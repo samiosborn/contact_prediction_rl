@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="hx5_d20_right">
+
+  <xacro:include filename="hx5_d20_right.urdf.xacro"/>
+
+  <xacro:hx5_d20_right prefix=""/>
+
+</robot>

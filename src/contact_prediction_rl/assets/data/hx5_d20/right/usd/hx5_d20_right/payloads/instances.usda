@@ -1,0 +1,429 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "URDF USD Converter v0.3.2"
+    }
+    endTimeCode = 1000000
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    startTimeCode = 0
+    upAxis = "Z"
+)
+
+def Scope "Instances"
+{
+    def Xform "hx5_d20_base_unit" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_base_unit>
+    )
+    {
+        over "hx5_d20_base_unit" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/hx5_d20_base_unit/VisualMaterials/grey>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "grey" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/grey>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "hx5_d20_base_unit_1" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_base_unit>
+    )
+    {
+        over "hx5_d20_base_unit" (
+            apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "PhysicsMeshCollisionAPI", "NewtonMeshCollisionAPI"]
+        )
+        {
+            token physics:approximation = "convexHull"
+            token purpose = "guide"
+
+            def Scope "material"
+            {
+                custom string urdf:name = "grey"
+
+                def Scope "color"
+                {
+                    custom string urdf:rgba = "0.2 0.2 0.2 1"
+                }
+            }
+        }
+    }
+
+    def Xform "hx5_d20_thumb_mcp" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_thumb_mcp>
+    )
+    {
+        over "hx5_d20_thumb_mcp" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/hx5_d20_thumb_mcp/VisualMaterials/grey>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "grey" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/grey>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "hx5_d20_thumb_mcp_1" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_thumb_mcp>
+    )
+    {
+        over "hx5_d20_thumb_mcp" (
+            apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "PhysicsMeshCollisionAPI", "NewtonMeshCollisionAPI"]
+        )
+        {
+            token physics:approximation = "convexHull"
+            token purpose = "guide"
+
+            def Scope "material"
+            {
+                custom string urdf:name = "grey"
+
+                def Scope "color"
+                {
+                    custom string urdf:rgba = "0.2 0.2 0.2 1"
+                }
+            }
+        }
+    }
+
+    def Xform "hx5_d20_thumb_mcp2" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_thumb_mcp2>
+    )
+    {
+        over "hx5_d20_thumb_mcp2" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/hx5_d20_thumb_mcp2/VisualMaterials/grey>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "grey" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/grey>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "hx5_d20_thumb_mcp2_1" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_thumb_mcp2>
+    )
+    {
+        over "hx5_d20_thumb_mcp2" (
+            apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "PhysicsMeshCollisionAPI", "NewtonMeshCollisionAPI"]
+        )
+        {
+            token physics:approximation = "convexHull"
+            token purpose = "guide"
+
+            def Scope "material"
+            {
+                custom string urdf:name = "grey"
+
+                def Scope "color"
+                {
+                    custom string urdf:rgba = "0.2 0.2 0.2 1"
+                }
+            }
+        }
+    }
+
+    def Xform "hx5_d20_thumb_ip" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_thumb_ip>
+    )
+    {
+        over "hx5_d20_thumb_ip" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/hx5_d20_thumb_ip/VisualMaterials/grey>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "grey" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/grey>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "hx5_d20_thumb_ip_1" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_thumb_ip>
+    )
+    {
+        over "hx5_d20_thumb_ip" (
+            apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "PhysicsMeshCollisionAPI", "NewtonMeshCollisionAPI"]
+        )
+        {
+            token physics:approximation = "convexHull"
+            token purpose = "guide"
+
+            def Scope "material"
+            {
+                custom string urdf:name = "grey"
+
+                def Scope "color"
+                {
+                    custom string urdf:rgba = "0.2 0.2 0.2 1"
+                }
+            }
+        }
+    }
+
+    def Xform "hx5_d20_thumb_tip" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_thumb_tip>
+    )
+    {
+        over "hx5_d20_thumb_tip" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/hx5_d20_thumb_tip/VisualMaterials/grey>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "grey" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/grey>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "hx5_d20_thumb_tip_1" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_thumb_tip>
+    )
+    {
+        over "hx5_d20_thumb_tip" (
+            apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "PhysicsMeshCollisionAPI", "NewtonMeshCollisionAPI"]
+        )
+        {
+            token physics:approximation = "convexHull"
+            token purpose = "guide"
+
+            def Scope "material"
+            {
+                custom string urdf:name = "grey"
+
+                def Scope "color"
+                {
+                    custom string urdf:rgba = "0.2 0.2 0.2 1"
+                }
+            }
+        }
+    }
+
+    def Xform "hx5_d20_finger_mcp" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_finger_mcp>
+    )
+    {
+        over "hx5_d20_finger_mcp" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/hx5_d20_finger_mcp/VisualMaterials/grey>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "grey" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/grey>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "hx5_d20_finger_mcp_1" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_finger_mcp>
+    )
+    {
+        over "hx5_d20_finger_mcp" (
+            apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "PhysicsMeshCollisionAPI", "NewtonMeshCollisionAPI"]
+        )
+        {
+            token physics:approximation = "convexHull"
+            token purpose = "guide"
+
+            def Scope "material"
+            {
+                custom string urdf:name = "grey"
+
+                def Scope "color"
+                {
+                    custom string urdf:rgba = "0.2 0.2 0.2 1"
+                }
+            }
+        }
+    }
+
+    def Xform "hx5_d20_finger_pip" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_finger_pip>
+    )
+    {
+        over "hx5_d20_finger_pip" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/hx5_d20_finger_pip/VisualMaterials/grey>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "grey" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/grey>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "hx5_d20_finger_pip_1" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_finger_pip>
+    )
+    {
+        over "hx5_d20_finger_pip" (
+            apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "PhysicsMeshCollisionAPI", "NewtonMeshCollisionAPI"]
+        )
+        {
+            token physics:approximation = "convexHull"
+            token purpose = "guide"
+
+            def Scope "material"
+            {
+                custom string urdf:name = "grey"
+
+                def Scope "color"
+                {
+                    custom string urdf:rgba = "0.2 0.2 0.2 1"
+                }
+            }
+        }
+    }
+
+    def Xform "hx5_d20_finger_dip" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_finger_dip>
+    )
+    {
+        over "hx5_d20_finger_dip" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/hx5_d20_finger_dip/VisualMaterials/grey>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "grey" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/grey>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "hx5_d20_finger_dip_1" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_finger_dip>
+    )
+    {
+        over "hx5_d20_finger_dip" (
+            apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "PhysicsMeshCollisionAPI", "NewtonMeshCollisionAPI"]
+        )
+        {
+            token physics:approximation = "convexHull"
+            token purpose = "guide"
+
+            def Scope "material"
+            {
+                custom string urdf:name = "grey"
+
+                def Scope "color"
+                {
+                    custom string urdf:rgba = "0.2 0.2 0.2 1"
+                }
+            }
+        }
+    }
+
+    def Xform "hx5_d20_finger_tip" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_finger_tip>
+    )
+    {
+        over "hx5_d20_finger_tip" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/hx5_d20_finger_tip/VisualMaterials/grey>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "grey" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/grey>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "hx5_d20_finger_tip_1" (
+        prepend references = @./geometries.usd@</Geometries/hx5_d20_finger_tip>
+    )
+    {
+        over "hx5_d20_finger_tip" (
+            apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "PhysicsMeshCollisionAPI", "NewtonMeshCollisionAPI"]
+        )
+        {
+            token physics:approximation = "convexHull"
+            token purpose = "guide"
+
+            def Scope "material"
+            {
+                custom string urdf:name = "grey"
+
+                def Scope "color"
+                {
+                    custom string urdf:rgba = "0.2 0.2 0.2 1"
+                }
+            }
+        }
+    }
+}
+

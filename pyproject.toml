@@ -17,6 +17,7 @@ authors = [{ name = "Isaac Lab Project Developers" }]
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "isaaclab-dev[rsl-rl]",
+    "xacro>=2.1.1",
 ]
 
 [project.entry-points."isaaclab.tasks"]
@@ -52,21 +53,21 @@ override-dependencies = [
 ]
 
 [tool.uv.sources]
-"isaaclab" = { path = "../../../../Apps/IsaacLab/source/isaaclab", editable = true }
-"isaaclab-assets" = { path = "../../../../Apps/IsaacLab/source/isaaclab_assets", editable = true }
-"isaaclab-contrib" = { path = "../../../../Apps/IsaacLab/source/isaaclab_contrib", editable = true }
-"isaaclab-dev" = { path = "../../../../Apps/IsaacLab", editable = true }
-"isaaclab-experimental" = { path = "../../../../Apps/IsaacLab/source/isaaclab_experimental", editable = true }
-"isaaclab-mimic" = { path = "../../../../Apps/IsaacLab/source/isaaclab_mimic", editable = true }
-"isaaclab-newton" = { path = "../../../../Apps/IsaacLab/source/isaaclab_newton", editable = true }
-"isaaclab-ov" = { path = "../../../../Apps/IsaacLab/source/isaaclab_ov", editable = true }
-"isaaclab-physx" = { path = "../../../../Apps/IsaacLab/source/isaaclab_physx", editable = true }
-"isaaclab-ppisp" = { path = "../../../../Apps/IsaacLab/source/isaaclab_ppisp", editable = true }
-"isaaclab-rl" = { path = "../../../../Apps/IsaacLab/source/isaaclab_rl", editable = true }
-"isaaclab-tasks" = { path = "../../../../Apps/IsaacLab/source/isaaclab_tasks", editable = true }
-"isaaclab-tasks-experimental" = { path = "../../../../Apps/IsaacLab/source/isaaclab_tasks_experimental", editable = true }
-"isaaclab-teleop" = { path = "../../../../Apps/IsaacLab/source/isaaclab_teleop", editable = true }
-"isaaclab-visualizers" = { path = "../../../../Apps/IsaacLab/source/isaaclab_visualizers", editable = true }
+"isaaclab" = { path = "../../../Apps/IsaacLab/source/isaaclab", editable = true }
+"isaaclab-assets" = { path = "../../../Apps/IsaacLab/source/isaaclab_assets", editable = true }
+"isaaclab-contrib" = { path = "../../../Apps/IsaacLab/source/isaaclab_contrib", editable = true }
+"isaaclab-dev" = { path = "../../../Apps/IsaacLab", editable = true }
+"isaaclab-experimental" = { path = "../../../Apps/IsaacLab/source/isaaclab_experimental", editable = true }
+"isaaclab-mimic" = { path = "../../../Apps/IsaacLab/source/isaaclab_mimic", editable = true }
+"isaaclab-newton" = { path = "../../../Apps/IsaacLab/source/isaaclab_newton", editable = true }
+"isaaclab-ov" = { path = "../../../Apps/IsaacLab/source/isaaclab_ov", editable = true }
+"isaaclab-physx" = { path = "../../../Apps/IsaacLab/source/isaaclab_physx", editable = true }
+"isaaclab-ppisp" = { path = "../../../Apps/IsaacLab/source/isaaclab_ppisp", editable = true }
+"isaaclab-rl" = { path = "../../../Apps/IsaacLab/source/isaaclab_rl", editable = true }
+"isaaclab-tasks" = { path = "../../../Apps/IsaacLab/source/isaaclab_tasks", editable = true }
+"isaaclab-tasks-experimental" = { path = "../../../Apps/IsaacLab/source/isaaclab_tasks_experimental", editable = true }
+"isaaclab-teleop" = { path = "../../../Apps/IsaacLab/source/isaaclab_teleop", editable = true }
+"isaaclab-visualizers" = { path = "../../../Apps/IsaacLab/source/isaaclab_visualizers", editable = true }
 "omniverseclient" = { index = "pypi-public" }
 "ovphysx" = { index = "pypi-public" }
 "ovrtx" = { index = "pypi-public" }
