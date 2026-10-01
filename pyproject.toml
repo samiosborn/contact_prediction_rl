@@ -53,21 +53,21 @@ override-dependencies = [
 ]
 
 [tool.uv.sources]
-"isaaclab" = { path = "../../../Apps/IsaacLab/source/isaaclab", editable = true }
-"isaaclab-assets" = { path = "../../../Apps/IsaacLab/source/isaaclab_assets", editable = true }
-"isaaclab-contrib" = { path = "../../../Apps/IsaacLab/source/isaaclab_contrib", editable = true }
-"isaaclab-dev" = { path = "../../../Apps/IsaacLab", editable = true }
-"isaaclab-experimental" = { path = "../../../Apps/IsaacLab/source/isaaclab_experimental", editable = true }
-"isaaclab-mimic" = { path = "../../../Apps/IsaacLab/source/isaaclab_mimic", editable = true }
-"isaaclab-newton" = { path = "../../../Apps/IsaacLab/source/isaaclab_newton", editable = true }
-"isaaclab-ov" = { path = "../../../Apps/IsaacLab/source/isaaclab_ov", editable = true }
-"isaaclab-physx" = { path = "../../../Apps/IsaacLab/source/isaaclab_physx", editable = true }
-"isaaclab-ppisp" = { path = "../../../Apps/IsaacLab/source/isaaclab_ppisp", editable = true }
-"isaaclab-rl" = { path = "../../../Apps/IsaacLab/source/isaaclab_rl", editable = true }
-"isaaclab-tasks" = { path = "../../../Apps/IsaacLab/source/isaaclab_tasks", editable = true }
-"isaaclab-tasks-experimental" = { path = "../../../Apps/IsaacLab/source/isaaclab_tasks_experimental", editable = true }
-"isaaclab-teleop" = { path = "../../../Apps/IsaacLab/source/isaaclab_teleop", editable = true }
-"isaaclab-visualizers" = { path = "../../../Apps/IsaacLab/source/isaaclab_visualizers", editable = true }
+"isaaclab" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab" }
+"isaaclab-assets" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab_assets" }
+"isaaclab-contrib" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab_contrib" }
+"isaaclab-dev" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA" }
+"isaaclab-experimental" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab_experimental" }
+"isaaclab-mimic" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab_mimic" }
+"isaaclab-newton" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab_newton" }
+"isaaclab-ov" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab_ov" }
+"isaaclab-physx" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab_physx" }
+"isaaclab-ppisp" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab_ppisp" }
+"isaaclab-rl" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab_rl" }
+"isaaclab-tasks" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab_tasks" }
+"isaaclab-tasks-experimental" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab_tasks_experimental" }
+"isaaclab-teleop" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab_teleop" }
+"isaaclab-visualizers" = { git = "https://github.com/isaac-sim/IsaacLab.git", tag = "v3.0.0-EA", subdirectory = "source/isaaclab_visualizers" }
 "omniverseclient" = { index = "pypi-public" }
 "ovphysx" = { index = "pypi-public" }
 "ovrtx" = { index = "pypi-public" }
