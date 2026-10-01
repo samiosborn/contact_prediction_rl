@@ -640,22 +640,22 @@ name = "contact-prediction-rl"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "isaaclab-dev", extra = ["rsl-rl"] },
+    { name = "isaaclab", extra = ["rsl-rl"] },
     { name = "xacro" },
 ]
 
 [package.optional-dependencies]
 isaacsim = [
-    { name = "isaaclab-dev", extra = ["isaacsim"] },
+    { name = "isaaclab", extra = ["isaacsim"] },
 ]
 ov = [
-    { name = "isaaclab-dev", extra = ["ov"] },
+    { name = "isaaclab", extra = ["ov"] },
 ]
 ovphysx = [
-    { name = "isaaclab-dev", extra = ["ovphysx"] },
+    { name = "isaaclab", extra = ["ovphysx"] },
 ]
 ovrtx = [
-    { name = "isaaclab-dev", extra = ["ovrtx"] },
+    { name = "isaaclab", extra = ["ovrtx"] },
 ]
 
 [package.dev-dependencies]
@@ -668,11 +668,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "isaaclab-dev", extras = ["isaacsim"], marker = "extra == 'isaacsim'", git = "https://github.com/isaac-sim/IsaacLab.git?tag=v3.0.0-EA" },
-    { name = "isaaclab-dev", extras = ["ov"], marker = "extra == 'ov'", git = "https://github.com/isaac-sim/IsaacLab.git?tag=v3.0.0-EA" },
-    { name = "isaaclab-dev", extras = ["ovphysx"], marker = "extra == 'ovphysx'", git = "https://github.com/isaac-sim/IsaacLab.git?tag=v3.0.0-EA" },
-    { name = "isaaclab-dev", extras = ["ovrtx"], marker = "extra == 'ovrtx'", git = "https://github.com/isaac-sim/IsaacLab.git?tag=v3.0.0-EA" },
-    { name = "isaaclab-dev", extras = ["rsl-rl"], git = "https://github.com/isaac-sim/IsaacLab.git?tag=v3.0.0-EA" },
+    { name = "isaaclab", extras = ["isaacsim"], marker = "extra == 'isaacsim'", specifier = "==3.0.0rc1" },
+    { name = "isaaclab", extras = ["ov"], marker = "extra == 'ov'", specifier = "==3.0.0rc1" },
+    { name = "isaaclab", extras = ["ovphysx"], marker = "extra == 'ovphysx'", specifier = "==3.0.0rc1" },
+    { name = "isaaclab", extras = ["ovrtx"], marker = "extra == 'ovrtx'", specifier = "==3.0.0rc1" },
+    { name = "isaaclab", extras = ["rsl-rl"], specifier = "==3.0.0rc1" },
     { name = "xacro", specifier = ">=2.1.1" },
 ]
 provides-extras = ["isaacsim", "ov", "ovphysx", "ovrtx"]
@@ -1442,32 +1442,8 @@ wheels = [
 
 [[package]]
 name = "isaaclab"
-version = "17.0.2"
-source = { git = "https://github.com/isaac-sim/IsaacLab.git?subdirectory=source%2Fisaaclab&tag=v3.0.0-EA#ae37b028ea415c91ea2bc32609efcd759ed2b974" }
-
-[[package]]
-name = "isaaclab-assets"
-version = "0.7.1"
-source = { git = "https://github.com/isaac-sim/IsaacLab.git?subdirectory=source%2Fisaaclab_assets&tag=v3.0.0-EA#ae37b028ea415c91ea2bc32609efcd759ed2b974" }
-dependencies = [
-    { name = "isaaclab" },
-    { name = "isaaclab-contrib" },
-    { name = "isaaclab-newton" },
-    { name = "isaaclab-physx" },
-]
-
-[[package]]
-name = "isaaclab-contrib"
-version = "2.0.1"
-source = { git = "https://github.com/isaac-sim/IsaacLab.git?subdirectory=source%2Fisaaclab_contrib&tag=v3.0.0-EA#ae37b028ea415c91ea2bc32609efcd759ed2b974" }
-dependencies = [
-    { name = "isaaclab" },
-]
-
-[[package]]
-name = "isaaclab-dev"
-version = "0.1.0"
-source = { git = "https://github.com/isaac-sim/IsaacLab.git?tag=v3.0.0-EA#ae37b028ea415c91ea2bc32609efcd759ed2b974" }
+version = "3.0.0rc1"
+source = { registry = "https://pypi.nvidia.com/" }
 dependencies = [
     { name = "alphashape" },
     { name = "botocore" },
@@ -1483,18 +1459,6 @@ dependencies = [
     { name = "hidapi" },
     { name = "hydra-core" },
     { name = "imgui-bundle" },
-    { name = "isaaclab" },
-    { name = "isaaclab-assets" },
-    { name = "isaaclab-contrib" },
-    { name = "isaaclab-experimental" },
-    { name = "isaaclab-newton" },
-    { name = "isaaclab-ov" },
-    { name = "isaaclab-physx" },
-    { name = "isaaclab-ppisp" },
-    { name = "isaaclab-rl" },
-    { name = "isaaclab-tasks" },
-    { name = "isaaclab-tasks-experimental" },
-    { name = "isaaclab-visualizers" },
     { name = "jinja2" },
     { name = "lazy-loader" },
     { name = "matplotlib" },
@@ -1537,6 +1501,9 @@ dependencies = [
     { name = "usd-exchange" },
     { name = "warp-lang" },
 ]
+wheels = [
+    { url = "https://pypi.nvidia.com/isaaclab/isaaclab-3.0.0rc1-py3-none-any.whl", hash = "sha256:d95e6cc9d3e8428341f2b4b866822c372363fcf1cfaa7a1e64bce5b3c36c6c7b" },
+]
 
 [package.optional-dependencies]
 isaacsim = [
@@ -1558,83 +1525,6 @@ ovrtx = [
 rsl-rl = [
     { name = "onnxscript" },
     { name = "rsl-rl-lib" },
-]
-
-[[package]]
-name = "isaaclab-experimental"
-version = "0.2.1"
-source = { git = "https://github.com/isaac-sim/IsaacLab.git?subdirectory=source%2Fisaaclab_experimental&tag=v3.0.0-EA#ae37b028ea415c91ea2bc32609efcd759ed2b974" }
-dependencies = [
-    { name = "isaaclab" },
-]
-
-[[package]]
-name = "isaaclab-newton"
-version = "5.4.1"
-source = { git = "https://github.com/isaac-sim/IsaacLab.git?subdirectory=source%2Fisaaclab_newton&tag=v3.0.0-EA#ae37b028ea415c91ea2bc32609efcd759ed2b974" }
-dependencies = [
-    { name = "isaaclab" },
-]
-
-[[package]]
-name = "isaaclab-ov"
-version = "2.2.0"
-source = { git = "https://github.com/isaac-sim/IsaacLab.git?subdirectory=source%2Fisaaclab_ov&tag=v3.0.0-EA#ae37b028ea415c91ea2bc32609efcd759ed2b974" }
-dependencies = [
-    { name = "isaaclab" },
-    { name = "ovstage" },
-]
-
-[[package]]
-name = "isaaclab-physx"
-version = "6.0.0"
-source = { git = "https://github.com/isaac-sim/IsaacLab.git?subdirectory=source%2Fisaaclab_physx&tag=v3.0.0-EA#ae37b028ea415c91ea2bc32609efcd759ed2b974" }
-dependencies = [
-    { name = "isaaclab" },
-]
-
-[[package]]
-name = "isaaclab-ppisp"
-version = "0.3.1"
-source = { git = "https://github.com/isaac-sim/IsaacLab.git?subdirectory=source%2Fisaaclab_ppisp&tag=v3.0.0-EA#ae37b028ea415c91ea2bc32609efcd759ed2b974" }
-dependencies = [
-    { name = "isaaclab" },
-]
-
-[[package]]
-name = "isaaclab-rl"
-version = "0.16.3"
-source = { git = "https://github.com/isaac-sim/IsaacLab.git?subdirectory=source%2Fisaaclab_rl&tag=v3.0.0-EA#ae37b028ea415c91ea2bc32609efcd759ed2b974" }
-dependencies = [
-    { name = "isaaclab" },
-    { name = "isaaclab-assets" },
-    { name = "isaaclab-tasks" },
-]
-
-[[package]]
-name = "isaaclab-tasks"
-version = "18.0.1"
-source = { git = "https://github.com/isaac-sim/IsaacLab.git?subdirectory=source%2Fisaaclab_tasks&tag=v3.0.0-EA#ae37b028ea415c91ea2bc32609efcd759ed2b974" }
-dependencies = [
-    { name = "isaaclab" },
-    { name = "isaaclab-assets" },
-]
-
-[[package]]
-name = "isaaclab-tasks-experimental"
-version = "0.0.1"
-source = { git = "https://github.com/isaac-sim/IsaacLab.git?subdirectory=source%2Fisaaclab_tasks_experimental&tag=v3.0.0-EA#ae37b028ea415c91ea2bc32609efcd759ed2b974" }
-dependencies = [
-    { name = "isaaclab" },
-    { name = "isaaclab-assets" },
-]
-
-[[package]]
-name = "isaaclab-visualizers"
-version = "1.8.0"
-source = { git = "https://github.com/isaac-sim/IsaacLab.git?subdirectory=source%2Fisaaclab_visualizers&tag=v3.0.0-EA#ae37b028ea415c91ea2bc32609efcd759ed2b974" }
-dependencies = [
-    { name = "isaaclab" },
 ]
 
 [[package]]
@@ -2927,11 +2817,11 @@ wheels = [
 [[package]]
 name = "omniverseclient"
 version = "2.72.3"
-source = { registry = "https://pypi.org/simple" }
+source = { registry = "https://pypi.nvidia.com/" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ed/83/a4b1a9b7c046d72c37f2c9a3496f34f516285475cc841f9d917c17dcc61d/omniverseclient-2.72.3-cp312-cp312-manylinux_2_35_aarch64.whl", hash = "sha256:cc3cf460bb95517b6b610b142bec5809105310f8fe57a913dc404d8801c91b7b", size = 16894728, upload-time = "2026-07-22T13:57:09.342Z" },
-    { url = "https://files.pythonhosted.org/packages/4e/2b/738fede63c3c8b2119b9532002cd14f5561eed0f3ac3c0ac26f3d9c61bd5/omniverseclient-2.72.3-cp312-cp312-manylinux_2_35_x86_64.whl", hash = "sha256:4cb9af5953be9940b462b954055ec2397e77d1117e742eb20703ed3e38db540f", size = 16938296, upload-time = "2026-07-22T13:57:05.003Z" },
-    { url = "https://files.pythonhosted.org/packages/23/4c/3e685146febf968387b3557dd5c1ebd05701c0bc0442718cfb7a22dcebf0/omniverseclient-2.72.3-cp312-cp312-win_amd64.whl", hash = "sha256:35197d0fda6f0c4cd2e145a2741a420d095a4107b4b24dd395d5918c4206351b", size = 12171518, upload-time = "2026-07-22T13:57:12.917Z" },
+    { url = "https://pypi.nvidia.com/omniverseclient/omniverseclient-2.72.3-cp312-cp312-manylinux_2_35_aarch64.whl", hash = "sha256:cc3cf460bb95517b6b610b142bec5809105310f8fe57a913dc404d8801c91b7b" },
+    { url = "https://pypi.nvidia.com/omniverseclient/omniverseclient-2.72.3-cp312-cp312-manylinux_2_35_x86_64.whl", hash = "sha256:4cb9af5953be9940b462b954055ec2397e77d1117e742eb20703ed3e38db540f" },
+    { url = "https://pypi.nvidia.com/omniverseclient/omniverseclient-2.72.3-cp312-cp312-win_amd64.whl", hash = "sha256:35197d0fda6f0c4cd2e145a2741a420d095a4107b4b24dd395d5918c4206351b" },
 ]
 
 [[package]]
@@ -3066,31 +2956,35 @@ wheels = [
 [[package]]
 name = "ovphysx"
 version = "0.5.11"
-source = { registry = "https://pypi.org/simple" }
+source = { registry = "https://pypi.nvidia.com/" }
 dependencies = [
     { name = "ovstage" },
     { name = "packaging" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e1/93/36e41c4ea7c9a1e0a4a7ab95286c7428b228bd78eccd1e5d5388f893c88b/ovphysx-0.5.11-py3-none-manylinux_2_35_aarch64.whl", hash = "sha256:fff7e648fe14989e6ae51b7c6e6c516beab0b4f0749110c32c5a142b31525946", size = 162111746, upload-time = "2026-08-28T08:44:04.939Z" },
-    { url = "https://files.pythonhosted.org/packages/07/ea/df4b90eb2ba9136eac99d0da839fa687c77017016300674801254c79e107/ovphysx-0.5.11-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:4e6f904d9858674ecf4fccc2a462d048f9eeb7d20724a7eafd294bf5ccac9a2c", size = 168926695, upload-time = "2026-08-28T08:45:49.197Z" },
-    { url = "https://files.pythonhosted.org/packages/6e/8f/f653c0d8b8973c482ac0e93500c5d48d846ca0f49388122f60a1a49a6c99/ovphysx-0.5.11-py3-none-win_amd64.whl", hash = "sha256:409637574296f2f4c9a377444c2072c5539a8a5adf88b9536c02fdff6af387be", size = 148040678, upload-time = "2026-08-28T08:47:14.928Z" },
+    { url = "https://pypi.nvidia.com/ovphysx/ovphysx-0.5.11-py3-none-manylinux_2_35_aarch64.whl", hash = "sha256:fff7e648fe14989e6ae51b7c6e6c516beab0b4f0749110c32c5a142b31525946" },
+    { url = "https://pypi.nvidia.com/ovphysx/ovphysx-0.5.11-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:4e6f904d9858674ecf4fccc2a462d048f9eeb7d20724a7eafd294bf5ccac9a2c" },
+    { url = "https://pypi.nvidia.com/ovphysx/ovphysx-0.5.11-py3-none-win_amd64.whl", hash = "sha256:409637574296f2f4c9a377444c2072c5539a8a5adf88b9536c02fdff6af387be" },
 ]
 
 [[package]]
 name = "ovrtx"
 version = "0.4.1.364340"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2c/3e/ecefd14d7dc8b377607aafe19e426f40b921b2be9a8f73ebc6e4d180ecd1/ovrtx-0.4.1.364340.tar.gz", hash = "sha256:1b20e48a69a091246b0537412e0434ee5d5437a8bfc3bbe02599f13ac7488927", size = 23382, upload-time = "2026-08-14T22:43:40.756Z" }
+source = { registry = "https://pypi.nvidia.com/" }
+wheels = [
+    { url = "https://pypi.nvidia.com/ovrtx/ovrtx-0.4.1.364340-py3-none-manylinux_2_35_aarch64.whl", hash = "sha256:38b33e5052b81572c11af317fd9f214b873a631ae727e448f6a6b990597c0320" },
+    { url = "https://pypi.nvidia.com/ovrtx/ovrtx-0.4.1.364340-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:597e09f34819f31a71fb919c9b0024c3b652588bdfa4d1858b2222f219d0ec09" },
+    { url = "https://pypi.nvidia.com/ovrtx/ovrtx-0.4.1.364340-py3-none-win_amd64.whl", hash = "sha256:f1a8e160912a503a5e536143f7bc1bca7048b3941a4c2756c5b661961bcb5752" },
+]
 
 [[package]]
 name = "ovstage"
 version = "0.1.1.355824"
-source = { registry = "https://pypi.org/simple" }
+source = { registry = "https://pypi.nvidia.com/" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/05/fd/a1650d436b3c304720236178848d4e7ad523a2b9f2b76918d7b902934cac/ovstage-0.1.1.355824-py3-none-manylinux_2_35_aarch64.whl", hash = "sha256:046aa360959bf5344d912470aaa11d3ec1fc750e28816e5239ce0438864c9863", size = 59799282, upload-time = "2026-08-05T20:07:10.538Z" },
-    { url = "https://files.pythonhosted.org/packages/8d/2e/e5d03719d9ab8e412187be84efe11bc6b912eca02bd8dfb09a1bf522bbe4/ovstage-0.1.1.355824-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:b4affd9e5b23620ec71901a164df4ae373d25de2c76b9fae4d193d97aa2df0ec", size = 64302147, upload-time = "2026-08-05T20:06:18.013Z" },
-    { url = "https://files.pythonhosted.org/packages/fb/d0/ff9124f524ffadc87f8893e99de1679e7c517ca6ceb60e0b870a284b71a3/ovstage-0.1.1.355824-py3-none-win_amd64.whl", hash = "sha256:fc8ae7fe950aa2ff8fd24643047f7156ffa1b9b384ce3f024ee2193929e21a3b", size = 35031430, upload-time = "2026-08-05T20:05:29.88Z" },
+    { url = "https://pypi.nvidia.com/ovstage/ovstage-0.1.1.355824-py3-none-manylinux_2_35_aarch64.whl", hash = "sha256:046aa360959bf5344d912470aaa11d3ec1fc750e28816e5239ce0438864c9863" },
+    { url = "https://pypi.nvidia.com/ovstage/ovstage-0.1.1.355824-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:b4affd9e5b23620ec71901a164df4ae373d25de2c76b9fae4d193d97aa2df0ec" },
+    { url = "https://pypi.nvidia.com/ovstage/ovstage-0.1.1.355824-py3-none-win_amd64.whl", hash = "sha256:fc8ae7fe950aa2ff8fd24643047f7156ffa1b9b384ce3f024ee2193929e21a3b" },
 ]
 
 [[package]]
