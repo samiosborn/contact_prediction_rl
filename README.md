@@ -1,115 +1,81 @@
 # contact_prediction_rl
 
-An installable downstream Isaac Lab task package generated with a standard uv `src` layout.
+- Reinforcement-learning experiments for studying whether auxiliary contact prediction improves dexterous manipulation.
+- The initial task uses a ROBOTIS HX5-D20 right hand in Isaac Lab to manipulate an object in simulation.
+- The policy is trained with PPO while an auxiliary head predicts binary fingertip-object contact from the same learned representation.
+- The main comparison is baseline PPO against PPO with auxiliary fingertip contact prediction.
+- Contact is used as privileged supervision during training but is not provided as an input to the deployed policy.
 
-The registered tasks are:
+## Environment
 
-- `ContactPredictionRl-Reorientation-HX5-D20-Right`
+- The registered Isaac Lab environment is: ContactPredictionRl-Reorientation-HX5-D20-Right
 
-## Installation
+- The simulated hand has 20 actuated joints.
+- Five object-specific contact signals are defined for:
+  - thumb
+  - index
+  - middle
+  - ring
+  - little
+- These signals are derived from simulator contact forces at the corresponding fingertip links.
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then create the project environment. The default
-environment uses the Newton backend and does not install Isaac Sim:
+## Setup
 
-```bash
-uv sync
-```
+- This repository is an external Isaac Lab project using a standard `uv` `src` layout.
 
-This project was generated from an Isaac Lab source checkout. Its `pyproject.toml` uses editable relative paths to that
-checkout, so regenerate the project or update `[tool.uv.sources]` if either directory moves.
+- The project currently uses a local Isaac Lab checkout through editable paths in `pyproject.toml`.
 
-Optional backends are available through extras. Pass the extra to each `uv run` command that needs it:
+- The expected layout is:
+~/Apps/IsaacLab
+~/Git/Robotics/contact_prediction_rl
 
-```bash
-# Standalone OV PhysX
-uv run --extra ovphysx isaaclab random_agent --task <TASK_NAME> physics=ovphysx
+- If either repository moves, update the paths under `[tool.uv.sources]` in `pyproject.toml`.
+- The default configuration uses the Newton backend and does not require Isaac Sim.
 
-# Isaac Sim with PhysX and RTX rendering
-uv run --extra isaacsim isaaclab random_agent --task <TASK_NAME> physics=isaacsim_physx
-```
+## Run
 
-The `ov` extra installs both the `ovphysx` and `ovrtx` runtimes. You can also select `ovrtx` independently when using
-Newton physics with the OVRTX renderer. Commit `pyproject.toml` and `uv.lock` so collaborators use the same environment.
+- List the registered environments: uv run python scripts/list_envs.py --show_presets
 
-## Run the generated tasks
+- Run the HX5-D20 development test:
+uv run python scripts/test_hx5.py \
+  --num_envs 1 \
+  --viz newton_gl \
+  physics=newton_mjwarp
 
-Replace the placeholders below with a task listed above and a selected RL library.
-
-```bash
-# List this project's environments and their available presets
-uv run python scripts/list_envs.py --show_presets
-
-# Exercise an environment without a trained policy
-uv run isaaclab zero_agent --task <TASK_NAME> --num_envs 16
-uv run isaaclab random_agent --task <TASK_NAME> --num_envs 16
-
-# Train and play
-uv run isaaclab train --rl_library <RL_LIBRARY> --task <TASK_NAME>
-uv run isaaclab play --rl_library <RL_LIBRARY> --task <TASK_NAME> --checkpoint latest
-
-# Distributed training
-uv run isaaclab train_multigpu --rl_library <RL_LIBRARY> --task <TASK_NAME> --num_gpus 2
-
-# Benchmark startup, runtime, training, or play
-uv run isaaclab benchmark runtime --task <TASK_NAME> --num_envs 16 --num_steps 1000
-uv run isaaclab benchmark training --rl_library <RL_LIBRARY> --task <TASK_NAME> --max_iterations 10
-```
-
-Use `physics=<PRESET>` to select one of the presets shown by `list_envs.py`.
 
 ## Project structure
 
-Task families live in `src/contact_prediction_rl/tasks`. Within a manager-based family, task-wide MDP terms live in `mdp`, while
-robot-specific scenes, registrations, and agent configurations live in `config/hx5_d20_right`. Add another robot by
-creating a sibling of `config/hx5_d20_right`; add another task by creating a sibling task-family directory.
+contact_prediction_rl/
+├── scripts/
+│   ├── list_envs.py
+│   └── test_hx5.py
+├── src/
+│   └── contact_prediction_rl/
+│       ├── assets/
+│       │   └── data/
+│       │       └── hx5_d20/
+│       │           ├── left/
+│       │           └── right/
+│       └── tasks/
+│           └── reorientation/
+│               ├── mdp/
+│               └── config/
+│                   └── hx5_d20_right/
+├── tests/
+├── pyproject.toml
+└── uv.lock
+
+- `tasks/reorientation/mdp` contains task-level MDP components.
+- `tasks/reorientation/config/hx5_d20_right` contains the HX5-D20 scene, environment configuration, task registration and PPO configuration.
+- Robot assets are stored under `assets/data/hx5_d20`.
+- The right-hand model currently includes the generated URDF and USD used by Isaac Lab.
 
 ## Development
 
-Run the generated registration test and code-quality checks through the project environment:
+- Run tests with: uv run pytest
 
-```bash
-uv run pytest
-uv run pre-commit run --all-files
-```
+- Run formatting and code-quality hooks with: uv run pre-commit run --all-files
 
-The test helpers under `source/isaaclab_tasks/test` in the Isaac Lab repository are not part of the installed
-`isaaclab_tasks` package. Keep test fixtures in this project and use public Isaac Lab APIs. If you copy
-`env_test_utils.py`, it becomes vendored code whose upstream changes you must track.
+- Generate editor configuration with: uv run isaaclab --editor
 
-To configure VS Code or Cursor, run the `setup_python_env` task or invoke its command directly:
-
-```bash
-uv run isaaclab --editor
-```
-
-The setup command selects the active interpreter and generates a git-ignored `pyrightconfig.json`. The generated
-configuration inherits the project's checked-in Pyright settings and adds the Isaac Sim extensions, project `src` root,
-and any Isaac Lab packages discovered in the active Python environment. This supports both Pylance in VS Code and
-basedpyright in Cursor.
-
-In VS Code, use Pylance and select the interpreter that ran the setup command. In Cursor, install the
-[basedpyright extension](https://marketplace.visualstudio.com/items?itemName=detachhead.basedpyright) instead of
-Pylance, select the same interpreter, and reload the window. Both language servers read `pyrightconfig.json`.
-
-When using the `isaacsim` extra, include it while generating the editor configuration so the command can discover the
-Isaac Sim installation:
-
-```bash
-uv run --extra isaacsim isaaclab --editor
-```
-
-For an Isaac Sim binaries installation that is not available in the project environment, provide its path explicitly:
-
-```bash
-# Linux
-uv run isaaclab --editor --isaac_path <isaac-sim-path>
-
-# Windows
-uv run isaaclab --editor --isaac_path <isaac-sim-path>
-```
-
-## Troubleshooting
-
-If Pylance or basedpyright cannot resolve modules, confirm that the selected interpreter matches the one used to run the
-setup command, then reload the editor window. To add a missing extension or reduce indexing memory, edit the `extraPaths`
-array in the root `pyrightconfig.json`; remove simulator extension directories that the project does not use.
+- Local editor configuration, virtual environments, logs, training outputs and generated caches are excluded from version control.
