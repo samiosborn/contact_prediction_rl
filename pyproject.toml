@@ -16,7 +16,7 @@ license = { file = "LICENSE" }
 authors = [{ name = "Isaac Lab Project Developers" }]
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "isaaclab-dev[rsl-rl]",
+    "isaaclab[rsl-rl]==3.0.0rc1",
     "xacro>=2.1.1",
 ]
 
@@ -24,10 +24,10 @@ dependencies = [
 "contact_prediction_rl" = "contact_prediction_rl.tasks"
 
 [project.optional-dependencies]
-isaacsim = ["isaaclab-dev[isaacsim]"]
-ov = ["isaaclab-dev[ov]"]
-ovphysx = ["isaaclab-dev[ovphysx]"]
-ovrtx = ["isaaclab-dev[ovrtx]"]
+isaacsim = ["isaaclab[isaacsim]==3.0.0rc1"]
+ov = ["isaaclab[ov]==3.0.0rc1"]
+ovphysx = ["isaaclab[ovphysx]==3.0.0rc1"]
+ovrtx = ["isaaclab[ovrtx]==3.0.0rc1"]
 
 [dependency-groups]
 dev = ["codespell>=2.4", "pre-commit>=4.2", "pytest>=8.3", "ruff>=0.11"]
@@ -53,21 +53,6 @@ override-dependencies = [
 ]
 
 [tool.uv.sources]
-"isaaclab" = { path = "../../../Apps/IsaacLab/source/isaaclab", editable = true }
-"isaaclab-assets" = { path = "../../../Apps/IsaacLab/source/isaaclab_assets", editable = true }
-"isaaclab-contrib" = { path = "../../../Apps/IsaacLab/source/isaaclab_contrib", editable = true }
-"isaaclab-dev" = { path = "../../../Apps/IsaacLab", editable = true }
-"isaaclab-experimental" = { path = "../../../Apps/IsaacLab/source/isaaclab_experimental", editable = true }
-"isaaclab-mimic" = { path = "../../../Apps/IsaacLab/source/isaaclab_mimic", editable = true }
-"isaaclab-newton" = { path = "../../../Apps/IsaacLab/source/isaaclab_newton", editable = true }
-"isaaclab-ov" = { path = "../../../Apps/IsaacLab/source/isaaclab_ov", editable = true }
-"isaaclab-physx" = { path = "../../../Apps/IsaacLab/source/isaaclab_physx", editable = true }
-"isaaclab-ppisp" = { path = "../../../Apps/IsaacLab/source/isaaclab_ppisp", editable = true }
-"isaaclab-rl" = { path = "../../../Apps/IsaacLab/source/isaaclab_rl", editable = true }
-"isaaclab-tasks" = { path = "../../../Apps/IsaacLab/source/isaaclab_tasks", editable = true }
-"isaaclab-tasks-experimental" = { path = "../../../Apps/IsaacLab/source/isaaclab_tasks_experimental", editable = true }
-"isaaclab-teleop" = { path = "../../../Apps/IsaacLab/source/isaaclab_teleop", editable = true }
-"isaaclab-visualizers" = { path = "../../../Apps/IsaacLab/source/isaaclab_visualizers", editable = true }
 "omniverseclient" = { index = "pypi-public" }
 "ovphysx" = { index = "pypi-public" }
 "ovrtx" = { index = "pypi-public" }
@@ -126,6 +111,7 @@ markers = [
     "unit: test exercises isolated logic and does not launch the simulator",
     "integration: test drives the simulator/scene/environment end-to-end",
     "smoke: tests for core installation, task, and RL functionality",
+    "gpu: test needs a CUDA GPU and launches the simulator (deselect with -m \"not gpu\")",
     "kitless: test must pass inside the Kit-less container, which has no Isaac Sim runtime",
 ]
 
