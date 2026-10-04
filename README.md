@@ -21,49 +21,12 @@
 
 ## Setup
 
-### Prerequisites
-
-- Linux x86_64 with an NVIDIA GPU and driver 580.65.06 or later (required by the CUDA 13 torch builds; the locked torch is the CUDA 12.8 build for x86_64 Linux).
-- [uv](https://docs.astral.sh/uv/getting-started/installation/).
-- Internet access on first install (PyPI, `pypi.nvidia.com`, `download.pytorch.org`).
-- No Isaac Lab checkout is needed. The default configuration uses the Newton backend and does not require Isaac Sim.
-
 ### Install
 
-```bash
 git clone https://github.com/samiosborn/contact_prediction_rl.git
 cd contact_prediction_rl
-uv sync
-```
-
-`uv sync` installs the locked environment from `pyproject.toml` and `uv.lock`, including Isaac Lab from the NVIDIA package index.
 
 Optional Isaac Sim (large download, needed only for PhysX/Kit features): `uv sync --extra isaacsim`
-
-### Tested versions
-
-| Component | Version |
-|---|---|
-| Python | 3.12 |
-| Isaac Lab | 3.0.0rc1 (NVIDIA wheel; code identical to the `v3.0.0-EA` tag) |
-| Isaac Sim | not installed by default (`--extra isaacsim` pins 6.1.0.0) |
-| torch | 2.11.0+cu128 |
-| Newton / mujoco-warp | 1.5.2 / 3.11.0 |
-| rsl-rl-lib | 5.4.1 |
-| NVIDIA driver / GPU | 595.91 / RTX 5080 Laptop |
-
-Check the installed versions against the pins in `pyproject.toml`: `uv run python scripts/check_versions.py`
-
-Isaac Lab 3.0.0 final is not yet published to a package index. When it is, change the `isaaclab[rsl-rl]==3.0.0rc1` pins in `pyproject.toml` and re-run `uv lock`.
-
-### Reading Isaac Lab source (optional)
-
-A separate clone is only useful for reading or debugging Isaac Lab source. This project never imports from it:
-
-```bash
-git clone https://github.com/isaac-sim/IsaacLab.git ~/Apps/IsaacLab
-git -C ~/Apps/IsaacLab checkout v3.0.0-EA
-```
 
 ## Run
 
@@ -81,37 +44,6 @@ git -C ~/Apps/IsaacLab checkout v3.0.0-EA
   `uv run python scripts/test_hx5.py --num_envs 1 --viz newton_gl physics=newton_mjwarp`
 
 `scripts/train.py` and `scripts/play.py` import `contact_prediction_rl.tasks` (which registers the environments) and then call Isaac Lab's unified `isaaclab_rl.entrypoints` CLI, as Isaac Lab's own scripts do.
-
-## Project structure
-
-contact_prediction_rl/
-├── scripts/
-│   ├── check_versions.py
-│   ├── list_envs.py
-│   ├── play.py
-│   ├── smoke_envs.py
-│   ├── test_hx5.py
-│   └── train.py
-├── src/
-│   └── contact_prediction_rl/
-│       ├── assets/
-│       │   └── data/
-│       │       └── hx5_d20/
-│       │           ├── left/
-│       │           └── right/
-│       └── tasks/
-│           └── reorientation/
-│               ├── mdp/
-│               └── config/
-│                   └── hx5_d20_right/
-├── tests/
-├── pyproject.toml
-└── uv.lock
-
-- `tasks/reorientation/mdp` contains task-level MDP components.
-- `tasks/reorientation/config/hx5_d20_right` contains the HX5-D20 scene, environment configuration, task registration and PPO configuration.
-- Robot assets are stored under `assets/data/hx5_d20`.
-- The right-hand model currently includes the generated URDF and USD used by Isaac Lab.
 
 ## Development
 

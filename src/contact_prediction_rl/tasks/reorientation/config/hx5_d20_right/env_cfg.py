@@ -2,7 +2,7 @@ from pathlib import Path
 
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
-from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCfg, RigidObjectCfg
+from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -20,26 +20,14 @@ from isaaclab_tasks.utils import PresetCfg
 
 from ... import mdp
 
+ASSET_DIR = Path(__file__).resolve().parents[4] / "assets" / "data" / "hx5_d20" / "right"
 
-ASSET_DIR = (
-    Path(__file__).resolve().parents[4]
-    / "assets"
-    / "data"
-    / "hx5_d20"
-    / "right"
-)
-
-HX5_USD_PATH = (
-    ASSET_DIR
-    / "usd"
-    / "hx5_d20_right"
-    / "hx5_d20_right.usda"
-)
+HX5_USD_PATH = ASSET_DIR / "usd" / "hx5_d20_right" / "hx5_d20_right.usda"
 
 
 @configclass
 class ReorientationPhysicsCfg(PresetCfg):
-    """Physics backends supported by this task."""
+    """Physics backends supported by this task"""
 
     isaacsim_physx: PhysxCfg = PhysxCfg()
     ovphysx: OvPhysxCfg = OvPhysxCfg()
@@ -51,13 +39,14 @@ class ReorientationPhysicsCfg(PresetCfg):
 
     newton_mjwarp: NewtonCfg = NewtonCfg(
         solver_cfg=MJWarpSolverCfg(
-            njmax=64,
+            njmax=128,
             nconmax=128,
             cone="pyramidal",
             impratio=1,
             integrator="implicitfast",
         ),
-        num_substeps=1,
+        # Resolve fast fingertip motion at 480 Hz while retaining the 120 Hz task timestep
+        num_substeps=4,
         debug_mode=False,
         use_cuda_graph=True,
     )
@@ -75,7 +64,7 @@ class ReorientationPhysicsCfg(PresetCfg):
 
 @configclass
 class ReorientationSceneCfg(InteractiveSceneCfg):
-    """Minimal HX5-D20 scene."""
+    """Minimal HX5-D20 scene"""
 
     ground = AssetBaseCfg(
         prim_path="/World/ground",
@@ -88,7 +77,9 @@ class ReorientationSceneCfg(InteractiveSceneCfg):
             usd_path=str(HX5_USD_PATH),
         ),
         init_state=ArticulationCfg.InitialStateCfg(
+            # URDF fingers extend along +Z and curl toward +X, the palm normal
             pos=(0.0, 0.0, 0.5),
+            rot=(0.0, -0.7071067811865476, 0.0, 0.7071067811865476),
             joint_pos={
                 "finger_r_joint.*": 0.0,
             },
@@ -96,29 +87,51 @@ class ReorientationSceneCfg(InteractiveSceneCfg):
         actuators={
             "fingers": ImplicitActuatorCfg(
                 joint_names_expr=["finger_r_joint.*"],
-                stiffness=100.0,
-                damping=1.0,
+                # Conservative bring-up gains for the small finger inertias at 120 Hz
+                stiffness=1.0,
+                damping=0.05,
             ),
         },
+    )
+
+    # Catch surface 221 mm below the palm, clear of the hand workspace
+    table = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/Table",
+        spawn=sim_utils.CuboidCfg(
+            size=(1.2, 1.2, 0.04),
+            collision_props=[sim_utils.UsdPhysicsCollisionCfg(collision_enabled=True)],
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.35, 0.4, 0.45)),
+        ),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(-0.065, 0.0, 0.28)),
     )
 
     object = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/Object",
         spawn=sim_utils.CuboidCfg(
             size=(0.05, 0.05, 0.05),
-            rigid_props=sim_utils.RigidBodyPropertiesCfg(
-                disable_gravity=True,
-                kinematic_enabled=True,
-            ),
-            collision_props=sim_utils.CollisionPropertiesCfg(),
+            rigid_props=[
+                # Free rigid body: a kinematic cube reports contact but cannot be pushed
+                sim_utils.UsdPhysicsRigidBodyCfg(kinematic_enabled=False),
+            ],
+            collision_props=[
+                sim_utils.UsdPhysicsCollisionCfg(collision_enabled=True),
+            ],
             mass_props=sim_utils.MassPropertiesCfg(mass=0.05),
             visual_material=sim_utils.PreviewSurfaceCfg(
                 diffuse_color=(0.8, 0.2, 0.2),
             ),
         ),
         init_state=RigidObjectCfg.InitialStateCfg(
-            pos=(0.07, 0.0, 0.61),
+            # Palm collision front is at local X <= 21 mm, with 3 mm spawn clearance
+            pos=(-0.075, 0.0, 0.549),
         ),
+    )
+
+    palm_contact = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/Geometry/hx5_d20_right_base",
+        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
+        update_period=0.0,
+        force_threshold=0.1,
     )
 
     thumb_contact = ContactSensorCfg(
@@ -167,7 +180,7 @@ class ReorientationSceneCfg(InteractiveSceneCfg):
 
 @configclass
 class ActionsCfg:
-    """Twenty joint-position actions."""
+    """Twenty joint-position actions"""
 
     joint_pos = mdp.JointPositionActionCfg(
         asset_name="robot",
@@ -179,7 +192,7 @@ class ActionsCfg:
 
 @configclass
 class ObservationsCfg:
-    """For now expose only hand proprioception."""
+    """For now expose only hand proprioception"""
 
     @configclass
     class PolicyCfg(ObsGroup):
@@ -195,7 +208,7 @@ class ObservationsCfg:
 
 @configclass
 class RewardsCfg:
-    """Dummy reward while validating the environment."""
+    """Dummy reward while validating the environment"""
 
     alive = RewTerm(
         func=mdp.is_alive,
@@ -205,7 +218,7 @@ class RewardsCfg:
 
 @configclass
 class TerminationsCfg:
-    """Only time-limit termination for now."""
+    """Only time-limit termination for now"""
 
     time_out = DoneTerm(
         func=mdp.time_out,
@@ -215,7 +228,7 @@ class TerminationsCfg:
 
 @configclass
 class ReorientationEnvCfg(ManagerBasedRLEnvCfg):
-    """Minimal HX5-D20 environment."""
+    """Minimal HX5-D20 environment"""
 
     scene: ReorientationSceneCfg = ReorientationSceneCfg(
         num_envs=1,
@@ -231,6 +244,7 @@ class ReorientationEnvCfg(ManagerBasedRLEnvCfg):
         self.decimation = 4
         self.episode_length_s = 100.0
 
+        self.sim.gravity = (0.0, 0.0, -9.81)
         self.sim.dt = 1 / 120
         self.sim.render_interval = self.decimation
         self.sim.physics = ReorientationPhysicsCfg()
