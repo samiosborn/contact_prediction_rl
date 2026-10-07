@@ -45,6 +45,24 @@ Optional Isaac Sim (large download, needed only for PhysX/Kit features): `uv syn
 
 `scripts/train.py` and `scripts/play.py` import `contact_prediction_rl.tasks` (which registers the environments) and then call Isaac Lab's unified `isaaclab_rl.entrypoints` CLI, as Isaac Lab's own scripts do.
 
+## Franka + HX5-D20 tasks
+
+- Two tasks use a Franka Emika Panda arm carrying the HX5-D20 right hand (a single combined USD, see
+  `src/contact_prediction_rl/assets/data/franka_hx5d20/SOURCE.md`):
+  - `ContactPredictionRl-Reach-Franka-HX5-D20-Right`: move the hand to random poses with the fingers open
+  - `ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right`: grasp a 6x6x12 cm block from a table and hold it 10 cm higher
+- Both use PhysX, so install Isaac Sim once with `uv sync --extra isaacsim` and run with `uv run --extra isaacsim ...`.
+
+- Train the lift task:
+  `uv run --extra isaacsim python scripts/train.py --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right --num_envs 1024 --max_iterations 1000`
+
+- Evaluate a checkpoint with deterministic rollouts (held at the goal at the end, block tilt, ...):
+  `uv run --extra isaacsim python scripts/franka_hx5d20/evaluate_franka_hx5d20_lift.py --num_envs 512 --checkpoint logs/rsl_rl/lift_block_franka_hx5d20/<run>/model_<n>.pt`
+
+- `scripts/franka_hx5d20/` also holds the two tools used to design the grasp: the arm pose solver
+  (`find_franka_hx5d20_pregrasp.py`) and the table-grasp search (`search_franka_hx5d20_table_grasp.py`); each script
+  documents its usage at the top.
+
 ## Development
 
 - Run tests without the simulator: `uv run pytest -m "not gpu"`

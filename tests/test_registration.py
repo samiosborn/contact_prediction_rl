@@ -15,7 +15,23 @@ def test_task_registrations():
     expected = {
         "ContactPredictionRl-Reorientation-HX5-D20-Right": {
             "entry_point": "isaaclab.envs:ManagerBasedRLEnv",
-            "env_cfg_entry_point": "contact_prediction_rl.tasks.reorientation.config.hx5_d20_right.env_cfg:ReorientationEnvCfg",
+            "env_cfg_entry_point": (
+                "contact_prediction_rl.tasks.reorientation.config.hx5_d20_right.env_cfg:ReorientationEnvCfg"
+            ),
+            "default_agent": "rsl_rl",
+        },
+        "ContactPredictionRl-Reach-Franka-HX5-D20-Right": {
+            "entry_point": "isaaclab.envs:ManagerBasedRLEnv",
+            "env_cfg_entry_point": (
+                "contact_prediction_rl.tasks.reach.config.franka_hx5d20.env_cfg:FrankaHX5D20ReachEnvCfg"
+            ),
+            "default_agent": "rsl_rl",
+        },
+        "ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right": {
+            "entry_point": "isaaclab.envs:ManagerBasedRLEnv",
+            "env_cfg_entry_point": (
+                "contact_prediction_rl.tasks.lift.config.franka_hx5d20.env_cfg:FrankaHX5D20BlockLiftEnvCfg"
+            ),
             "default_agent": "rsl_rl",
         },
     }
