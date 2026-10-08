@@ -7,11 +7,43 @@
 - The main comparison is baseline PPO against PPO with auxiliary fingertip-contact prediction.
 - Contact is privileged supervision during training and is not provided to the deployed policy.
 
+## Policy Architecture
+
+The actor separates observation encoding from action prediction:
+
+```text
+task observation
+    ↓
+ObservationEncoder
+    ↓
+latent representation z
+    ↓
+action head
+    ↓
+Gaussian policy
+```
+
+The encoder architecture is shared across tasks, while the input and output dimensions are inferred from each task's observation and action spaces.
+
+Shared RSL-RL architecture and PPO settings are defined in:
+
+```text
+src/contact_prediction_rl/learning/configs/rsl_rl.py
+```
+
+The actor implementation is defined in:
+
+```text
+src/contact_prediction_rl/learning/models/actor.py
+```
+
+The critic remains a separate RSL-RL MLP.
+
 ## Manipulator
 
-The primary manipulator is the ROBOTIS HX5-D20 right hand.
+The primary manipulator is the ROBOTIS HX5-D20 right hand mounted on a Franka Emika Panda arm.
 
-- 20 actuated joints
+- 20 actuated hand joints
 - Five fingertip contact signals:
   - thumb
   - index
@@ -19,8 +51,6 @@ The primary manipulator is the ROBOTIS HX5-D20 right hand.
   - ring
   - little
 - Contact labels are derived from simulator contact forces at the corresponding fingertip links.
-
-The hand is used either standalone for reorientation or mounted on a Franka Emika Panda arm for reach and lift tasks.
 
 ## Setup
 
@@ -70,6 +100,12 @@ Run tests that do not launch the simulator:
 uv run pytest -m "not gpu"
 ```
 
+Test the actor architecture and gradient flow through the observation encoder:
+
+```bash
+uv run pytest tests/test_actor.py -v
+```
+
 Run GPU smoke tests for all registered tasks:
 
 ```bash
@@ -83,47 +119,6 @@ OMNI_KIT_ACCEPT_EULA=YES uv run --extra isaacsim pytest
 ```
 
 ## Tasks
-
-### HX5-D20 Reorientation
-
-`ContactPredictionRl-Reorientation-HX5-D20-Right`
-
-Standalone HX5-D20 in-hand reorientation using the Newton backend.
-
-Train:
-
-```bash
-uv run python scripts/train.py \
-  --task ContactPredictionRl-Reorientation-HX5-D20-Right \
-  --num_envs 4096
-```
-
-Short training check:
-
-```bash
-uv run python scripts/train.py \
-  --task ContactPredictionRl-Reorientation-HX5-D20-Right \
-  --num_envs 64 \
-  --max_iterations 3
-```
-
-Play a checkpoint:
-
-```bash
-uv run python scripts/play.py \
-  --task ContactPredictionRl-Reorientation-HX5-D20-Right \
-  --num_envs 16 \
-  --checkpoint logs/rsl_rl/<experiment>/<run>/model_<n>.pt
-```
-
-Run the standalone hand development test:
-
-```bash
-uv run python scripts/test_hx5.py \
-  --num_envs 1 \
-  --viz newton_gl \
-  physics=newton_mjwarp
-```
 
 ### Franka + HX5-D20 Reach
 
@@ -151,6 +146,15 @@ uv run --extra isaacsim python scripts/train.py \
   --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right \
   --num_envs 1024 \
   --max_iterations 1000
+```
+
+Run a short training check:
+
+```bash
+uv run --extra isaacsim python scripts/train.py \
+  --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right \
+  --num_envs 64 \
+  --max_iterations 3
 ```
 
 Evaluate a checkpoint with deterministic rollouts:
