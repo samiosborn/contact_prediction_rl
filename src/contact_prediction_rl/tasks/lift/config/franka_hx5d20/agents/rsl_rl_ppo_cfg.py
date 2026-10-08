@@ -12,7 +12,7 @@ import contact_prediction_rl.learning.configs.rsl_rl as CONFIG
 
 @configclass
 class FrankaHX5D20BlockLiftPPORunnerCfg(RslRlOnPolicyRunnerCfg):
-    """RSL-RL PPO configuration for the Franka + HX5-D20 block-lift task."""
+    """RSL-RL PPO configuration for the Franka + HX5-D20 block-lift task"""
 
     # Runner
     num_steps_per_env = CONFIG.NUM_STEPS_PER_ENV
@@ -24,6 +24,7 @@ class FrankaHX5D20BlockLiftPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
     # Actor
     actor = RslRlMLPModelCfg(
+        class_name="contact_prediction_rl.learning.models.actor:Actor",
         hidden_dims=[
             *CONFIG.ACTOR_ENCODER_HIDDEN_DIMS,
             CONFIG.ACTOR_LATENT_DIM,
