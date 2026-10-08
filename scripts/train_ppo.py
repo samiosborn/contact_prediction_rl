@@ -1,51 +1,33 @@
 # scripts/train_ppo.py
 
-"""PPO training entrypoint for contact_prediction_rl."""
+"""PPO training entrypoint"""
 
 from __future__ import annotations
 
 import argparse
 import contextlib
-import importlib.metadata as metadata
-import logging
 import os
-import platform
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
-from packaging import version
+import gymnasium as gym
+import torch
+from tensordict import TensorDict
 
-from isaaclab.app import add_launcher_args, report_activity
-
-from isaaclab_rl.entrypoints.backends import cli_args_rsl_rl as cli_args
-from isaaclab_rl.entrypoints.common import (
-    CHECKPOINT_SELECTORS,
-    add_common_train_args,
-    apply_env_overrides,
-    apply_video_recording,
-    configure_io_descriptors,
-    create_isaaclab_env,
-    dump_train_configs,
-    enable_cameras_for_video,
-    pre_launch_video_config,
-    resolve_checkpoint_selector,
-    scoped_torch_backend_flags,
-    set_hydra_args,
-    show_run_summary,
-    startup_screen,
-    validate_distributed_device,
-    wrap_training_capture,
-    write_run_manifest,
-)
+from isaaclab.app import add_launcher_args, launch_simulation, report_activity
+from isaaclab.utils.io import dump_yaml
+from isaaclab.utils.seed import configure_seed
 
 import contact_prediction_rl.tasks  # noqa: F401
 import isaaclab_tasks  # noqa: F401
 
+from isaaclab_tasks.utils import resolve_task_config, setup_preset_cli
 
-logger = logging.getLogger(__name__)
 
-RSL_RL_VERSION = "5.0.1"
+DEFAULT_SEED = 42
 
 
 # PLACEHOLDER: Extension template (do not remove this comment)
@@ -53,332 +35,721 @@ with contextlib.suppress(ImportError):
     import isaaclab_tasks_experimental  # noqa: F401
 
 
-def _check_rsl_rl_version() -> str:
-    """Check that the installed RSL-RL version is supported."""
-    installed_version = metadata.version("rsl-rl-lib")
+class IsaacLabPPOEnvWrapper:
+    """Minimal adapter between an Isaac Lab environment and our PPO runner"""
 
-    if version.parse(installed_version) < version.parse(RSL_RL_VERSION):
-        if platform.system() == "Windows":
-            cmd = [r".\isaaclab.bat", "-p", "-m", "pip", "install", f"rsl-rl-lib=={RSL_RL_VERSION}"]
-        else:
-            cmd = ["./isaaclab.sh", "-p", "-m", "pip", "install", f"rsl-rl-lib=={RSL_RL_VERSION}"]
+    def __init__(
+        self,
+        env: Any,
+        clip_actions: float | None = None,
+    ) -> None:
+        self.env = env
+        self.clip_actions = clip_actions
 
-        print(
-            f"Please install the correct version of RSL-RL.\nExisting version is: '{installed_version}'"
-            f" and required version is: '{RSL_RL_VERSION}'.\nTo install the correct version, run:"
-            f"\n\n\t{' '.join(cmd)}\n"
+        # Our runner expects the environment to already be reset
+        self.reset()
+
+    @property
+    def unwrapped(
+        self,
+    ) -> Any:
+        """Return the underlying Isaac Lab environment"""
+
+        return self.env.unwrapped
+
+    @property
+    def num_envs(
+        self,
+    ) -> int:
+        """Number of parallel environments"""
+
+        return self.unwrapped.num_envs
+
+    @property
+    def num_actions(
+        self,
+    ) -> int:
+        """Number of policy action dimensions"""
+
+        if hasattr(
+            self.unwrapped,
+            "action_manager",
+        ):
+            return int(
+                self.unwrapped.action_manager.total_action_dim
+            )
+
+        return int(
+            self.unwrapped.single_action_space.shape[-1]
         )
 
-        raise SystemExit(1)
+    @property
+    def device(
+        self,
+    ) -> str:
+        """Environment simulation device"""
 
-    return installed_version
+        return self.unwrapped.device
+
+    @property
+    def cfg(
+        self,
+    ) -> Any:
+        """Environment configuration"""
+
+        return self.unwrapped.cfg
+
+    @property
+    def max_episode_length(
+        self,
+    ) -> int:
+        """Maximum number of environment steps per episode"""
+
+        return self.unwrapped.max_episode_length
+
+    @property
+    def episode_length_buf(
+        self,
+    ) -> torch.Tensor:
+        """Current episode lengths for all environments"""
+
+        return self.unwrapped.episode_length_buf
+
+    @episode_length_buf.setter
+    def episode_length_buf(
+        self,
+        value: torch.Tensor,
+    ) -> None:
+        self.unwrapped.episode_length_buf = value
+
+    def reset(
+        self,
+    ) -> tuple[TensorDict, dict]:
+        """Reset the environment"""
+
+        observations, extras = (
+            self.env.reset()
+        )
+
+        return (
+            self._to_tensordict(
+                observations
+            ),
+            extras,
+        )
+
+    def get_observations(
+        self,
+    ) -> TensorDict:
+        """Return the current environment observations"""
+
+        if hasattr(
+            self.unwrapped,
+            "observation_manager",
+        ):
+            observations = (
+                self.unwrapped
+                .observation_manager
+                .compute()
+            )
+
+        else:
+            observations = (
+                self.unwrapped
+                ._get_observations()
+            )
+
+        return self._to_tensordict(
+            observations
+        )
+
+    def step(
+        self,
+        actions: torch.Tensor,
+    ) -> tuple[
+        TensorDict,
+        torch.Tensor,
+        torch.Tensor,
+        dict,
+    ]:
+        """Step the environment"""
+
+        if self.clip_actions is not None:
+            actions = torch.clamp(
+                actions,
+                -self.clip_actions,
+                self.clip_actions,
+            )
+
+        (
+            observations,
+            rewards,
+            terminated,
+            truncated,
+            extras,
+        ) = self.env.step(
+            actions
+        )
+
+        # PPO treats both environment termination and truncation as done
+        dones = (
+            terminated
+            | truncated
+        )
+
+        # Store truncation information separately so PPO can bootstrap
+        # time-limit terminations when using an infinite-horizon task
+        if not self.unwrapped.cfg.is_finite_horizon:
+            extras[
+                "time_outs"
+            ] = truncated
+
+        return (
+            self._to_tensordict(
+                observations
+            ),
+            rewards,
+            dones,
+            extras,
+        )
+
+    def close(
+        self,
+    ) -> None:
+        """Close the environment"""
+
+        self.env.close()
+
+    def _to_tensordict(
+        self,
+        observations: Any,
+    ) -> TensorDict:
+        """Convert Isaac Lab observations to a TensorDict"""
+
+        if isinstance(
+            observations,
+            TensorDict,
+        ):
+            return observations
+
+        return TensorDict(
+            observations,
+            batch_size=[
+                self.num_envs
+            ],
+        )
 
 
-def _parse_args(argv: list[str]) -> argparse.Namespace:
-    """Parse PPO training arguments."""
-    from isaaclab.utils.string import list_intersection, string_to_callable
+def _parse_args(
+    argv: list[str],
+) -> tuple[argparse.Namespace, list[str]]:
+    """Parse PPO training arguments"""
 
-    from isaaclab_tasks.utils import setup_preset_cli
+    parser = argparse.ArgumentParser(
+        description="Train the contact_prediction_rl PPO agent."
+    )
 
-    parser = argparse.ArgumentParser(description="Train a PPO agent.")
-
-    add_common_train_args(
-        parser,
-        agent_default="rsl_rl_cfg_entry_point",
-        agent_help="Name of the RL agent configuration entry point.",
+    # Task
+    parser.add_argument(
+        "--task",
+        type=str,
+        required=True,
+        help="Isaac Lab task name.",
     )
 
     parser.add_argument(
-        "--external_callback",
+        "--agent",
+        type=str,
+        default="ppo_cfg_entry_point",
+        help="Gym registry key containing the PPO agent configuration.",
+    )
+
+    # Training
+    parser.add_argument(
+        "--num_envs",
+        type=int,
         default=None,
-        help="Fully qualified path to an externally defined callback.",
+        help="Number of parallel environments.",
     )
 
-    cli_args.add_rsl_rl_args(parser)
-    add_launcher_args(parser)
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Training seed.",
+    )
 
-    # Register external tasks before preset setup reads their Gym metadata
-    registration_parser = argparse.ArgumentParser(add_help=False)
-    registration_parser.add_argument("--external_callback")
-    registration_args, _ = registration_parser.parse_known_args(argv)
+    parser.add_argument(
+        "--max_iterations",
+        type=int,
+        default=None,
+        help="Maximum number of PPO iterations.",
+    )
 
-    remaining_args_env_registration = None
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default=None,
+        help="Checkpoint file, run directory, or 'latest'.",
+    )
 
-    if registration_args.external_callback:
-        external_callback_function = string_to_callable(
-            registration_args.external_callback,
-            separator=".",
+    parser.add_argument(
+        "--run_name",
+        type=str,
+        default="",
+        help="Optional suffix appended to the run directory.",
+    )
+
+    parser.add_argument(
+        "--no_random_episode_lengths",
+        action="store_true",
+        help="Start all environments at episode step zero.",
+    )
+
+    # Video
+    parser.add_argument(
+        "--video",
+        action="store_true",
+        default=False,
+        help="Record training videos.",
+    )
+
+    parser.add_argument(
+        "--video_length",
+        type=int,
+        default=200,
+        help="Length of each recorded video in environment steps.",
+    )
+
+    parser.add_argument(
+        "--video_interval",
+        type=int,
+        default=2000,
+        help="Interval between recorded videos in environment steps.",
+    )
+
+    # Isaac Lab simulator arguments
+    add_launcher_args(
+        parser
+    )
+
+    args_cli, hydra_args = (
+        setup_preset_cli(
+            parser,
+            argv,
         )
-        remaining_args_env_registration = external_callback_function()
+    )
 
-    args_cli, remaining_args = setup_preset_cli(parser, argv)
+    if args_cli.video:
+        args_cli.enable_cameras = True
 
-    enable_cameras_for_video(args_cli)
+    return (
+        args_cli,
+        hydra_args,
+    )
 
-    set_hydra_args(
-        list_intersection(
-            remaining_args,
-            remaining_args_env_registration,
+
+def _latest_checkpoint_in_directory(
+    directory: Path,
+) -> Path:
+    """Return the checkpoint with the highest iteration number"""
+
+    checkpoints = list(
+        directory.glob(
+            "model_*.pt"
         )
     )
 
-    return args_cli
+    if not checkpoints:
+        raise FileNotFoundError(
+            f"No model_*.pt checkpoints found in: {directory}"
+        )
 
+    def iteration(
+        path: Path,
+    ) -> int:
+        try:
+            return int(
+                path.stem.split(
+                    "_"
+                )[-1]
+            )
 
-def run(argv: list[str]) -> None:
-    """Train the PPO agent while restoring the caller's Torch backend settings."""
-    args_cli = _parse_args(argv)
+        except ValueError:
+            return -1
 
-    with scoped_torch_backend_flags(
-        cuda_matmul_allow_tf32=True,
-        cudnn_allow_tf32=True,
-        cudnn_deterministic=False,
-        cudnn_benchmark=False,
-    ):
-        _run(args_cli)
-
-
-def _run(args_cli: argparse.Namespace) -> None:
-    """Execute PPO training with parsed arguments."""
-    from contact_prediction_rl.learning.runners.on_policy_runner import OnPolicyRunner
-
-    from isaaclab.app import launch_simulation
-    from isaaclab.envs import DirectMARLEnvCfg
-    from isaaclab.utils.assets import retrieve_file_path
-    from isaaclab.utils.seed import configure_seed
-
-    from isaaclab_rl.rsl_rl import (
-        RslRlVecEnvWrapper,
-        handle_deprecated_rsl_rl_cfg,
+    return max(
+        checkpoints,
+        key=iteration,
     )
 
-    from isaaclab_tasks.utils import (
-        get_checkpoint_path,
-        resolve_task_config,
+
+def _resolve_checkpoint(
+    checkpoint: str | None,
+    log_root_path: Path,
+) -> Path | None:
+    """Resolve a checkpoint argument"""
+
+    if checkpoint is None:
+        return None
+
+    if checkpoint == "latest":
+        run_directories = sorted(
+            (
+                path
+                for path in log_root_path.iterdir()
+                if path.is_dir()
+            ),
+            reverse=True,
+        ) if log_root_path.exists() else []
+
+        for run_directory in run_directories:
+            try:
+                return (
+                    _latest_checkpoint_in_directory(
+                        run_directory
+                    )
+                )
+
+            except FileNotFoundError:
+                continue
+
+        raise FileNotFoundError(
+            f"No PPO checkpoints found under: {log_root_path}"
+        )
+
+    checkpoint_path = Path(
+        checkpoint
+    ).expanduser().resolve()
+
+    if checkpoint_path.is_dir():
+        return (
+            _latest_checkpoint_in_directory(
+                checkpoint_path
+            )
+        )
+
+    if not checkpoint_path.is_file():
+        raise FileNotFoundError(
+            f"Checkpoint does not exist: {checkpoint_path}"
+        )
+
+    return checkpoint_path
+
+
+def _create_log_directory(
+    experiment_name: str,
+    run_name: str,
+) -> tuple[Path, Path]:
+    """Create the root and run-specific logging directories"""
+
+    log_root_path = Path(
+        os.path.abspath(
+            os.path.join(
+                "logs",
+                "ppo",
+                experiment_name,
+            )
+        )
     )
 
-    installed_version = _check_rsl_rl_version()
+    print(
+        f"[INFO] Logging experiment in directory: "
+        f"{log_root_path}"
+    )
 
-    with startup_screen(args_cli, num_stages=3) as screen:
-        env_cfg, agent_cfg = resolve_task_config(
+    timestamp = datetime.now().strftime(
+        "%Y-%m-%d_%H-%M-%S"
+    )
+
+    print(
+        f"Exact experiment name requested from command line: "
+        f"{timestamp}"
+    )
+
+    directory_name = timestamp
+
+    if run_name:
+        directory_name += (
+            f"_{run_name}"
+        )
+
+    log_dir = (
+        log_root_path
+        / directory_name
+    )
+
+    log_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    return (
+        log_root_path,
+        log_dir,
+    )
+
+
+def _dump_configs(
+    log_dir: Path,
+    env_cfg: Any,
+    agent_cfg: Any,
+) -> None:
+    """Store environment, agent, and command configuration"""
+
+    params_dir = (
+        log_dir
+        / "params"
+    )
+
+    params_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    dump_yaml(
+        str(
+            params_dir
+            / "env.yaml"
+        ),
+        env_cfg,
+    )
+
+    dump_yaml(
+        str(
+            params_dir
+            / "agent.yaml"
+        ),
+        agent_cfg,
+    )
+
+    (
+        log_dir
+        / "command.txt"
+    ).write_text(
+        " ".join(
+            sys.orig_argv
+        ),
+        encoding="utf-8",
+    )
+
+
+def run(
+    argv: list[str],
+) -> None:
+    """Train PPO"""
+
+    from contact_prediction_rl.learning.runners.on_policy_runner import (
+        OnPolicyRunner,
+    )
+
+    args_cli, hydra_args = (
+        _parse_args(
+            argv
+        )
+    )
+
+    # Load the environment and our PPO configuration from Gym registration
+    env_cfg, agent_cfg = (
+        resolve_task_config(
             args_cli.task,
             args_cli.agent,
+            overrides=hydra_args,
+        )
+    )
+
+    # ----------------------------------------------------------
+    # CLI overrides
+    # ----------------------------------------------------------
+
+    if args_cli.num_envs is not None:
+        env_cfg.scene.num_envs = (
+            args_cli.num_envs
         )
 
-        pre_launch_video_config(
-            env_cfg,
-            args_cli=args_cli,
+    if args_cli.device is not None:
+        env_cfg.sim.device = (
+            args_cli.device
         )
 
-        show_run_summary(
-            screen,
-            args_cli,
-            env_cfg,
-            library="rsl_rl",
-            action="train",
+    # Ensure the simulator launcher uses the resolved task device
+    args_cli.device = (
+        env_cfg.sim.device
+    )
+
+    seed = (
+        args_cli.seed
+        if args_cli.seed is not None
+        else DEFAULT_SEED
+    )
+
+    env_cfg.seed = seed
+
+    if args_cli.max_iterations is not None:
+        agent_cfg.max_iterations = (
+            args_cli.max_iterations
         )
 
-        screen.stage("Launching simulation")
+    # ----------------------------------------------------------
+    # Logging
+    # ----------------------------------------------------------
 
-        with launch_simulation(env_cfg, args_cli):
-            agent_cfg = cli_args.update_rsl_rl_cfg(
-                agent_cfg,
-                args_cli,
-            )
+    log_root_path, log_dir = (
+        _create_log_directory(
+            experiment_name=(
+                agent_cfg.experiment_name
+            ),
+            run_name=args_cli.run_name,
+        )
+    )
 
-            apply_env_overrides(
-                args_cli,
-                env_cfg,
-            )
+    resume_path = (
+        _resolve_checkpoint(
+            args_cli.checkpoint,
+            log_root_path,
+        )
+    )
 
-            agent_cfg.max_iterations = (
-                args_cli.max_iterations
-                if args_cli.max_iterations is not None
-                else agent_cfg.max_iterations
-            )
+    _dump_configs(
+        log_dir,
+        env_cfg,
+        agent_cfg,
+    )
 
-            agent_cfg = handle_deprecated_rsl_rl_cfg(
-                agent_cfg,
-                installed_version,
-            )
+    # ----------------------------------------------------------
+    # Simulation
+    # ----------------------------------------------------------
 
-            env_cfg.seed = agent_cfg.seed
+    print(
+        "[1/3] Launching simulation"
+    )
 
-            validate_distributed_device(args_cli)
+    with launch_simulation(
+        env_cfg,
+        args_cli,
+    ):
+        print(
+            "[2/3] Creating environment"
+        )
 
-            if args_cli.distributed:
-                global_rank = int(os.getenv("RANK", "0"))
+        env = gym.make(
+            args_cli.task,
+            cfg=env_cfg,
+            render_mode=(
+                "rgb_array"
+                if args_cli.video
+                else None
+            ),
+        )
 
-                agent_cfg.device = env_cfg.sim.device
-
-                seed = agent_cfg.seed + global_rank
-
-                env_cfg.seed = seed
-                agent_cfg.seed = seed
-
-            log_root_path = os.path.abspath(
-                os.path.join(
-                    "logs",
-                    "rsl_rl",
-                    agent_cfg.experiment_name,
+        # Optional Gym video recording
+        if args_cli.video:
+            env = (
+                gym.wrappers.RecordVideo(
+                    env,
+                    video_folder=str(
+                        log_dir
+                        / "videos"
+                        / "train"
+                    ),
+                    step_trigger=lambda step: (
+                        step
+                        % args_cli.video_interval
+                        == 0
+                    ),
+                    video_length=(
+                        args_cli.video_length
+                    ),
+                    disable_logger=True,
                 )
             )
 
+        # Convert the Gymnasium step API into the small interface
+        # expected by our runner
+        report_activity(
+            "Wrapping environment"
+        )
+
+        env = IsaacLabPPOEnvWrapper(
+            env
+        )
+
+        report_activity(
+            None
+        )
+
+        print(
+            "[3/3] Preparing agent"
+        )
+
+        start_time = time.time()
+
+        report_activity(
+            "Building policy"
+        )
+
+        runner = OnPolicyRunner(
+            env=env,
+            train_cfg=agent_cfg.to_dict(),
+            log_dir=str(
+                log_dir
+            ),
+            device=env.device,
+        )
+
+        report_activity(
+            None
+        )
+
+        # Configure deterministic Torch behaviour only after model
+        # construction so it does not alter network initialisation
+        if args_cli.deterministic:
+            configure_seed(
+                seed,
+                torch_deterministic=True,
+            )
+
+        runner.add_git_repo_to_log(
+            __file__
+        )
+
+        if resume_path is not None:
             print(
-                f"[INFO] Logging experiment in directory: "
-                f"{log_root_path}"
+                f"[INFO]: Loading model checkpoint from: "
+                f"{resume_path}"
             )
 
-            log_dir = datetime.now().strftime(
-                "%Y-%m-%d_%H-%M-%S"
+            runner.load(
+                str(
+                    resume_path
+                )
             )
 
-            print(
-                f"Exact experiment name requested from command line: "
-                f"{log_dir}"
-            )
-
-            if agent_cfg.run_name:
-                log_dir += f"_{agent_cfg.run_name}"
-
-            log_dir = os.path.join(
-                log_root_path,
-                log_dir,
-            )
-
-            write_run_manifest(
-                log_dir,
-                library="rsl_rl",
-                task=args_cli.task,
-                metadata={
-                    "agent": args_cli.agent,
-                },
-            )
-
-            configure_io_descriptors(
-                env_cfg,
-                args_cli,
-                logger,
-            )
-
-            env_cfg.log_dir = log_dir
-
-            apply_video_recording(
-                env_cfg,
-                log_dir,
-                args_cli,
-            )
-
-            screen.stage("Creating environment")
-
-            env = create_isaaclab_env(
-                args_cli.task,
-                env_cfg,
-                args_cli,
-                convert_marl_to_single_agent=isinstance(
-                    env_cfg,
-                    DirectMARLEnvCfg,
+        try:
+            runner.learn(
+                num_learning_iterations=(
+                    agent_cfg.max_iterations
+                ),
+                init_at_random_ep_len=(
+                    not args_cli.no_random_episode_lengths
                 ),
             )
 
-            if args_cli.checkpoint in CHECKPOINT_SELECTORS:
-                resume_path = resolve_checkpoint_selector(
-                    log_root_path,
-                    args_cli.checkpoint,
-                    library="rsl_rl",
-                    task=args_cli.task,
-                    checkpoint_pattern=r"model_.*\.pt",
-                    metadata={
-                        "agent": args_cli.agent,
-                    },
-                )
-
-            elif args_cli.checkpoint and os.path.isdir(
-                args_cli.checkpoint
-            ):
-                resume_path = get_checkpoint_path(
-                    os.path.dirname(args_cli.checkpoint),
-                    os.path.basename(args_cli.checkpoint),
-                    agent_cfg.load_checkpoint,
-                )
-
-            elif args_cli.checkpoint:
-                resume_path = retrieve_file_path(
-                    args_cli.checkpoint
-                )
-
-            env = wrap_training_capture(
-                env,
-                log_dir,
-                args_cli,
+            print(
+                f"Training time: "
+                f"{round(time.time() - start_time, 2)} seconds"
             )
 
-            screen.stage("Preparing agent")
-
-            start_time = time.time()
-
-            report_activity("Wrapping environment")
-
-            env = RslRlVecEnvWrapper(
-                env,
-                clip_actions=agent_cfg.clip_actions,
+        except KeyboardInterrupt:
+            print(
+                "\n[INFO]: Training interrupted"
             )
 
-            report_activity(None)
-
-            report_activity("Building policy")
-
-            runner = OnPolicyRunner(
-                env,
-                agent_cfg.to_dict(),
-                log_dir=log_dir,
-                device=agent_cfg.device,
-            )
-
-            report_activity(None)
-
-            # configure_seed must run after runner construction so torch
-            # determinism does not disturb its initialization
-            if args_cli.deterministic:
-                configure_seed(
-                    env_cfg.seed,
-                    torch_deterministic=True,
-                )
-
-            runner.add_git_repo_to_log(__file__)
-
-            if args_cli.checkpoint:
-                print(
-                    f"[INFO]: Loading model checkpoint from: "
-                    f"{resume_path}"
-                )
-
-                runner.load(resume_path)
-
-            dump_train_configs(
-                log_dir,
-                env_cfg,
-                agent_cfg,
-            )
-
-            screen.close()
-
-            try:
-                runner.learn(
-                    num_learning_iterations=agent_cfg.max_iterations,
-                    init_at_random_ep_len=agent_cfg.init_at_random_ep_len,
-                )
-
-                print(
-                    f"Training time: "
-                    f"{round(time.time() - start_time, 2)} seconds"
-                )
-
-                env.close()
-
-            except KeyboardInterrupt:
-                pass
+        finally:
+            env.close()
 
 
 if __name__ == "__main__":
-    run(sys.argv[1:])
+    run(
+        sys.argv[1:]
+    )
