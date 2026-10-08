@@ -7,12 +7,14 @@ from isaaclab_rl.rsl_rl import (
     RslRlPpoAlgorithmCfg,
 )
 
-import contact_prediction_rl.learning.configs.rsl_rl as CONFIG
+import contact_prediction_rl.learning.configs.ppo as CONFIG
 
 
 @configclass
 class FrankaHX5D20BlockLiftPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     """RSL-RL PPO configuration for the Franka + HX5-D20 block-lift task"""
+
+    class_name = "contact_prediction_rl.learning.runners.on_policy_runner:OnPolicyRunner"
 
     # Runner
     num_steps_per_env = CONFIG.NUM_STEPS_PER_ENV
@@ -45,6 +47,7 @@ class FrankaHX5D20BlockLiftPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
     # PPO
     algorithm = RslRlPpoAlgorithmCfg(
+        class_name="contact_prediction_rl.learning.algorithms.ppo:PPO",
         value_loss_coef=CONFIG.PPO_VALUE_LOSS_COEF,
         use_clipped_value_loss=CONFIG.PPO_USE_CLIPPED_VALUE_LOSS,
         clip_param=CONFIG.PPO_CLIP_PARAM,

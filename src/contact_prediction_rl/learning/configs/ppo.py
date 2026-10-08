@@ -1,4 +1,4 @@
-# src/contact_prediction_rl/learning/configs/rsl_rl.py
+# src/contact_prediction_rl/learning/configs/ppo.py
 
 # Actor
 ACTOR_ENCODER_HIDDEN_DIMS = [256, 128]
