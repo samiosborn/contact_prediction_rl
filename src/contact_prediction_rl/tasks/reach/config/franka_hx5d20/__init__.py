@@ -7,7 +7,7 @@
 
 Train with (the task uses PhysX, which needs the ``isaacsim`` extra)::
 
-    uv run --extra isaacsim python scripts/train.py --task ContactPredictionRl-Reach-Franka-HX5-D20-Right
+    uv run --extra isaacsim python scripts/train_ppo.py --task ContactPredictionRl-Reach-Franka-HX5-D20-Right
 """
 
 import gymnasium as gym
@@ -24,7 +24,10 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.env_cfg:FrankaHX5D20ReachEnvCfg",
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FrankaHX5D20ReachPPORunnerCfg",
-        "default_agent": "rsl_rl",
+        "ppo_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20ReachPPOCfg"
+        ),
+        "default_agent": "ppo",
     },
 )

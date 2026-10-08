@@ -24,7 +24,11 @@ def test_task_registrations():
                 "contact_prediction_rl.tasks.reach.config.franka_hx5d20.env_cfg:"
                 "FrankaHX5D20ReachEnvCfg"
             ),
-            "default_agent": "rsl_rl",
+            "ppo_cfg_entry_point": (
+                "contact_prediction_rl.tasks.reach.config.franka_hx5d20.agents.ppo_cfg:"
+                "FrankaHX5D20ReachPPOCfg"
+            ),
+            "default_agent": "ppo",
         },
         "ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right": {
             "entry_point": "isaaclab.envs:ManagerBasedRLEnv",
