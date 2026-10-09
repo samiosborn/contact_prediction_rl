@@ -25,11 +25,13 @@ Gaussian policy
 
 The encoder architecture is shared across tasks, while the input and output dimensions are inferred from each task's observation and action spaces.
 
-Shared RSL-RL architecture and PPO settings are defined in:
+PPO is implemented locally in `src/contact_prediction_rl/learning/`. Shared architecture and PPO settings are defined in:
 
 ```text
-src/contact_prediction_rl/learning/configs/rsl_rl.py
+src/contact_prediction_rl/learning/configs/ppo.py
 ```
+
+Each task builds its own PPO configuration from these shared settings in `agents/ppo_cfg.py`, registered under `ppo_cfg_entry_point`.
 
 The actor implementation is defined in:
 
@@ -37,7 +39,7 @@ The actor implementation is defined in:
 src/contact_prediction_rl/learning/models/actor.py
 ```
 
-The critic remains a separate RSL-RL MLP.
+The critic is a separate MLP (`learning/models/critic.py`).
 
 ## Manipulator
 
@@ -133,6 +135,8 @@ uv run --extra isaacsim python scripts/train.py \
   --task ContactPredictionRl-Reach-Franka-HX5-D20-Right
 ```
 
+Checkpoints are written to `logs/ppo/<experiment>/<run>/model_<n>.pt`.
+
 ### Franka + HX5-D20 Lift
 
 `ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right`
@@ -157,12 +161,24 @@ uv run --extra isaacsim python scripts/train.py \
   --max_iterations 3
 ```
 
-Evaluate a checkpoint with deterministic rollouts:
+Evaluate a checkpoint with deterministic rollouts (`--checkpoint` accepts a file, a run directory or `latest`):
 
 ```bash
 uv run --extra isaacsim python scripts/franka_hx5d20/evaluate_franka_hx5d20_lift.py \
   --num_envs 512 \
-  --checkpoint logs/rsl_rl/lift_block_franka_hx5d20/<run>/model_<n>.pt
+  --checkpoint logs/ppo/lift_block_franka_hx5d20/<run>/model_<n>.pt
+```
+
+Watch a trained policy in the viewport, or record a video:
+
+```bash
+uv run --extra isaacsim python scripts/play.py \
+  --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right \
+  --checkpoint latest --visualizer kit --real_time
+
+uv run --extra isaacsim python scripts/play.py \
+  --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right \
+  --checkpoint latest --video
 ```
 
 The combined Franka + HX5-D20 asset is documented in:
@@ -178,7 +194,7 @@ Additional grasp-design tools are in `scripts/franka_hx5d20/`:
 
 ## Development
 
-`scripts/train.py` and `scripts/play.py` import `contact_prediction_rl.tasks` to register the environments before calling Isaac Lab's reinforcement-learning entry points.
+`scripts/train.py` and `scripts/play.py` import `contact_prediction_rl.tasks` to register the environments, then resolve the environment and PPO configurations from the Gym registry (`env_cfg_entry_point`, `ppo_cfg_entry_point`). PPO hyperparameters can be overridden on the command line with Hydra syntax, for example `agent.algorithm.learning_rate=1e-4`.
 
 Run formatting and code-quality hooks:
 

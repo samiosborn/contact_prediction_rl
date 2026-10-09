@@ -7,7 +7,7 @@
 
 Train with (the task uses PhysX, which needs the ``isaacsim`` extra)::
 
-    uv run --extra isaacsim python scripts/train_ppo.py --task ContactPredictionRl-Reach-Franka-HX5-D20-Right
+    uv run --extra isaacsim python scripts/train.py --task ContactPredictionRl-Reach-Franka-HX5-D20-Right
 """
 
 import gymnasium as gym
