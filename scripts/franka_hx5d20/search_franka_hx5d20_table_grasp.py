@@ -10,7 +10,9 @@ Each candidate is a combination of
 * a **gravity direction** in the hand frame (this sets the hand orientation; the rotation about the vertical axis is
   left free),
 * a **grasp centre**: where the cube centre sits in the hand frame, and
-* a **flexion scale** applied to the finger flexion joints of ``FRANKA_HX5D20_HAND_CLOSED`` (1 = as stored).
+* a **flexion scale** applied to the finger flexion joints of ``FRANKA_HX5D20_HAND_CLOSED`` (1 = as stored), or
+  instead a **synergy closure** ``curl,thumb,spread`` that blends the hand synergies of
+  ``FRANKA_HX5D20_HAND_SYNERGIES`` (``--synergies``; the flexion scale and ``--thumbs`` are then ignored).
 
 For every candidate the script solves the arm pose that puts the grasp centre on the cube and a second pose 12 cm
 higher (damped least squares inside the simulation), closes the hand on the cube with the cube at several small
@@ -22,6 +24,9 @@ at z = 0.
     uv run --extra isaacsim python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py
     uv run --extra isaacsim python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py \
         --gravities "0,-0.99,0.14" --centers "0.05,-0.03,0.10" --flex_scales "1.0"
+    uv run --extra isaacsim python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py \
+        --gravities "0,-1,0" --centers "0.04,0,0.09" --block_height 0.12 --approach 0.06 \
+        --synergies "1,1,0;1,1,0.5;1,1,1;0.8,1,0.5"
 
 """
 
@@ -83,6 +88,13 @@ parser.add_argument(
     help="Candidate thumb joint values 'j1,j2,j3,j4' [rad] replacing those of the closed posture, separated by ';'.",
 )
 parser.add_argument(
+    "--synergies",
+    type=str,
+    default=None,
+    help="Candidate synergy closures 'curl,thumb,spread' in [0, 1], separated by ';', replacing the closed posture "
+    "(1,1,0 is FRANKA_HX5D20_HAND_CLOSED).",
+)
+parser.add_argument(
     "--lift_after",
     type=int,
     default=None,
@@ -117,13 +129,13 @@ import torch
 
 import isaaclab.sim as sim_utils
 import isaaclab.utils.math as math_utils
-from isaaclab.assets import Articulation, RigidObject, RigidObjectCfg
 from isaaclab.physics import PhysicsCfg
 from isaaclab.sim import SimulationContext
 from isaaclab_physx.sim.schemas import PhysxRigidBodyCfg
 
 from contact_prediction_rl.robots.franka_hx5d20 import FRANKA_HX5D20_CFG  # isort:skip
 from contact_prediction_rl.robots.franka_hx5d20 import FRANKA_HX5D20_HAND_CLOSED  # isort:skip
+from contact_prediction_rl.robots.franka_hx5d20 import FRANKA_HX5D20_HAND_SYNERGIES, resolve_joint_posture  # isort:skip
 
 ARM_JOINTS = [f"panda_joint{i}" for i in range(1, 8)]
 READY_POSE = [0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785]
@@ -149,7 +161,7 @@ def parse_list(text: str) -> list[tuple[float, ...]]:
 class Rig:
     """The robot, cube and table, with helpers to solve arm poses and run one scripted grasp."""
 
-    def __init__(self, sim: SimulationContext, robot: Articulation, cube: RigidObject):
+    def __init__(self, sim: SimulationContext, robot: "Articulation", cube: "RigidObject"):
         self.sim, self.robot, self.cube = sim, robot, cube
         self.dt = sim.get_physics_dt()
         self.device = sim.device
@@ -233,9 +245,15 @@ class Rig:
 
     # -- one scripted grasp ------------------------------------------------------------------------------------
 
-    def closed_target(self, arm: torch.Tensor, flex_scale: float, thumb=None) -> torch.Tensor:
+    def closed_target(self, arm: torch.Tensor, flex_scale: float, thumb=None, synergy=None) -> torch.Tensor:
         target = self.robot.data.default_joint_pos.torch.clone()
         target[0, self.arm_ids] = arm
+        if synergy is not None:
+            for closure, posture in zip(synergy, FRANKA_HX5D20_HAND_SYNERGIES.values()):
+                target[0] += closure * torch.tensor(
+                    resolve_joint_posture(posture, self.robot.joint_names), device=self.device
+                )
+            return target
         for pattern, value in FRANKA_HX5D20_HAND_CLOSED.items():
             for j, name in enumerate(self.robot.joint_names):
                 if re.fullmatch(pattern, name):
@@ -246,15 +264,23 @@ class Rig:
         return target
 
     def trial(
-        self, grasp_arm, lift_arm, flex_scale: float, centre: torch.Tensor, offset, approach_arm=None, thumb=None
+        self,
+        grasp_arm,
+        lift_arm,
+        flex_scale: float,
+        centre: torch.Tensor,
+        offset,
+        approach_arm=None,
+        thumb=None,
+        synergy=None,
     ) -> dict:
         open_pose = self.robot.data.default_joint_pos.torch.clone()
         open_pose[0, self.arm_ids] = grasp_arm
         start_pose = open_pose.clone()
         if approach_arm is not None:
             start_pose[0, self.arm_ids] = approach_arm
-        close = self.closed_target(grasp_arm, flex_scale, thumb)
-        lift = self.closed_target(lift_arm, flex_scale, thumb)
+        close = self.closed_target(grasp_arm, flex_scale, thumb, synergy)
+        lift = self.closed_target(lift_arm, flex_scale, thumb, synergy)
         cube_pos = torch.tensor(
             [args_cli.cube_xy[0] + offset[0], args_cli.cube_xy[1] + offset[1], self.rest_z], device=self.device
         )
@@ -334,6 +360,9 @@ def main():
     offsets = parse_list(args_cli.offsets)
 
     with launch_simulation(PhysicsCfg(), args_cli) as physics_cfg:
+        # imported after the app has started: importing these classes earlier breaks Kit's startup
+        from isaaclab.assets import Articulation, RigidObject, RigidObjectCfg
+
         sim = SimulationContext(sim_utils.SimulationCfg(device=args_cli.device, physics=physics_cfg))
         sim.set_camera_view([1.2, 0.9, 0.7], [0.45, 0.0, 0.1])
         light = sim_utils.DomeLightCfg(intensity=3000.0, color=(0.75, 0.75, 0.75))
@@ -373,7 +402,12 @@ def main():
         )
         results = []
         thumbs = [None] if args_cli.thumbs is None else parse_list(args_cli.thumbs)
-        for gravity, centre, flex_scale, thumb in itertools.product(gravities, centres, flex_scales, thumbs):
+        synergies = [None] if args_cli.synergies is None else parse_list(args_cli.synergies)
+        if args_cli.synergies is not None:
+            flex_scales, thumbs = [1.0], [None]
+        for gravity, centre, flex_scale, thumb, synergy in itertools.product(
+            gravities, centres, flex_scales, thumbs, synergies
+        ):
             started = time.time()
             g = torch.tensor(gravity, device=sim.device)
             g = g / g.norm()
@@ -395,7 +429,7 @@ def main():
                     print(f"{str(gravity):<22}{str(centre):<22}{flex_scale:>5}  no IK solution for the approach pose")
                     continue
             yaw = rig.palm_yaw(grasp_arm)
-            trials = [rig.trial(grasp_arm, lift_arm, flex_scale, c, o, approach_arm, thumb) for o in offsets]
+            trials = [rig.trial(grasp_arm, lift_arm, flex_scale, c, o, approach_arm, thumb, synergy) for o in offsets]
             lifted = sum(t["lifted"] for t in trials)
             upright = sum(t["lifted"] and t["tilt"] < 10.0 for t in trials)
             tilts = sorted(t["tilt"] for t in trials if t["lifted"])
@@ -408,6 +442,7 @@ def main():
                 f"{lifted:>3}/{len(trials)}  {pushed:>12.1f} {rise:>10.1f}"
                 f"   upright {upright}/{len(trials)}, {tilt_txt}, palm yaw {yaw:.0f} deg"
                 f"{'' if thumb is None else f', thumb {thumb}'}"
+                f"{'' if synergy is None else f', synergy {synergy}'}"
                 f"   ({time.time() - started:.0f} s)"
             )
 
