@@ -242,14 +242,17 @@ def main() -> None:
             )
         if closure_dim > 1:
             names = getattr(hand_term, "synergy_names", [str(i) for i in range(closure_dim)])
-            print("hand synergy closure at end (0 open, 1 closed), episodes that held the cube at the goal:")
+            # the episodes that ended with the cube held at the goal, else the ones that ended with it lifted in hand
+            group, label = (held_end, "held the cube at the goal") if held_end.any() else (lifted_end, "lifted the cube")
+            if not group.any():
+                group, label = torch.ones_like(held_end), "all"
+            print(f"hand synergy closure at end (0 open, 1 closed), episodes that {label} ({int(group.sum())}):")
             for k, name in enumerate(names):
-                values = final_closure[held_end, k]
-                if values.numel() == 0:
-                    continue
+                values = final_closure[group, k]
+                std = values.std().item() if values.numel() > 1 else 0.0
                 print(
-                    f"  {name}: mean {values.mean().item():.2f}, std {values.std().item() if values.numel() > 1 else 0.0:.2f}"
-                    f", range {values.min().item():.2f}-{values.max().item():.2f}"
+                    f"  {name}: mean {values.mean().item():.2f}, std {std:.2f}, "
+                    f"range {values.min().item():.2f}-{values.max().item():.2f}"
                 )
         print(f"regrasps per env that lifted: mean {regrasps.mean().item() if regrasps.numel() else 0.0:.2f}")
         print(
