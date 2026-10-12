@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 
-from rsl_rl.utils import resolve_nn_activation
+from contact_prediction_rl.learning.models.activations import get_activation
 
 
 class ObservationEncoder(nn.Module):
@@ -18,22 +18,21 @@ class ObservationEncoder(nn.Module):
     ) -> None:
         super().__init__()
 
-        # Build a list of layers
         layers = []
         last_dim = observation_dim
 
         for hidden_dim in hidden_dims:
             layers.append(nn.Linear(last_dim, hidden_dim))
-            layers.append(resolve_nn_activation(activation))
+            layers.append(get_activation(activation))
             last_dim = hidden_dim
 
-        # Map the final hidden layer into the latent representation
         layers.append(nn.Linear(last_dim, latent_dim))
-        layers.append(resolve_nn_activation(activation))
+        layers.append(get_activation(activation))
 
-        # Unpack layers
         self.network = nn.Sequential(*layers)
 
-    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        observations: torch.Tensor,
+    ) -> torch.Tensor:
         return self.network(observations)
-    

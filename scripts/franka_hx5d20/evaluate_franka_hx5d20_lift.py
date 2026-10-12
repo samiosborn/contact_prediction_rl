@@ -25,31 +25,22 @@ The "in hand", "lifted" and "goal" thresholds are read from the reward terms of 
 """
 
 import argparse
-import importlib.metadata as metadata
 import math
-import os
 import sys
 
+import gymnasium as gym
 import torch
-from rsl_rl.runners import OnPolicyRunner
 
 import isaaclab.utils.math as math_utils
 from isaaclab.app import add_launcher_args, launch_simulation
-from isaaclab.utils.assets import retrieve_file_path
 from isaaclab.utils.math import combine_frame_transforms
 
-from isaaclab_rl.entrypoints.backends import cli_args_rsl_rl as cli_args
-from isaaclab_rl.entrypoints.common import (
-    CHECKPOINT_SELECTORS,
-    add_frontend_args,
-    create_isaaclab_env,
-    resolve_checkpoint_selector,
-)
-from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper, handle_deprecated_rsl_rl_cfg
-
-from isaaclab_tasks.utils import get_checkpoint_path, resolve_task_config, setup_preset_cli
+from isaaclab_tasks.utils import resolve_task_config, setup_preset_cli
 
 import contact_prediction_rl.tasks  # noqa: F401  (registers this project's tasks)
+from contact_prediction_rl.learning.checkpoints import get_log_root_path, resolve_checkpoint
+from contact_prediction_rl.learning.inference import load_policy
+from contact_prediction_rl.learning.isaaclab_env import IsaacLabPPOEnvWrapper
 
 TASK = "ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right"
 
@@ -61,45 +52,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num_envs", type=int, default=256, help="Number of environments, one episode each.")
     parser.add_argument("--seed", type=int, default=42, help="Seed used for the environment.")
     parser.add_argument(
-        "--agent", type=str, default="rsl_rl_cfg_entry_point", help="Name of the RL agent configuration entry point."
+        "--agent", type=str, default="ppo_cfg_entry_point", help="Name of the PPO agent configuration entry point."
     )
     parser.add_argument(
-        "--no_obs_normalization",
-        action="store_true",
-        help="Build the policy without observation normalisation, for checkpoints trained before it was enabled.",
+        "--checkpoint",
+        type=str,
+        default="latest",
+        help="Checkpoint file, run directory, or 'latest' (the newest checkpoint under logs/ppo/<experiment>).",
     )
     parser.add_argument("--goal_threshold", type=float, default=None, help="Goal distance [m]; defaults to the reward.")
-    cli_args.add_rsl_rl_args(parser)
     add_launcher_args(parser)
-    add_frontend_args(parser)
     args_cli, remaining = setup_preset_cli(parser)
     sys.argv = [sys.argv[0]] + remaining
     return args_cli
 
 
-def resolve_checkpoint(args_cli: argparse.Namespace, agent_cfg, log_root_path: str) -> str:
-    """Resolve ``--checkpoint`` (latest/best, a run directory or a file) as the RSL-RL play script does."""
-    if args_cli.checkpoint in CHECKPOINT_SELECTORS:
-        return resolve_checkpoint_selector(
-            log_root_path,
-            args_cli.checkpoint,
-            library="rsl_rl",
-            task=args_cli.task,
-            checkpoint_pattern=r"model_.*\.pt",
-            metadata={"agent": args_cli.agent},
-        )
-    if args_cli.checkpoint and os.path.isdir(args_cli.checkpoint):
-        return get_checkpoint_path(
-            os.path.dirname(args_cli.checkpoint), os.path.basename(args_cli.checkpoint), agent_cfg.load_checkpoint
-        )
-    if args_cli.checkpoint:
-        return retrieve_file_path(args_cli.checkpoint)
-    return get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
-
-
 def main() -> None:
     args_cli = parse_args()
-    installed_version = metadata.version("rsl-rl-lib")
     env_cfg, agent_cfg = resolve_task_config(args_cli.task, args_cli.agent, play_mode=True)
 
     lift_params = env_cfg.rewards.lifting_object.params
@@ -109,24 +78,15 @@ def main() -> None:
     goal_threshold = args_cli.goal_threshold or goal_params["success_threshold"]
 
     with launch_simulation(env_cfg, args_cli):
-        agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
-        agent_cfg = handle_deprecated_rsl_rl_cfg(agent_cfg, installed_version)
-        if args_cli.no_obs_normalization:
-            agent_cfg.actor.obs_normalization = False
-            agent_cfg.critic.obs_normalization = False
         env_cfg.scene.num_envs = args_cli.num_envs
-        env_cfg.seed = agent_cfg.seed
+        env_cfg.seed = args_cli.seed
         env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
 
-        log_root_path = os.path.abspath(os.path.join("logs", "rsl_rl", agent_cfg.experiment_name))
-        checkpoint = resolve_checkpoint(args_cli, agent_cfg, log_root_path)
+        checkpoint = resolve_checkpoint(args_cli.checkpoint, get_log_root_path(agent_cfg.experiment_name))
         print(f"[INFO] Evaluating {checkpoint} on task {args_cli.task}")
 
-        env = create_isaaclab_env(args_cli.task, env_cfg, args_cli, convert_marl_to_single_agent=False)
-        env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
-        runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-        runner.load(checkpoint)
-        policy = runner.get_inference_policy(device=env.unwrapped.device)
+        env = IsaacLabPPOEnvWrapper(gym.make(args_cli.task, cfg=env_cfg))
+        policy = load_policy(env, agent_cfg, str(checkpoint))
 
         u = env.unwrapped
         n, device = u.num_envs, u.device
@@ -178,7 +138,7 @@ def main() -> None:
             held_part[:, 2] += grasp_offset_z
             return tilt, torch.linalg.norm(held_part - ee.data.target_pos_w.torch[:, 0, :], dim=1)
 
-        obs = env.get_observations()
+        obs, _ = env.reset()
         for step in range(u.max_episode_length + 5):
             with torch.inference_mode():
                 lifted, held, goal_distance, error, goal_b = snapshot()
@@ -199,8 +159,7 @@ def main() -> None:
                     closed_now = active & (hand_term.closure[:, 0] > 0.99) & gap_when_closed.isnan()
                     gap_when_closed = torch.where(closed_now, gap, gap_when_closed)
                 final_goal = torch.where(active[:, None], goal_b, final_goal)
-                obs, _, dones, extras = env.step(policy(obs))
-                policy.reset(dones)
+                obs, _, dones, extras = env.step(policy(obs["policy"]))
                 # ``lifted`` and ``held`` describe the state just before this step, i.e. the last state of the episode
                 ended = dones.bool() & active
                 timed_out = extras["time_outs"].bool() if "time_outs" in extras else torch.zeros_like(finished)
@@ -223,7 +182,7 @@ def main() -> None:
             return f"median {median:.2f} s, 90th pct {pct90:.2f} s  ({seen.numel()} envs)"
 
         lifted_envs = ~first_lift.isnan()
-        print(f"\n=== {args_cli.task}: {n} deterministic episodes, seed {agent_cfg.seed} ===")
+        print(f"\n=== {args_cli.task}: {n} deterministic episodes, seed {args_cli.seed} ===")
         print(f"held at goal at end    {rate(held_end)}")
         print(f"lifted in hand at end  {rate(lifted_end)}")
         print(f"reached goal ever      {rate(reached_ever)}   (training-style success)")
@@ -232,6 +191,9 @@ def main() -> None:
         print(f"time to first goal     {timing(first_goal)}")
         for name, values in (("closest to goal while held", closest), ("distance to goal at end", final_distance)):
             seen = values[torch.isfinite(values)] * 100
+            if seen.numel() == 0:
+                print(f"{name}: never")
+                continue
             print(
                 f"{name}: median {seen.median().item():.1f} cm, 90th pct {seen.quantile(0.9).item():.1f} cm, "
                 f"worst {seen.max().item():.1f} cm"
