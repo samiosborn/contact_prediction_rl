@@ -5,6 +5,11 @@
 Train with (the task uses PhysX, which needs the ``isaacsim`` extra)::
 
     uv run --extra isaacsim python scripts/train.py --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right
+
+The ``-Synergy-`` variant lets the policy blend three hand-designed finger shapes (curl, thumb, spread) instead of
+one open/close value (7 + 3 actions)::
+
+    uv run --extra isaacsim python scripts/train.py --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Synergy-Right
 """
 
 import gymnasium as gym
@@ -27,6 +32,23 @@ gym.register(
         "ppo_cfg_entry_point": (
             f"{agents.__name__}.ppo_cfg:"
             "FrankaHX5D20BlockLiftPPOCfg"
+        ),
+        "default_agent": "ppo",
+    },
+)
+
+gym.register(
+    id="ContactPredictionRl-Lift-Block-Franka-HX5-D20-Synergy-Right",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.env_cfg:"
+            "FrankaHX5D20BlockLiftSynergyEnvCfg"
+        ),
+        "ppo_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20BlockLiftSynergyPPOCfg"
         ),
         "default_agent": "ppo",
     },

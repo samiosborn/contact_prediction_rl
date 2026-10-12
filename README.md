@@ -181,6 +181,33 @@ uv run --extra isaacsim python scripts/play.py \
   --checkpoint latest --video
 ```
 
+### Franka + HX5-D20 Lift with hand synergies
+
+`ContactPredictionRl-Lift-Block-Franka-HX5-D20-Synergy-Right`
+
+The same block-lift task, but the policy blends three hand-designed finger shapes (7 arm + 3 hand actions) instead of
+one open/close value:
+
+| Action | Shape |
+|---|---|
+| curl | bending joints of index, middle, ring and little |
+| thumb | thumb opposition and flexion |
+| spread | finger abduction, fanning the fingers apart |
+
+Each synergy has a closure in [0, 1] that moves at the same limited rate as the single-closure hand; a negative action
+closes it and a non-negative action opens it. The shapes are defined in
+`src/contact_prediction_rl/robots/franka_hx5d20.py` (`FRANKA_HX5D20_HAND_SYNERGIES`). Train, evaluate and play work as
+for the lift task, with the new task name; checkpoints go to `logs/ppo/lift_block_franka_hx5d20_synergy/`. The
+evaluation script also reports the final closure of each synergy.
+
+Scripted grasps over the synergy space (no training) can be run with:
+
+```bash
+uv run --extra isaacsim python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py \
+  --gravities "0,-1,0" --centers "0.04,0,0.09" --block_height 0.12 --approach 0.06 \
+  --synergies "1,1,0;1,0.5,0.5;1,0,0"
+```
+
 The combined Franka + HX5-D20 asset is documented in:
 
 ```text

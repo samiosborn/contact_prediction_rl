@@ -50,3 +50,10 @@ class FrankaHX5D20BlockLiftPPOCfg:
             CONFIG.PPO_NORMALIZE_ADVANTAGE_PER_MINI_BATCH
         ),
     }
+
+
+@configclass
+class FrankaHX5D20BlockLiftSynergyPPOCfg(FrankaHX5D20BlockLiftPPOCfg):
+    """PPO configuration of the synergy block-lift task: the same settings, logged under its own experiment name"""
+
+    experiment_name = "lift_block_franka_hx5d20_synergy"
