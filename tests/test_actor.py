@@ -114,18 +114,12 @@ def test_actor_stochastic_shapes():
     )
 
     # Log probability should give one scalar per action vector
-    log_prob = actor.get_output_log_prob(
-        actions
-    )
+    log_prob = actor.get_output_log_prob(actions)
 
-    assert log_prob.shape == (
-        batch_size,
-    )
+    assert log_prob.shape == (batch_size,)
 
     # Entropy should also give one scalar per action vector
-    assert actor.output_entropy.shape == (
-        batch_size,
-    )
+    assert actor.output_entropy.shape == (batch_size,)
 
 
 def test_actor_distribution_parameters():
@@ -197,9 +191,7 @@ def test_actor_normalisation_updates():
     assert actor.normaliser.count.item() == 0
 
     # Update the running mean and variance
-    actor.update_normalisation(
-        observations
-    )
+    actor.update_normalisation(observations)
 
     # The normaliser should now have processed the full batch
     assert actor.normaliser.count.item() == 32

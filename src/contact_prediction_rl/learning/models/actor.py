@@ -27,11 +27,7 @@ class Actor(nn.Module):
             raise ValueError("Initial action standard deviation must be positive")
 
         # Observation normalisation
-        self.normaliser = (
-            ObservationNormaliser(observation_dim)
-            if observation_normalisation
-            else nn.Identity()
-        )
+        self.normaliser = ObservationNormaliser(observation_dim) if observation_normalisation else nn.Identity()
 
         # Encode observations into the shared latent representation z
         self.observation_encoder = ObservationEncoder(
@@ -105,9 +101,7 @@ class Actor(nn.Module):
     ) -> torch.Tensor:
         """Return the log probability of each action"""
 
-        return self.distribution.log_prob(
-            actions
-        ).sum(dim=-1)
+        return self.distribution.log_prob(actions).sum(dim=-1)
 
     def get_kl_divergence(
         self,
@@ -144,9 +138,7 @@ class Actor(nn.Module):
             self.normaliser,
             ObservationNormaliser,
         ):
-            self.normaliser.update(
-                observations
-            )
+            self.normaliser.update(observations)
 
     @property
     def distribution(
@@ -155,9 +147,7 @@ class Actor(nn.Module):
         """Return the current action distribution"""
 
         if self._distribution is None:
-            raise RuntimeError(
-                "Action distribution has not been initialised"
-            )
+            raise RuntimeError("Action distribution has not been initialised")
 
         return self._distribution
 
@@ -178,9 +168,7 @@ class Actor(nn.Module):
     ) -> torch.Tensor:
         """Return policy entropy summed across action dimensions"""
 
-        return self.distribution.entropy().sum(
-            dim=-1
-        )
+        return self.distribution.entropy().sum(dim=-1)
 
     @property
     def output_std(

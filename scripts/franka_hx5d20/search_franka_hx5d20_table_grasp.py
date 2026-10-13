@@ -19,8 +19,8 @@ at z = 0.
 
 .. code-block:: bash
 
-    uv run --extra isaacsim python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py
-    uv run --extra isaacsim python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py \
+    uv run python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py
+    uv run python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py \
         --gravities "0,-0.99,0.14" --centers "0.05,-0.03,0.10" --flex_scales "1.0"
 
 """

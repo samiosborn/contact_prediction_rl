@@ -226,19 +226,19 @@ Each row was a real failure, found by measurement (training curves, deterministi
 
 ```bash
 # train
-uv run --extra isaacsim isaaclab -p scripts/reinforcement_learning/train.py \
+uv run isaaclab -p scripts/reinforcement_learning/train.py \
   --task Isaac-Lift-Cube-Franka-HX5D20 --num_envs 1024 --max_iterations 1000
 
 # evaluate a checkpoint
-uv run --extra isaacsim isaaclab -p scripts/tools/evaluate_franka_hx5d20_lift.py --num_envs 512 \
+uv run isaaclab -p scripts/tools/evaluate_franka_hx5d20_lift.py --num_envs 512 \
   --checkpoint logs/rsl_rl/lift_cube_franka_hx5d20/2026-10-06_12-15-08/model_650.pt
 
 # watch it
-uv run --extra isaacsim isaaclab -p scripts/reinforcement_learning/play.py \
+uv run isaaclab -p scripts/reinforcement_learning/play.py \
   --task Isaac-Lift-Cube-Franka-HX5D20 --num_envs 4 --checkpoint latest --viz kit
 
 # record a video
-uv run --extra isaacsim --extra video isaaclab -p scripts/reinforcement_learning/play.py \
+uv run --extra video isaaclab -p scripts/reinforcement_learning/play.py \
   --task Isaac-Lift-Cube-Franka-HX5D20 --num_envs 1 --checkpoint latest --video --video_length 400
 
 # training curves

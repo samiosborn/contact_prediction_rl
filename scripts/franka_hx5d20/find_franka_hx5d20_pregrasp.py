@@ -14,7 +14,7 @@ kinematic model is duplicated here.
 
 .. code-block:: bash
 
-    uv run --extra isaacsim python scripts/franka_hx5d20/find_franka_hx5d20_pregrasp.py
+    uv run python scripts/franka_hx5d20/find_franka_hx5d20_pregrasp.py
 
 """
 

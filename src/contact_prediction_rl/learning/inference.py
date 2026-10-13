@@ -34,6 +34,4 @@ def load_policy(
         map_location=env.device,
     )
 
-    return runner.get_inference_policy(
-        device=env.device
-    )
+    return runner.get_inference_policy(device=env.device)

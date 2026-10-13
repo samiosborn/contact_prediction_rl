@@ -6,7 +6,7 @@ Use ``--visualizer kit`` to watch the rollout in the Isaac Sim viewport, or ``--
 
 .. code-block:: bash
 
-    uv run --extra isaacsim python scripts/play.py \
+    uv run python scripts/play.py \
       --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right \
       --checkpoint latest --visualizer kit
 """
@@ -14,12 +14,15 @@ Use ``--visualizer kit`` to watch the rollout in the Isaac Sim viewport, or ``--
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
 
 import gymnasium as gym
 import torch
+
+os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
 
 from isaaclab.app import add_launcher_args, launch_simulation
 
@@ -39,9 +42,7 @@ def _parse_args(
 ) -> tuple[argparse.Namespace, list[str]]:
     """Parse playback arguments"""
 
-    parser = argparse.ArgumentParser(
-        description="Play a trained contact_prediction_rl PPO policy."
-    )
+    parser = argparse.ArgumentParser(description="Play a trained contact_prediction_rl PPO policy.")
     parser.add_argument("--task", type=str, required=True, help="Isaac Lab task name.")
     parser.add_argument(
         "--agent",

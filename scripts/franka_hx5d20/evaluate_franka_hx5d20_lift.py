@@ -1,7 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
+# scripts/franka_hx5d20/evaluate_franka_hx5d20_lift.py
 
 """Evaluate a trained policy of the Franka + HX5-D20 cube-lift task with deterministic rollouts.
 
@@ -20,16 +17,19 @@ The "in hand", "lifted" and "goal" thresholds are read from the reward terms of 
 
 .. code-block:: bash
 
-    uv run --extra isaacsim python scripts/franka_hx5d20/evaluate_franka_hx5d20_lift.py --checkpoint latest
+    uv run python scripts/franka_hx5d20/evaluate_franka_hx5d20_lift.py --checkpoint latest
 
 """
 
 import argparse
 import math
+import os
 import sys
 
 import gymnasium as gym
 import torch
+
+os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
 
 import isaaclab.utils.math as math_utils
 from isaaclab.app import add_launcher_args, launch_simulation
@@ -37,8 +37,11 @@ from isaaclab.utils.math import combine_frame_transforms
 
 from isaaclab_tasks.utils import resolve_task_config, setup_preset_cli
 
-import contact_prediction_rl.tasks  # noqa: F401  (registers this project's tasks)
-from contact_prediction_rl.learning.checkpoints import get_log_root_path, resolve_checkpoint
+import contact_prediction_rl.tasks  # noqa: F401
+from contact_prediction_rl.learning.checkpoints import (
+    get_log_root_path,
+    resolve_checkpoint,
+)
 from contact_prediction_rl.learning.inference import load_policy
 from contact_prediction_rl.learning.isaaclab_env import IsaacLabPPOEnvWrapper
 

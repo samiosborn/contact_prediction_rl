@@ -4,7 +4,7 @@
 
 Train with (the task uses PhysX, which needs the ``isaacsim`` extra)::
 
-    uv run --extra isaacsim python scripts/train.py --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right
+    uv run python scripts/train.py --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right
 """
 
 import gymnasium as gym
@@ -20,14 +20,8 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": (
-            f"{__name__}.env_cfg:"
-            "FrankaHX5D20BlockLiftEnvCfg"
-        ),
-        "ppo_cfg_entry_point": (
-            f"{agents.__name__}.ppo_cfg:"
-            "FrankaHX5D20BlockLiftPPOCfg"
-        ),
+        "env_cfg_entry_point": (f"{__name__}.env_cfg:FrankaHX5D20BlockLiftEnvCfg"),
+        "ppo_cfg_entry_point": (f"{agents.__name__}.ppo_cfg:FrankaHX5D20BlockLiftPPOCfg"),
         "default_agent": "ppo",
     },
 )
