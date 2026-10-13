@@ -26,6 +26,12 @@ os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
 
 from isaaclab.app import add_launcher_args, launch_simulation
 
+from isaaclab_rl.entrypoints.common import (
+    apply_video_recording,
+    enable_cameras_for_video,
+    pre_launch_video_config,
+)
+
 from isaaclab_tasks.utils import resolve_task_config, setup_preset_cli
 
 import contact_prediction_rl.tasks  # noqa: F401
@@ -65,14 +71,14 @@ def _parse_args(
         help="Slow the loop down to the environment step time, for watching in a viewer.",
     )
     parser.add_argument("--video", action="store_true", help="Record a video of the rollout.")
-    parser.add_argument("--video_length", type=int, default=200, help="Length of the video in environment steps.")
+    parser.add_argument("--video_length", type=int, default=None, help="Length of the video in environment steps (default 200).")
+    parser.add_argument("--video_interval", type=int, default=None, help="Start a new video clip every this many environment steps.")
 
     add_launcher_args(parser)
 
     args_cli, hydra_args = setup_preset_cli(parser, argv)
 
-    if args_cli.video:
-        args_cli.enable_cameras = True
+    enable_cameras_for_video(args_cli)
 
     return args_cli, hydra_args
 
@@ -105,28 +111,26 @@ def run(
     )
     print(f"[INFO] Playing {checkpoint} on task {args_cli.task}")
 
+    # the recorder needs a Kit visualizer, which must be requested before the simulation launches
+    pre_launch_video_config(env_cfg, args_cli=args_cli)
+
     with launch_simulation(env_cfg, args_cli):
-        env = gym.make(
-            args_cli.task,
-            cfg=env_cfg,
-            render_mode="rgb_array" if args_cli.video else None,
+        # videos go to <run directory>/videos/play
+        apply_video_recording(
+            env_cfg,
+            str(Path(checkpoint).parent),
+            args_cli,
+            subdir="play",
+            checkpoint_path=str(checkpoint),
         )
 
-        if args_cli.video:
-            video_dir = Path(checkpoint).parent / "videos" / "play"
-            env = gym.wrappers.RecordVideo(
-                env,
-                video_folder=str(video_dir),
-                step_trigger=lambda step: step == 0,
-                video_length=args_cli.video_length,
-                disable_logger=True,
-            )
-
+        env = gym.make(args_cli.task, cfg=env_cfg)
         env = IsaacLabPPOEnvWrapper(env)
         policy = load_policy(env, agent_cfg, str(checkpoint))
 
         step_dt = env.unwrapped.step_dt
-        steps = args_cli.video_length if args_cli.video else args_cli.steps
+        # with --video, run just past the clip so that it is finished and written
+        steps = (args_cli.video_length or 200) + 1 if args_cli.video else args_cli.steps
 
         obs = env.get_observations()
 

@@ -21,6 +21,7 @@ dependencies = [
 ov = ["isaaclab[ov]==3.0.0rc1"]
 ovphysx = ["isaaclab[ovphysx]==3.0.0rc1"]
 ovrtx = ["isaaclab[ovrtx]==3.0.0rc1"]
+video = ["moviepy>=1.0.3,<2.0.0.dev0", "imageio-ffmpeg"]
 
 [dependency-groups]
 dev = ["codespell>=2.4", "pre-commit>=4.2", "pytest>=8.3", "ruff>=0.11"]

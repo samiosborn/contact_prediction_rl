@@ -57,16 +57,18 @@ def hand_closed_near_object(
     action_name: str = "gripper_action",
     object_cfg: SceneEntityCfg = _OBJECT,
     ee_frame_cfg: SceneEntityCfg = _EE_FRAME,
+    closure_index: int = 0,
 ) -> torch.Tensor:
     """Reward a closed hand while the grasp centre is close to the part to hold (tanh kernel).
 
     How closed the hand is comes from the ``closure`` fraction of a rate-limited hand action, so the reward needs the
-    hand to actually close and stay closed. For an action term without a closure fraction, the commanded state
-    (negative action = closed) is used instead.
+    hand to actually close and stay closed. For a hand action with several synergies, ``closure_index`` selects the
+    one that counts as closing the hand (0, the finger curl, in the synergy action). For an action term without a
+    closure fraction, the commanded state (negative action = closed) is used instead.
     """
     distance = _hand_to_object_distance(env, object_cfg, ee_frame_cfg, grasp_offset_z)
     term = env.action_manager.get_term(action_name)
-    closed = term.closure[:, 0] if hasattr(term, "closure") else (term.raw_actions[:, 0] < 0).float()
+    closed = term.closure[:, closure_index] if hasattr(term, "closure") else (term.raw_actions[:, 0] < 0).float()
     return closed * (1.0 - torch.tanh(distance / std))
 
 

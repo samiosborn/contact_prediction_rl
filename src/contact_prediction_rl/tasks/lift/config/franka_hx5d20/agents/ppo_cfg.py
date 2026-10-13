@@ -48,3 +48,17 @@ class FrankaHX5D20BlockLiftPPOCfg:
         "max_grad_norm": CONFIG.PPO_MAX_GRAD_NORM,
         "normalize_advantage_per_mini_batch": (CONFIG.PPO_NORMALIZE_ADVANTAGE_PER_MINI_BATCH),
     }
+
+
+@configclass
+class FrankaHX5D20BlockLiftSynergyPPOCfg(FrankaHX5D20BlockLiftPPOCfg):
+    """PPO configuration of the synergy block-lift task: the same settings, logged under its own experiment name"""
+
+    experiment_name = "lift_block_franka_hx5d20_synergy"
+
+
+@configclass
+class FrankaHX5D20BlockLiftCurlPPOCfg(FrankaHX5D20BlockLiftPPOCfg):
+    """PPO configuration of the curl-only block-lift task: the same settings, logged under its own experiment name"""
+
+    experiment_name = "lift_block_franka_hx5d20_curl"

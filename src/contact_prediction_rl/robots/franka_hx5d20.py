@@ -10,6 +10,8 @@ The following configurations are available:
 * :obj:`FRANKA_HX5D20_CFG`: Franka Panda arm (7 DoF) with the 20-DoF Robotis HX5-D20 right hand
 * :obj:`FRANKA_HX5D20_HAND_OPEN` / :obj:`FRANKA_HX5D20_HAND_CLOSED`: open and closed hand postures
 * :obj:`FRANKA_HX5D20_GRASP_CENTER`: where an object sits in the closed hand
+* :obj:`FRANKA_HX5D20_HAND_CLOSED_THUMB_OPEN`: the closed posture with the thumb left open (curl only)
+* :obj:`FRANKA_HX5D20_HAND_SYNERGIES`: hand-designed finger postures the policy can blend (curl, thumb, spread)
 
 The USD is stored in ``assets/data/franka_hx5d20`` (see its ``SOURCE.md``). The hand is attached to ``panda_hand``
 with a fixed joint, and the whole robot is a single articulation rooted at ``/World``.
@@ -17,6 +19,8 @@ with a fixed joint, and the whole robot is a single articulation rooted at ``/Wo
 Reference: https://github.com/ROBOTIS-GIT/robotis_hand
 """
 
+import re
+from collections.abc import Sequence
 from pathlib import Path
 
 import isaaclab.sim as sim_utils
@@ -95,8 +99,62 @@ Fitted with forward kinematics of the hand's joint frames (thumb opposition and 
 the scripted grasp search ``scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py``.
 """
 
+FRANKA_HX5D20_HAND_CLOSED_THUMB_OPEN = {
+    # thumb stays open
+    "finger_r_joint[1-4]": 0.0,
+    # finger abduction stays neutral; flexion as in the closed posture
+    "finger_r_joint(5|9|13|17)": 0.0,
+    "finger_r_joint(6|10|14|18)": 1.505,
+    "finger_r_joint(7|8|11|12|15|16|19|20)": 1.178,
+}
+"""Closed hand posture [rad] with the four fingers curled and the thumb left open (all 20 joints are listed, as the
+binary hand action requires). It is :obj:`FRANKA_HX5D20_HAND_CLOSED` without the thumb, and the "curl" synergy of
+:obj:`FRANKA_HX5D20_HAND_SYNERGIES` at closure 1. Used as the control of the synergy task: a hand with one open/close
+value whose closed posture is what the best synergy policy used."""
+
 FRANKA_HX5D20_GRASP_CENTER = (0.05, 0.0, 0.10)
 """Position [m] in the ``panda_hand`` frame where a 6 cm cube is held by the closed hand.
 
 The fingers extend along the frame's +z axis and curl toward +x, so the palm faces +x.
 """
+
+
+FRANKA_HX5D20_HAND_SYNERGIES = {
+    "curl": {
+        # finger flexion at 75 % of the joint range, as in the closed posture
+        "finger_r_joint(6|10|14|18)": 1.505,
+        "finger_r_joint(7|8|11|12|15|16|19|20)": 1.178,
+    },
+    "thumb": {
+        # thumb opposition (joint 1 at its limit) and flexion, as in the closed posture
+        "finger_r_joint1": 1.571,
+        "finger_r_joint2": -0.524,
+        "finger_r_joint[34]": 0.785,
+    },
+    "spread": {
+        # fan the fingers apart: the outer fingers move twice as far as the inner ones. The fingers lie side by side
+        # along the hand's y axis (index at +y), and a positive abduction angle moves a fingertip toward -y, so the
+        # index and middle fingers take negative angles and the ring and little fingers positive ones. At full
+        # spread the index and little fingertips are about 4.7 cm further apart.
+        "finger_r_joint5": -0.4,
+        "finger_r_joint9": -0.2,
+        "finger_r_joint13": 0.2,
+        "finger_r_joint17": 0.4,
+    },
+}
+"""Hand synergies: joint postures [rad], each a displacement from the open hand for a closure of 1.
+
+Keys of the inner dictionaries are joint name regular expressions. The hand target is
+``open + sum_i closure_i * synergy_i`` with every closure in [0, 1]. Curl and thumb together at full closure give
+:obj:`FRANKA_HX5D20_HAND_CLOSED`, the posture of the single-closure lift task, with the fingers parallel (no spread).
+"""
+
+
+def resolve_joint_posture(posture: dict[str, float], joint_names: Sequence[str]) -> list[float]:
+    """Joint values [rad] of ``posture`` (regular expression keys) for ``joint_names``; unmatched joints are 0."""
+    values = [0.0] * len(joint_names)
+    for pattern, value in posture.items():
+        for j, name in enumerate(joint_names):
+            if re.fullmatch(pattern, name):
+                values[j] = value
+    return values

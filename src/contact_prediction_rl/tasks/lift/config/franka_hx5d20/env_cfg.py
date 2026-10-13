@@ -22,11 +22,13 @@ from isaaclab.markers.config import FRAME_MARKER_CFG  # isort: skip
 from contact_prediction_rl.robots.franka_hx5d20 import (  # isort: skip
     FRANKA_HX5D20_CFG,
     FRANKA_HX5D20_HAND_CLOSED,
+    FRANKA_HX5D20_HAND_CLOSED_THUMB_OPEN,
     FRANKA_HX5D20_HAND_OPEN,
+    FRANKA_HX5D20_HAND_SYNERGIES,
 )
 
 from ...mdp import rewards
-from ...mdp.actions_cfg import RateLimitedBinaryJointPositionActionCfg
+from ...mdp.actions_cfg import RateLimitedBinaryJointPositionActionCfg, SynergyJointPositionActionCfg
 
 CUBE_SIZE = 0.06
 """Edge length [m] of the cube-sized part of the block that the hand holds, which is also the block's footprint."""
@@ -304,3 +306,40 @@ class FrankaHX5D20BlockLiftEnvCfg(LiftEnvCfg):
             },
             weight=0.5,
         )
+
+
+@configclass
+class FrankaHX5D20BlockLiftSynergyEnvCfg(FrankaHX5D20BlockLiftEnvCfg):
+    """The block-lift task with a hand that blends hand-designed finger shapes instead of one open/close value.
+
+    The policy commands the seven arm joints and one continuous value per synergy of
+    ``FRANKA_HX5D20_HAND_SYNERGIES`` (finger curl, thumb, finger spread). Each synergy closes at the same limited
+    rate as the single-closure hand (``HAND_CLOSING_TIME``), and the curl closure is what the closed-hand reward
+    pays for. Everything else is as in the single-closure task, so the two can be compared directly.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.actions.gripper_action = SynergyJointPositionActionCfg(
+            asset_name="robot",
+            joint_names=["finger_r_joint.*"],
+            open_command_expr=FRANKA_HX5D20_HAND_OPEN,
+            synergies=FRANKA_HX5D20_HAND_SYNERGIES,
+            closing_time=HAND_CLOSING_TIME,
+        )
+
+
+@configclass
+class FrankaHX5D20BlockLiftCurlEnvCfg(FrankaHX5D20BlockLiftEnvCfg):
+    """The block-lift task with the single open/close hand, closing the fingers only and keeping the thumb open.
+
+    This is the control of the synergy task: the policy still has one open/close value and no choice of finger
+    shape, and the only difference from :class:`FrankaHX5D20BlockLiftEnvCfg` is the closed posture
+    (``FRANKA_HX5D20_HAND_CLOSED_THUMB_OPEN`` instead of ``FRANKA_HX5D20_HAND_CLOSED``).
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.actions.gripper_action.close_command_expr = FRANKA_HX5D20_HAND_CLOSED_THUMB_OPEN

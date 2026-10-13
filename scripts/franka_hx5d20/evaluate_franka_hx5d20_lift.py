@@ -126,6 +126,9 @@ def main() -> None:
 
         final_error, final_goal = torch.zeros(n, 3, device=device), torch.zeros(n, 3, device=device)
         hand_term = u.action_manager.get_term("gripper_action")
+        # closure of each hand synergy at the end of the episode (a single column for the single-closure hand)
+        closure_dim = hand_term.closure.shape[1] if hasattr(hand_term, "closure") else 0
+        final_closure = torch.zeros(n, closure_dim, device=device)
         final_tilt = nan.clone()
         gap_when_closed = nan.clone()
         up_axis = torch.tensor([0.0, 0.0, 1.0], device=device).expand(n, 3)
@@ -160,6 +163,8 @@ def main() -> None:
                     closed_now = active & (hand_term.closure[:, 0] > 0.99) & gap_when_closed.isnan()
                     gap_when_closed = torch.where(closed_now, gap, gap_when_closed)
                 final_goal = torch.where(active[:, None], goal_b, final_goal)
+                if closure_dim:
+                    final_closure = torch.where(active[:, None], hand_term.closure, final_closure)
                 obs, _, dones, extras = env.step(policy(obs["policy"]))
                 # ``lifted`` and ``held`` describe the state just before this step, i.e. the last state of the episode
                 ended = dones.bool() & active
@@ -230,6 +235,17 @@ def main() -> None:
         seen = gap_when_closed[~gap_when_closed.isnan()] * 1000
         if seen.numel():
             print(f"grasp centre to held part when the hand finished closing: median {seen.median().item():.0f} mm, 90th pct {seen.quantile(0.9).item():.0f} mm  ({seen.numel()} envs)")
+        if closure_dim > 1:
+            names = getattr(hand_term, "synergy_names", [str(i) for i in range(closure_dim)])
+            # the episodes that ended with the cube held at the goal, else the ones that ended with it lifted in hand
+            group, label = (held_end, "held the cube at the goal") if held_end.any() else (lifted_end, "lifted the cube")
+            if not group.any():
+                group, label = torch.ones_like(held_end), "all"
+            print(f"hand synergy closure at end (0 open, 1 closed), episodes that {label} ({int(group.sum())}):")
+            for k, name in enumerate(names):
+                values = final_closure[group, k]
+                std = values.std().item() if values.numel() > 1 else 0.0
+                print(f"  {name}: mean {values.mean().item():.2f}, std {std:.2f}, range {values.min().item():.2f}-{values.max().item():.2f}")
         print(f"regrasps per env that lifted: mean {regrasps.mean().item() if regrasps.numel() else 0.0:.2f}")
         print(f"share of the episode holding the cube at the goal: mean {100 * (held_steps / steps).mean().item():.1f} %")
         print(f"thresholds: lift above {lift_height:.3f} m, in hand within {in_hand_distance} m, goal within {goal_threshold} m")

@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import torch
+
 from isaaclab.sensors import ContactSensorCfg
 
 if TYPE_CHECKING:
