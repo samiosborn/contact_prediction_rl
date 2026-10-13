@@ -1,3 +1,5 @@
+# tests/test_reorientation_config.py
+
 """CPU checks for Reorientation's hand-only control and local PPO configuration."""
 
 import re
@@ -6,6 +8,11 @@ import gymnasium as gym
 from pxr import Usd, UsdPhysics
 
 from contact_prediction_rl.robots.franka_hx5d20 import FRANKA_HX5D20_CFG, FRANKA_HX5D20_USD_PATH
+from contact_prediction_rl.robots.hx5_d20_contacts import (
+    FINGERTIP_NAMES,
+    fingertip_contact_sensor_cfg,
+    fingertip_object_contact,
+)
 from contact_prediction_rl.tasks.reorientation.config.hx5_d20_right.agents.ppo_cfg import PPORunnerCfg
 from contact_prediction_rl.tasks.reorientation.config.hx5_d20_right.env_cfg import ReorientationEnvCfg
 
@@ -25,12 +32,19 @@ def test_hand_only_control_and_sensor_paths():
     assert cfg.scene.robot.spawn.usd_path == str(FRANKA_HX5D20_USD_PATH)
     for name in ("panda_shoulder", "panda_forearm"):
         assert cfg.scene.robot.actuators[name] == FRANKA_HX5D20_CFG.actuators[name]
-    # Reorientation's hand gains must not mutate the shared robot config used by Reach/Lift.
+    # Reorientation's hand gains must not mutate the shared robot config
     assert FRANKA_HX5D20_CFG.actuators["hx5_d20_fingers"].stiffness == 20.0
-    for name in ("palm", "thumb", "index", "middle", "ring", "little"):
+    for name in ("palm", *FINGERTIP_NAMES):
         sensor = getattr(cfg.scene, f"{name}_contact")
         path = sensor.prim_path.replace("{ENV_REGEX_NS}/Robot", "/World")
         assert stage.GetPrimAtPath(path).HasAPI(UsdPhysics.RigidBodyAPI)
+        if name != "palm":
+            assert sensor.prim_path == fingertip_contact_sensor_cfg(name).prim_path
+            assert sensor.filter_prim_paths_expr == ["{ENV_REGEX_NS}/Object"]
+
+    assert cfg.observations.contact.fingertip_object.func is fingertip_object_contact
+    assert cfg.observations.contact.concatenate_terms is True
+    assert cfg.observations.policy.concatenate_terms is True
 
 
 def test_local_ppo_registration_and_preserved_settings():

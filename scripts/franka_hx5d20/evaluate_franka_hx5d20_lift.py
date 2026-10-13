@@ -54,9 +54,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--task", type=str, default=TASK, help="Name of the task.")
     parser.add_argument("--num_envs", type=int, default=256, help="Number of environments, one episode each.")
     parser.add_argument("--seed", type=int, default=42, help="Seed used for the environment.")
-    parser.add_argument(
-        "--agent", type=str, default="ppo_cfg_entry_point", help="Name of the PPO agent configuration entry point."
-    )
+    parser.add_argument("--agent", type=str, default="ppo_cfg_entry_point", help="Name of the PPO agent configuration entry point.")
     parser.add_argument(
         "--checkpoint",
         type=str,
@@ -197,10 +195,7 @@ def main() -> None:
             if seen.numel() == 0:
                 print(f"{name}: never")
                 continue
-            print(
-                f"{name}: median {seen.median().item():.1f} cm, 90th pct {seen.quantile(0.9).item():.1f} cm, "
-                f"worst {seen.max().item():.1f} cm"
-            )
+            print(f"{name}: median {seen.median().item():.1f} cm, 90th pct {seen.quantile(0.9).item():.1f} cm, worst {seen.max().item():.1f} cm")
         print("signed error at end (cube - goal) [cm]:")
         for axis, name in enumerate("xyz"):
             e = final_error[:, axis] * 100
@@ -234,18 +229,10 @@ def main() -> None:
             )
         seen = gap_when_closed[~gap_when_closed.isnan()] * 1000
         if seen.numel():
-            print(
-                f"grasp centre to held part when the hand finished closing: median {seen.median().item():.0f} mm, "
-                f"90th pct {seen.quantile(0.9).item():.0f} mm  ({seen.numel()} envs)"
-            )
+            print(f"grasp centre to held part when the hand finished closing: median {seen.median().item():.0f} mm, 90th pct {seen.quantile(0.9).item():.0f} mm  ({seen.numel()} envs)")
         print(f"regrasps per env that lifted: mean {regrasps.mean().item() if regrasps.numel() else 0.0:.2f}")
-        print(
-            f"share of the episode holding the cube at the goal: mean {100 * (held_steps / steps).mean().item():.1f} %"
-        )
-        print(
-            f"thresholds: lift above {lift_height:.3f} m, in hand within {in_hand_distance} m, "
-            f"goal within {goal_threshold} m"
-        )
+        print(f"share of the episode holding the cube at the goal: mean {100 * (held_steps / steps).mean().item():.1f} %")
+        print(f"thresholds: lift above {lift_height:.3f} m, in hand within {in_hand_distance} m, goal within {goal_threshold} m")
         env.close()
 
 

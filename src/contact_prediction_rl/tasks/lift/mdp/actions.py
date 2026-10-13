@@ -48,9 +48,7 @@ class RateLimitedBinaryJointPositionAction(BinaryJointPositionAction):
         self._closure += (close.float() - self._closure).clamp(-max_change, max_change)
         self._processed_actions = self._open_command + self._closure * (self._close_command - self._open_command)
         if self.cfg.clip is not None:
-            self._processed_actions = torch.clamp(
-                self._processed_actions, min=self._clip[:, :, 0], max=self._clip[:, :, 1]
-            )
+            self._processed_actions = torch.clamp(self._processed_actions, min=self._clip[:, :, 0], max=self._clip[:, :, 1])
 
     def reset(self, env_ids: Sequence[int] | None = None) -> None:
         super().reset(env_ids)

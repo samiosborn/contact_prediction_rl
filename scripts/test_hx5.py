@@ -10,9 +10,7 @@ parser = argparse.ArgumentParser(description="Palm-up HX5 contact and stability 
 parser.add_argument("--num_envs", type=int, default=1, choices=[1])
 parser.add_argument("--random-steps", type=int, default=1000)
 parser.add_argument("--physics-substeps", type=int, choices=[1, 4], help="Compare solver substep counts")
-parser.add_argument(
-    "--contact-profile", choices=["configured", "default", "stiff", "soft", "balanced"], default="configured"
-)
+parser.add_argument("--contact-profile", choices=["configured", "default", "stiff", "soft", "balanced"], default="configured")
 parser.add_argument("--capture-dir", type=Path, help="Save newton_gl frames for visual inspection")
 
 add_launcher_args(parser)
@@ -132,10 +130,7 @@ class ContactReport:
         self.body_labels = model.body_label
         self.geom_newton_bodies = self.solver.mjc_body_to_newton.numpy().reshape(-1)[self.geom_bodies]
         self.object_bodies = {i for i, label in enumerate(self.body_labels) if label.endswith("/Object")}
-        self.tip_bodies = {
-            name: {i for i, label in enumerate(self.body_labels) if label.endswith("/" + link)}
-            for name, link in CONTACT_BODY_NAMES.items()
-        }
+        self.tip_bodies = {name: {i for i, label in enumerate(self.body_labels) if label.endswith("/" + link)} for name, link in CONTACT_BODY_NAMES.items()}
         self.scene_update = env.scene.update
         env.scene.update = self.update_and_sample
         self.reset()
@@ -211,10 +206,7 @@ class ContactReport:
             "sampling_interval_s": self.env.physics_dt,
             "peak_normal_force_N": self.peak_force,
             "peak_contact_point_normal_force_N": self.peak_point_force,
-            "peak_sampled_normal_impulse_N_s": {
-                name: force * self.env.physics_dt / self.env.cfg.sim.physics.num_substeps
-                for name, force in self.peak_force.items()
-            },
+            "peak_sampled_normal_impulse_N_s": {name: force * self.env.physics_dt / self.env.cfg.sim.physics.num_substeps for name, force in self.peak_force.items()},
             "peak_simultaneous_contact_points": self.peak_points,
             "contact_point_samples": self.contact_samples,
             "max_hand_cube_penetration_mm": 1000 * self.max_penetration,
@@ -312,9 +304,7 @@ def main():
             model = NewtonManager.get_model()
             shape_bodies = model.shape_body.numpy()
             cube_shapes = np.flatnonzero(np.isin(shape_bodies, list(report.object_bodies)))
-            tip_shapes = np.flatnonzero(
-                np.isin(shape_bodies, list(set.union(*(b for n, b in report.tip_bodies.items() if n != "palm"))))
-            )
+            tip_shapes = np.flatnonzero(np.isin(shape_bodies, list(set.union(*(b for n, b in report.tip_bodies.items() if n != "palm")))))
             pairs = np.array([(a, b) for a in tip_shapes for b in cube_shapes])
             print(
                 "COLLISION_AUDIT",
@@ -325,9 +315,7 @@ def main():
                         "filtered_tip_cube_pairs": int(model.shape_collision_filter_mask(pairs).sum()),
                         "cube_mass_kg": model.body_mass.numpy()[list(report.object_bodies)].tolist(),
                         "cube_flags": model.body_flags.numpy()[list(report.object_bodies)].tolist(),
-                        "cube_gravcomp": report.solver.mj_model.body_gravcomp[
-                            np.isin(report.solver.mjc_body_to_newton.numpy().reshape(-1), list(report.object_bodies))
-                        ].tolist(),
+                        "cube_gravcomp": report.solver.mj_model.body_gravcomp[np.isin(report.solver.mjc_body_to_newton.numpy().reshape(-1), list(report.object_bodies))].tolist(),
                         "use_mujoco_contacts": env.cfg.sim.physics.solver_cfg.use_mujoco_contacts,
                         "disable_contacts": env.cfg.sim.physics.solver_cfg.disable_contacts,
                         "njmax": env.cfg.sim.physics.solver_cfg.njmax,
@@ -359,10 +347,7 @@ def main():
                         "gravity_m_s2": env.cfg.sim.gravity,
                         "substeps": env.cfg.sim.physics.num_substeps,
                         "contact_profile": args_cli.contact_profile,
-                        "initial_cube_table_gap_m": float(start[0, 2])
-                        - env.cfg.scene.object.spawn.size[2] / 2
-                        - env.cfg.scene.table.init_state.pos[2]
-                        - env.cfg.scene.table.spawn.size[2] / 2,
+                        "initial_cube_table_gap_m": float(start[0, 2]) - env.cfg.scene.object.spawn.size[2] / 2 - env.cfg.scene.table.init_state.pos[2] - env.cfg.scene.table.spawn.size[2] / 2,
                     }
                 ),
             )
@@ -388,9 +373,7 @@ def main():
             assert report.peak_points["palm"] > 0, "No physical palm support"
             assert float(settled[0, 2]) > table_top + 0.15, "Cube settled on table instead of palm"
             assert float(obj.data.root_lin_vel_w.torch.norm()) < 0.02, "Cube is not resting"
-            assert not any(report.peak_points[n] for n in CONTACT_BODY_NAMES if n != "palm"), (
-                "Tips contacted before closure"
-            )
+            assert not any(report.peak_points[n] for n in CONTACT_BODY_NAMES if n != "palm"), "Tips contacted before closure"
             capture(env, "settled")
             report.reset()
             run_pose(env, closed_action, 240, report, start_action=open_action, phase="closure")
@@ -409,9 +392,7 @@ def main():
                 ),
             )
             capture(env, "closed")
-            assert any(report.peak_points[n] for n in CONTACT_BODY_NAMES if n != "palm"), (
-                "No fingertip-object contact points detected"
-            )
+            assert any(report.peak_points[n] for n in CONTACT_BODY_NAMES if n != "palm"), "No fingertip-object contact points detected"
             assert max(report.peak_force.values()) > 0.1, "No significant fingertip-object force"
             assert displacement > 0.001, "Contact did not move the cube"
             assert report.max_penetration < 0.005, "Hand penetrated cube by more than 5 mm"
@@ -442,9 +423,7 @@ def main():
                     push_steps += 1
                     if float(obj.data.root_pos_w.torch[0, 1]) < -0.10:
                         break
-                obj.permanent_wrench_composer.set_forces_and_torques_index(
-                    forces=torch.zeros_like(force), is_global=True
-                )
+                obj.permanent_wrench_composer.set_forces_and_torques_index(forces=torch.zeros_like(force), is_global=True)
             run_pose(env, open_action, 120, report, phase="catch")
             release_end = obj.data.root_pos_w.torch.clone()
             landed = abs(float(release_end[0, 2]) - (table_top + 0.025)) < 0.003
@@ -489,10 +468,7 @@ def main():
                     }
                 ),
             )
-            assert (
-                abs(float(obj.data.root_pos_w.torch[0, 2]) - (table_top + env.cfg.scene.object.spawn.size[2] / 2))
-                < 0.002
-            )
+            assert abs(float(obj.data.root_pos_w.torch[0, 2]) - (table_top + env.cfg.scene.object.spawn.size[2] / 2)) < 0.002
             assert float(obj.data.root_lin_vel_w.torch.norm()) < 0.001
             assert not any(report.peak_points.values()), "Drop probe contacted hand"
             capture(env, "gravity_settled")
@@ -503,9 +479,7 @@ def main():
             # Bounded random joint targets using the actual URDF limits
             limits = robot.data.joint_pos_limits.torch
             for _ in range(args_cli.random_steps):
-                action = limits[..., 0] + torch.rand((1, env.action_manager.total_action_dim), device=env.device) * (
-                    limits[..., 1] - limits[..., 0]
-                )
+                action = limits[..., 0] + torch.rand((1, env.action_manager.total_action_dim), device=env.device) * (limits[..., 1] - limits[..., 0])
                 env.step(action)
             print(
                 "STABILITY",

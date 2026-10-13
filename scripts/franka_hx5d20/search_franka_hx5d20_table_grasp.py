@@ -52,9 +52,7 @@ parser.add_argument(
     default="1.0",
     help="Scales of the finger flexion of the closed posture, separated by ';'.",
 )
-parser.add_argument(
-    "--finger_velocity", type=float, default=None, help="Hard limit [rad/s] on the speed of the finger joints."
-)
+parser.add_argument("--finger_velocity", type=float, default=None, help="Hard limit [rad/s] on the speed of the finger joints.")
 parser.add_argument(
     "--approach",
     type=float,
@@ -65,8 +63,7 @@ parser.add_argument(
     "--arm_noise",
     type=float,
     default=0.0,
-    help="Standard deviation [rad] of Gaussian noise added to every arm joint target at every step, like the "
-    "exploration noise of a training policy (action std times the arm action scale).",
+    help="Standard deviation [rad] of Gaussian noise added to every arm joint target at every step, like the exploration noise of a training policy (action std times the arm action scale).",
 )
 parser.add_argument(
     "--ik_start",
@@ -97,9 +94,7 @@ parser.add_argument(
     help="Height [m] of a taller block with the cube's footprint; the hand grasps its upper cube-sized part.",
 )
 parser.add_argument("--cube_xy", type=float, nargs=2, default=[0.45, 0.0], help="Cube position [m].")
-parser.add_argument(
-    "--offsets", type=str, default="0,0;0.01,0;-0.01,0;0,0.01;0,-0.01", help="Cube offsets 'dx,dy' [m]."
-)
+parser.add_argument("--offsets", type=str, default="0,0;0.01,0;-0.01,0;0,0.01;0,-0.01", help="Cube offsets 'dx,dy' [m].")
 parser.add_argument("--close_steps", type=int, default=90, help="Steps used to close the hand.")
 parser.add_argument("--ik_iterations", type=int, default=100, help="Solver iterations per pose.")
 add_launcher_args(parser)
@@ -214,9 +209,7 @@ class Rig:
                 jac[:, k] = -(error(q_pert) - err) / 1e-3
             pinv = jac.T @ torch.linalg.inv(jac @ jac.T + 0.02**2 * torch.eye(6, device=self.device))
             posture = (torch.eye(7, device=self.device) - pinv @ jac) @ (reference - q[0, self.arm_ids])
-            q[0, self.arm_ids] = torch.clamp(
-                q[0, self.arm_ids] + 0.7 * (pinv @ err + 0.1 * posture), self.limits[:, 0], self.limits[:, 1]
-            )
+            q[0, self.arm_ids] = torch.clamp(q[0, self.arm_ids] + 0.7 * (pinv @ err + 0.1 * posture), self.limits[:, 0], self.limits[:, 1])
         err = error(q)
         return q[0, self.arm_ids].clone(), err[:3].norm().item(), err[3:].norm().item()
 
@@ -245,9 +238,7 @@ class Rig:
                 target[0, self.robot.joint_names.index(f"finger_r_joint{k + 1}")] = value
         return target
 
-    def trial(
-        self, grasp_arm, lift_arm, flex_scale: float, centre: torch.Tensor, offset, approach_arm=None, thumb=None
-    ) -> dict:
+    def trial(self, grasp_arm, lift_arm, flex_scale: float, centre: torch.Tensor, offset, approach_arm=None, thumb=None) -> dict:
         open_pose = self.robot.data.default_joint_pos.torch.clone()
         open_pose[0, self.arm_ids] = grasp_arm
         start_pose = open_pose.clone()
@@ -255,9 +246,7 @@ class Rig:
             start_pose[0, self.arm_ids] = approach_arm
         close = self.closed_target(grasp_arm, flex_scale, thumb)
         lift = self.closed_target(lift_arm, flex_scale, thumb)
-        cube_pos = torch.tensor(
-            [args_cli.cube_xy[0] + offset[0], args_cli.cube_xy[1] + offset[1], self.rest_z], device=self.device
-        )
+        cube_pos = torch.tensor([args_cli.cube_xy[0] + offset[0], args_cli.cube_xy[1] + offset[1], self.rest_z], device=self.device)
         half_yaw = math.radians(args_cli.block_yaw) / 2
         yaw_quat = torch.tensor([0.0, 0.0, math.sin(half_yaw), math.cos(half_yaw)], device=self.device)  # x, y, z, w
         cube_pose = torch.cat([cube_pos, yaw_quat]).unsqueeze(0)
@@ -276,9 +265,7 @@ class Rig:
         start = self.cube.data.root_pos_w.torch[0].clone()
         if args_cli.lift_after is None:
             for k in range(args_cli.close_steps):
-                self.step(
-                    open_pose + min(1.0, (k + 1) / (0.8 * args_cli.close_steps)) * (close - open_pose), noisy=True
-                )
+                self.step(open_pose + min(1.0, (k + 1) / (0.8 * args_cli.close_steps)) * (close - open_pose), noisy=True)
             for _ in range(HOLD_STEPS):
                 self.step(close, noisy=True)
             after_close = self.cube.data.root_pos_w.torch[0].clone()
@@ -291,9 +278,7 @@ class Rig:
             after_close = None
             for k in range(total):
                 closure = min(1.0, (k + 1) / (0.8 * args_cli.close_steps))
-                lifting = (
-                    0.0 if k < args_cli.lift_after else min(1.0, (k + 1 - args_cli.lift_after) / (0.8 * LIFT_STEPS))
-                )
+                lifting = 0.0 if k < args_cli.lift_after else min(1.0, (k + 1 - args_cli.lift_after) / (0.8 * LIFT_STEPS))
                 target = open_pose.clone()
                 target[0, hand_ids] = (open_pose + closure * (close - open_pose))[0, hand_ids]
                 target[0, self.arm_ids] = (close + lifting * (lift - close))[0, self.arm_ids]
@@ -305,9 +290,7 @@ class Rig:
         final = self.cube.data.root_pos_w.torch[0]
         rise = 1000 * (final[2] - start[2]).item()
         to_hand = 1000 * (final - self.centre_world(centre)).norm().item() - 1000 * (self.grasp_z - self.rest_z)
-        up = math_utils.quat_apply(
-            self.cube.data.root_quat_w.torch[0], torch.tensor([0.0, 0.0, 1.0], device=self.device)
-        )
+        up = math_utils.quat_apply(self.cube.data.root_quat_w.torch[0], torch.tensor([0.0, 0.0, 1.0], device=self.device))
         tilt = math.degrees(math.acos(max(-1.0, min(1.0, up[2].item()))))
         return {
             "pushed": 1000 * (after_close - start).norm().item(),
@@ -367,10 +350,7 @@ def main():
         lift_goal = cube_centre + torch.tensor([0.0, 0.0, args_cli.lift_height], device=sim.device)
         ready = torch.tensor(READY_POSE, device=sim.device)
 
-        print(
-            f"\n{'gravity (hand frame)':<22}{'cube centre (hand)':<22}{'flex':>5}  {'IK err':>14}  "
-            f"{'lifted':>7} {'pushed [mm]':>12} {'rise [mm]':>10}"
-        )
+        print(f"\n{'gravity (hand frame)':<22}{'cube centre (hand)':<22}{'flex':>5}  {'IK err':>14}  {'lifted':>7} {'pushed [mm]':>12} {'rise [mm]':>10}")
         results = []
         thumbs = [None] if args_cli.thumbs is None else parse_list(args_cli.thumbs)
         for gravity, centre, flex_scale, thumb in itertools.product(gravities, centres, flex_scales, thumbs):
@@ -413,10 +393,7 @@ def main():
 
         if results:
             best = max(results, key=lambda r: r[0])
-            print(
-                f"\nbest: {best[0]}/{len(offsets)} lifted with gravity {best[1]}, "
-                f"cube centre {best[2]}, flex scale {best[3]}"
-            )
+            print(f"\nbest: {best[0]}/{len(offsets)} lifted with gravity {best[1]}, cube centre {best[2]}, flex scale {best[3]}")
             print(f"  grasp arm [rad]: {[round(v, 3) for v in best[4]]}")
             print(f"  lift arm  [rad]: {[round(v, 3) for v in best[5]]}")
 

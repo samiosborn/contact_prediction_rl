@@ -1,3 +1,5 @@
+# src/contact_prediction_rl/tasks/reorientation/config/hx5_d20_right/env_cfg.py
+
 import isaaclab.sim as sim_utils
 from isaaclab.assets import AssetBaseCfg, RigidObjectCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
@@ -17,6 +19,7 @@ from isaaclab_physx.physics import PhysxCfg
 from isaaclab_tasks.utils import PresetCfg
 
 from contact_prediction_rl.robots.franka_hx5d20 import FRANKA_HX5D20_CFG
+from contact_prediction_rl.robots.hx5_d20_contacts import fingertip_contact_sensor_cfg, fingertip_object_contact
 
 from ... import mdp
 
@@ -112,40 +115,11 @@ class ReorientationSceneCfg(InteractiveSceneCfg):
         force_threshold=0.1,
     )
 
-    thumb_contact = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/ConvertedAsset/Geometry/hx5_d20_right_base/finger_r_link1/finger_r_link2/finger_r_link3/finger_r_link4",
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
-        update_period=0.0,
-        force_threshold=0.1,
-    )
-
-    index_contact = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/ConvertedAsset/Geometry/hx5_d20_right_base/finger_r_link5/finger_r_link6/finger_r_link7/finger_r_link8",
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
-        update_period=0.0,
-        force_threshold=0.1,
-    )
-
-    middle_contact = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/ConvertedAsset/Geometry/hx5_d20_right_base/finger_r_link9/finger_r_link10/finger_r_link11/finger_r_link12",
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
-        update_period=0.0,
-        force_threshold=0.1,
-    )
-
-    ring_contact = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/ConvertedAsset/Geometry/hx5_d20_right_base/finger_r_link13/finger_r_link14/finger_r_link15/finger_r_link16",
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
-        update_period=0.0,
-        force_threshold=0.1,
-    )
-
-    little_contact = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/ConvertedAsset/Geometry/hx5_d20_right_base/finger_r_link17/finger_r_link18/finger_r_link19/finger_r_link20",
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
-        update_period=0.0,
-        force_threshold=0.1,
-    )
+    thumb_contact = fingertip_contact_sensor_cfg("thumb")
+    index_contact = fingertip_contact_sensor_cfg("index")
+    middle_contact = fingertip_contact_sensor_cfg("middle")
+    ring_contact = fingertip_contact_sensor_cfg("ring")
+    little_contact = fingertip_contact_sensor_cfg("little")
 
     dome_light = AssetBaseCfg(
         prim_path="/World/DomeLight",
@@ -170,22 +144,29 @@ class ActionsCfg:
 
 @configclass
 class ObservationsCfg:
-    """For now expose only hand proprioception"""
+    """Public proprioception and separate privileged fingertip labels."""
 
     @configclass
     class PolicyCfg(ObsGroup):
-        joint_pos = ObsTerm(
-            func=mdp.joint_pos_rel, params={"asset_cfg": SceneEntityCfg("robot", joint_names=["finger_r_joint.*"])}
-        )
-        joint_vel = ObsTerm(
-            func=mdp.joint_vel_rel, params={"asset_cfg": SceneEntityCfg("robot", joint_names=["finger_r_joint.*"])}
-        )
+        joint_pos = ObsTerm(func=mdp.joint_pos_rel, params={"asset_cfg": SceneEntityCfg("robot", joint_names=["finger_r_joint.*"])})
+        joint_vel = ObsTerm(func=mdp.joint_vel_rel, params={"asset_cfg": SceneEntityCfg("robot", joint_names=["finger_r_joint.*"])})
 
         def __post_init__(self) -> None:
             self.enable_corruption = False
             self.concatenate_terms = True
 
     policy: PolicyCfg = PolicyCfg()
+
+    @configclass
+    class ContactCfg(ObsGroup):
+        fingertip_object = ObsTerm(func=fingertip_object_contact)
+
+        def __post_init__(self) -> None:
+            self.enable_corruption = False
+            self.concatenate_terms = True
+
+    # A distinct group ensures PPO never treats privileged labels as policy input.
+    contact: ContactCfg = ContactCfg()
 
 
 @configclass

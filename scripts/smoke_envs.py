@@ -1,7 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
+# scripts/smoke_envs.py
 
 """Instantiate one registered task with a few envs and step it; used by tests/test_smoke_envs.py."""
 
@@ -24,17 +21,33 @@ import contact_prediction_rl.tasks  # noqa: E402, F401
 
 
 def main() -> None:
-    env_cfg = parse_env_cfg(
-        args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, overrides=hydra_overrides
-    )
+    env_cfg = parse_env_cfg(args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, overrides=hydra_overrides)
     with launch_simulation(env_cfg, args_cli):
         from isaaclab.envs import ManagerBasedRLEnv
 
         env = ManagerBasedRLEnv(cfg=env_cfg)
-        env.reset()
+        obs, _ = env.reset()
+        contact_samples = []
+        check_contact = args_cli.task == "ContactPredictionRl-Reorientation-HX5-D20-Right"
+        if check_contact:
+            assert obs["policy"].shape == (args_cli.num_envs, 40), obs["policy"].shape
+            assert obs["contact"].shape == (args_cli.num_envs, 5), obs["contact"].shape
+            assert env.action_space.shape[-1] == 20, env.action_space.shape
         for _ in range(args_cli.steps):
             with torch.inference_mode():
-                env.step(torch.zeros(env.action_space.shape, device=env.device))
+                obs, _, _, _, _ = env.step(torch.zeros(env.action_space.shape, device=env.device))
+                if check_contact:
+                    contact = obs["contact"]
+                    assert contact.shape == (args_cli.num_envs, 5), contact.shape
+                    assert torch.all((contact == 0) | (contact == 1))
+                    contact_samples.append(contact)
+        if contact_samples:
+            rates = torch.cat(contact_samples, dim=0).float().mean(dim=0).tolist()
+            finger_names = ("thumb", "index", "middle", "ring", "little")
+            print(
+                f"CONTACT_RATE overall={sum(rates) / len(rates):.4f} " + " ".join(f"{name}={rate:.4f}" for name, rate in zip(finger_names, rates, strict=True)),
+                flush=True,
+            )
         env.close()
         # print before leaving the block: closing Isaac Sim (Kit-based tasks) ends the process
         print(f"SMOKE_OK {args_cli.task}", flush=True)

@@ -110,14 +110,7 @@ class IsaacLabPPOEnvWrapper:
     ) -> TensorDict:
         """Return the current environment observations"""
 
-        if hasattr(
-            self.unwrapped,
-            "observation_manager",
-        ):
-            observations = self.unwrapped.observation_manager.compute()
-
-        else:
-            observations = self.unwrapped._get_observations()
+        observations = self.unwrapped.observation_manager.compute() if hasattr(self.unwrapped, "observation_manager") else self.unwrapped._get_observations()
 
         return self._to_tensordict(observations)
 

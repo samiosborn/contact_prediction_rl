@@ -198,17 +198,11 @@ class OnPolicyRunner:
             self.current_learning_iteration = iteration
 
             # Average metrics collected during the rollout
-            metrics = {
-                name: (metric_sums[name] / metric_counts[name]) for name in metric_sums if metric_counts[name] > 0
-            }
+            metrics = {name: (metric_sums[name] / metric_counts[name]) for name in metric_sums if metric_counts[name] > 0}
 
-            mean_episode_reward = (
-                sum(completed_episode_rewards) / len(completed_episode_rewards) if completed_episode_rewards else None
-            )
+            mean_episode_reward = sum(completed_episode_rewards) / len(completed_episode_rewards) if completed_episode_rewards else None
 
-            mean_episode_length = (
-                sum(completed_episode_lengths) / len(completed_episode_lengths) if completed_episode_lengths else None
-            )
+            mean_episode_length = sum(completed_episode_lengths) / len(completed_episode_lengths) if completed_episode_lengths else None
 
             iteration_time = time.time() - iteration_start
 

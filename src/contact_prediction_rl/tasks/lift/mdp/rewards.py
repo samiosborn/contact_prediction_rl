@@ -26,9 +26,7 @@ _ROBOT = SceneEntityCfg("robot")
 _PANDA_HAND = SceneEntityCfg("robot", body_names=["panda_hand"])
 
 
-def _hand_to_object_distance(
-    env: ManagerBasedRLEnv, object_cfg: SceneEntityCfg, ee_frame_cfg: SceneEntityCfg, grasp_offset_z: float = 0.0
-) -> torch.Tensor:
+def _hand_to_object_distance(env: ManagerBasedRLEnv, object_cfg: SceneEntityCfg, ee_frame_cfg: SceneEntityCfg, grasp_offset_z: float = 0.0) -> torch.Tensor:
     """Distance [m] between the grasp centre of the hand and the part of the object the hand is meant to hold.
 
     The held part is the object's centre shifted up by ``grasp_offset_z`` [m]: zero for a cube, and half the extra
@@ -153,9 +151,7 @@ class object_goal_distance_in_hand(mdp.object_goal_distance):
     def reset(self, env_ids: torch.Tensor):
         # rewards are computed before resets, so ``_held_now`` still describes the last step of the finished episode
         if self._track_success:
-            self._env.extras.setdefault("log", {})["Metrics/held_at_goal_at_end"] = (
-                self._held_now[env_ids].float().mean().item()
-            )
+            self._env.extras.setdefault("log", {})["Metrics/held_at_goal_at_end"] = self._held_now[env_ids].float().mean().item()
         super().reset(env_ids)
 
     def __call__(
@@ -173,9 +169,7 @@ class object_goal_distance_in_hand(mdp.object_goal_distance):
     ) -> torch.Tensor:
         robot = env.scene[robot_cfg.name]
         command = env.command_manager.get_command(command_name)
-        des_pos_w, _ = combine_frame_transforms(
-            robot.data.root_pos_w.torch, robot.data.root_quat_w.torch, command[:, :3]
-        )
+        des_pos_w, _ = combine_frame_transforms(robot.data.root_pos_w.torch, robot.data.root_quat_w.torch, command[:, :3])
         object_pos_w = env.scene[object_cfg.name].data.root_pos_w.torch
         distance = torch.linalg.norm(des_pos_w - object_pos_w, dim=1)
         in_hand = _hand_to_object_distance(env, object_cfg, ee_frame_cfg, grasp_offset_z) < max_distance

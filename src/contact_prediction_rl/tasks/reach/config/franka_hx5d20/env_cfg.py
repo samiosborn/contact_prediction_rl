@@ -37,9 +37,7 @@ class FrankaHX5D20ReachEnvCfg(ReachEnvCfg):
         self.scene.robot = FRANKA_HX5D20_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
         # actions and observations cover the arm only
-        self.actions.arm_action = mdp.JointPositionActionCfg(
-            asset_name="robot", joint_names=ARM_JOINTS, scale=0.5, use_default_offset=True
-        )
+        self.actions.arm_action = mdp.JointPositionActionCfg(asset_name="robot", joint_names=ARM_JOINTS, scale=0.5, use_default_offset=True)
         self.observations.policy.joint_pos.params["asset_cfg"] = SceneEntityCfg("robot", joint_names=ARM_JOINTS)
         self.observations.policy.joint_vel.params["asset_cfg"] = SceneEntityCfg("robot", joint_names=ARM_JOINTS)
 

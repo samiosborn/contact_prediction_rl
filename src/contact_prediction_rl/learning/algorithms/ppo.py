@@ -15,7 +15,11 @@ from contact_prediction_rl.learning.storage.rollout_storage import RolloutStorag
 
 
 class PPO:
-    """Proximal Policy Optimisation"""
+    """Proximal Policy Optimisation.
+
+    Only ``obs["policy"]`` enters the actor and critic.
+    Other TensorDict groups, including privileged contact labels, are preserved in rollout storage but never used as policy inputs.
+    """
 
     def __init__(
         self,
@@ -105,9 +109,7 @@ class PPO:
         self.transition.actions_log_prob = self.actor.get_output_log_prob(self.transition.actions).detach()
 
         # Store the current Gaussian distribution parameters
-        self.transition.distribution_params = tuple(
-            parameter.detach() for parameter in self.actor.output_distribution_params
-        )
+        self.transition.distribution_params = tuple(parameter.detach() for parameter in self.actor.output_distribution_params)
 
         # Store observations before stepping the environment
         self.transition.observations = obs
