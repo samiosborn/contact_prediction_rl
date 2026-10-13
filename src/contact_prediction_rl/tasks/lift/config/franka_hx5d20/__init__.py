@@ -20,6 +20,9 @@ thumb left open (7 + 1 actions)::
 The ``-AllJoints-`` variant lets the policy control every finger joint, with no designed posture (7 + 20 actions)::
 
     uv run --extra isaacsim python scripts/train.py --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right
+
+It also has a PPO configuration with a lower entropy bonus and a near-zero initial action, selected with
+``--agent ppo_low_entropy_cfg_entry_point``.
 """
 
 import gymnasium as gym
@@ -92,6 +95,10 @@ gym.register(
         "ppo_cfg_entry_point": (
             f"{agents.__name__}.ppo_cfg:"
             "FrankaHX5D20BlockLiftAllJointsPPOCfg"
+        ),
+        "ppo_low_entropy_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20BlockLiftAllJointsLowEntropyPPOCfg"
         ),
         "default_agent": "ppo",
     },
