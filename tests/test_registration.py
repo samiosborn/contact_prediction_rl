@@ -15,7 +15,10 @@ def test_task_registrations():
             "env_cfg_entry_point": (
                 "contact_prediction_rl.tasks.reorientation.config.hx5_d20_right.env_cfg:ReorientationEnvCfg"
             ),
-            "default_agent": "rsl_rl",
+            "default_agent": "ppo",
+            "ppo_cfg_entry_point": (
+                "contact_prediction_rl.tasks.reorientation.config.hx5_d20_right.agents.ppo_cfg:PPORunnerCfg"
+            ),
         },
         "ContactPredictionRl-Reach-Franka-HX5-D20-Right": {
             "entry_point": "isaaclab.envs:ManagerBasedRLEnv",
