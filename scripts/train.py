@@ -27,6 +27,11 @@ from contact_prediction_rl.learning.isaaclab_env import (
 )
 import isaaclab_tasks  # noqa: F401
 
+from isaaclab_rl.entrypoints.common import (
+    apply_video_recording,
+    enable_cameras_for_video,
+    pre_launch_video_config,
+)
 from isaaclab_tasks.utils import resolve_task_config, setup_preset_cli
 
 
@@ -115,15 +120,15 @@ def _parse_args(
     parser.add_argument(
         "--video_length",
         type=int,
-        default=200,
-        help="Length of each recorded video in environment steps.",
+        default=None,
+        help="Length of each recorded video in environment steps (default 200).",
     )
 
     parser.add_argument(
         "--video_interval",
         type=int,
-        default=2000,
-        help="Interval between recorded videos in environment steps.",
+        default=None,
+        help="Interval between recorded videos in environment steps (default: one clip).",
     )
 
     # Isaac Lab simulator arguments
@@ -138,8 +143,9 @@ def _parse_args(
         )
     )
 
-    if args_cli.video:
-        args_cli.enable_cameras = True
+    enable_cameras_for_video(
+        args_cli
+    )
 
     return (
         args_cli,
@@ -282,6 +288,13 @@ def run(
         "[1/3] Launching simulation"
     )
 
+    # The recorder needs a Kit visualizer, which must be requested
+    # before the simulation launches
+    pre_launch_video_config(
+        env_cfg,
+        args_cli=args_cli,
+    )
+
     with launch_simulation(
         env_cfg,
         args_cli,
@@ -290,37 +303,17 @@ def run(
             "[2/3] Creating environment"
         )
 
+        # Videos go to <run directory>/videos/train
+        apply_video_recording(
+            env_cfg,
+            str(log_dir),
+            args_cli,
+        )
+
         env = gym.make(
             args_cli.task,
             cfg=env_cfg,
-            render_mode=(
-                "rgb_array"
-                if args_cli.video
-                else None
-            ),
         )
-
-        # Optional Gym video recording
-        if args_cli.video:
-            env = (
-                gym.wrappers.RecordVideo(
-                    env,
-                    video_folder=str(
-                        log_dir
-                        / "videos"
-                        / "train"
-                    ),
-                    step_trigger=lambda step: (
-                        step
-                        % args_cli.video_interval
-                        == 0
-                    ),
-                    video_length=(
-                        args_cli.video_length
-                    ),
-                    disable_logger=True,
-                )
-            )
 
         # Convert the Gymnasium step API into the small interface
         # expected by our runner

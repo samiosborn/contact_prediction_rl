@@ -176,10 +176,13 @@ uv run --extra isaacsim python scripts/play.py \
   --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right \
   --checkpoint latest --visualizer kit --real_time
 
-uv run --extra isaacsim python scripts/play.py \
+uv run --extra isaacsim --extra video python scripts/play.py \
   --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right \
   --checkpoint latest --video
 ```
+
+Videos are written to `<run directory>/videos/play/` and need the `video` extra (MoviePy). `scripts/train.py --video`
+records training clips to `<run directory>/videos/train/` the same way.
 
 ### Franka + HX5-D20 Lift with hand synergies
 
