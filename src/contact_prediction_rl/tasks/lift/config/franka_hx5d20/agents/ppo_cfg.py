@@ -62,3 +62,10 @@ class FrankaHX5D20BlockLiftCurlPPOCfg(FrankaHX5D20BlockLiftPPOCfg):
     """PPO configuration of the curl-only block-lift task: the same settings, logged under its own experiment name"""
 
     experiment_name = "lift_block_franka_hx5d20_curl"
+
+
+@configclass
+class FrankaHX5D20BlockLiftAllJointsPPOCfg(FrankaHX5D20BlockLiftPPOCfg):
+    """PPO configuration of the all-joints block-lift task: the same settings, logged under its own experiment name"""
+
+    experiment_name = "lift_block_franka_hx5d20_all_joints"

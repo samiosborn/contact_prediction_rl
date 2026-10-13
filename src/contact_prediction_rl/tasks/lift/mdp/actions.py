@@ -16,12 +16,17 @@ import isaaclab.utils.string as string_utils
 from isaaclab.envs.mdp.actions.binary_joint_actions import BinaryJointPositionAction
 from isaaclab.managers.action_manager import ActionTerm
 
+from .joint_targets import closure_along_shape, max_target_change, step_joint_targets
 from .synergies import step_closures, synergy_posture
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
 
-    from .actions_cfg import RateLimitedBinaryJointPositionActionCfg, SynergyJointPositionActionCfg
+    from .actions_cfg import (
+        PerJointPositionActionCfg,
+        RateLimitedBinaryJointPositionActionCfg,
+        SynergyJointPositionActionCfg,
+    )
 
 
 class RateLimitedBinaryJointPositionAction(BinaryJointPositionAction):
@@ -141,3 +146,86 @@ class SynergyJointPositionAction(ActionTerm):
             env_ids = slice(None)
         self._raw_actions[env_ids] = 0.0
         self._closure[env_ids] = 0.0
+
+
+class PerJointPositionAction(ActionTerm):
+    """Hand action with one continuous value per joint, integrated into rate-limited position targets.
+
+    The joint targets start at the open posture. At every step each target moves by ``action * max_change`` and is
+    clipped to the joint limits, where ``max_change`` is the joint's whole range divided by ``closing_time`` per
+    second. An action of 0 holds the posture and a positive action raises the joint angle, so the policy builds the
+    hand shape itself, joint by joint, at the same speed limit as the single-closure hand.
+
+    The ``closure`` property reports how far the targets are along ``closure_shape``, so that rewards written for the
+    single-closure hand work unchanged.
+    """
+
+    cfg: PerJointPositionActionCfg
+
+    def __init__(self, cfg: PerJointPositionActionCfg, env: ManagerBasedEnv) -> None:
+        super().__init__(cfg, env)
+
+        joint_ids, self._joint_names = self._asset.find_joints(self.cfg.joint_names, as_proxy=True)
+        self._num_joints = len(joint_ids)
+        self._joint_ids = joint_ids.warp
+
+        self._open_command = self._resolve_posture(self.cfg.open_command_expr)
+        self._closure_shape = self._resolve_posture(self.cfg.closure_shape)
+
+        limits = self._asset.data.joint_pos_limits.torch[0, joint_ids.torch].to(self.device)
+        self._lower, self._upper = limits[:, 0].clone(), limits[:, 1].clone()
+        self._max_change = max_target_change(self._lower, self._upper, env.step_dt, self.cfg.closing_time)
+
+        self._raw_actions = torch.zeros(self.num_envs, self._num_joints, device=self.device)
+        self._joint_targets = self._open_command.repeat(self.num_envs, 1)
+        self._processed_actions = self._joint_targets.clone()
+
+    def _resolve_posture(self, posture: dict[str, float]) -> torch.Tensor:
+        """Joint values of a posture given by regular expressions, with 0 for the joints it does not name."""
+        values = torch.zeros(self._num_joints, device=self.device)
+        index_list, _, value_list = string_utils.resolve_matching_names_values(posture, self._joint_names)
+        values[index_list] = torch.tensor(value_list, device=self.device)
+        return values
+
+    @property
+    def action_dim(self) -> int:
+        return self._num_joints
+
+    @property
+    def raw_actions(self) -> torch.Tensor:
+        return self._raw_actions
+
+    @property
+    def processed_actions(self) -> torch.Tensor:
+        return self._processed_actions
+
+    @property
+    def joint_names(self) -> list[str]:
+        """Names of the controlled joints, in the order of the action dimensions."""
+        return self._joint_names
+
+    @property
+    def joint_targets(self) -> torch.Tensor:
+        """Current joint position targets [rad], shape (num_envs, num_joints)."""
+        return self._joint_targets
+
+    @property
+    def closure(self) -> torch.Tensor:
+        """Fraction of ``closure_shape`` the targets have reached, shape (num_envs, 1)."""
+        return closure_along_shape(self._joint_targets, self._closure_shape)
+
+    def process_actions(self, actions: torch.Tensor):
+        self._raw_actions[:] = actions
+        self._joint_targets = step_joint_targets(
+            self._joint_targets, actions, self._max_change, self._lower, self._upper
+        )
+        self._processed_actions = self._joint_targets
+
+    def apply_actions(self):
+        self._asset.set_joint_position_target_index(target=self._processed_actions, joint_ids=self._joint_ids)
+
+    def reset(self, env_ids: Sequence[int] | None = None) -> None:
+        if env_ids is None:
+            env_ids = slice(None)
+        self._raw_actions[env_ids] = 0.0
+        self._joint_targets[env_ids] = self._open_command

@@ -34,6 +34,18 @@ def test_task_registrations():
             "ppo_cfg_entry_point": ("contact_prediction_rl.tasks.lift.config.franka_hx5d20.agents.ppo_cfg:FrankaHX5D20BlockLiftCurlPPOCfg"),
             "default_agent": "ppo",
         },
+        "ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right": {
+            "entry_point": "isaaclab.envs:ManagerBasedRLEnv",
+            "env_cfg_entry_point": (
+                "contact_prediction_rl.tasks.lift.config.franka_hx5d20.env_cfg:"
+                "FrankaHX5D20BlockLiftAllJointsEnvCfg"
+            ),
+            "ppo_cfg_entry_point": (
+                "contact_prediction_rl.tasks.lift.config.franka_hx5d20.agents.ppo_cfg:"
+                "FrankaHX5D20BlockLiftAllJointsPPOCfg"
+            ),
+            "default_agent": "ppo",
+        },
         "ContactPredictionRl-Lift-Block-Franka-HX5-D20-Synergy-Right": {
             "entry_point": "isaaclab.envs:ManagerBasedRLEnv",
             "env_cfg_entry_point": ("contact_prediction_rl.tasks.lift.config.franka_hx5d20.env_cfg:FrankaHX5D20BlockLiftSynergyEnvCfg"),
