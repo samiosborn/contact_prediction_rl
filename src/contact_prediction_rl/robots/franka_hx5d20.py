@@ -10,6 +10,7 @@ The following configurations are available:
 * :obj:`FRANKA_HX5D20_CFG`: Franka Panda arm (7 DoF) with the 20-DoF Robotis HX5-D20 right hand
 * :obj:`FRANKA_HX5D20_HAND_OPEN` / :obj:`FRANKA_HX5D20_HAND_CLOSED`: open and closed hand postures
 * :obj:`FRANKA_HX5D20_GRASP_CENTER`: where an object sits in the closed hand
+* :obj:`FRANKA_HX5D20_HAND_CLOSED_THUMB_OPEN`: the closed posture with the thumb left open (curl only)
 * :obj:`FRANKA_HX5D20_HAND_SYNERGIES`: hand-designed finger postures the policy can blend (curl, thumb, spread)
 
 The USD is stored in ``assets/data/franka_hx5d20`` (see its ``SOURCE.md``). The hand is attached to ``panda_hand``
@@ -97,6 +98,19 @@ FRANKA_HX5D20_HAND_CLOSED = {
 Fitted with forward kinematics of the hand's joint frames (thumb opposition and finger flexion) and checked with
 the scripted grasp search ``scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py``.
 """
+
+FRANKA_HX5D20_HAND_CLOSED_THUMB_OPEN = {
+    # thumb stays open
+    "finger_r_joint[1-4]": 0.0,
+    # finger abduction stays neutral; flexion as in the closed posture
+    "finger_r_joint(5|9|13|17)": 0.0,
+    "finger_r_joint(6|10|14|18)": 1.505,
+    "finger_r_joint(7|8|11|12|15|16|19|20)": 1.178,
+}
+"""Closed hand posture [rad] with the four fingers curled and the thumb left open (all 20 joints are listed, as the
+binary hand action requires). It is :obj:`FRANKA_HX5D20_HAND_CLOSED` without the thumb, and the "curl" synergy of
+:obj:`FRANKA_HX5D20_HAND_SYNERGIES` at closure 1. Used as the control of the synergy task: a hand with one open/close
+value whose closed posture is what the best synergy policy used."""
 
 FRANKA_HX5D20_GRASP_CENTER = (0.05, 0.0, 0.10)
 """Position [m] in the ``panda_hand`` frame where a 6 cm cube is held by the closed hand.

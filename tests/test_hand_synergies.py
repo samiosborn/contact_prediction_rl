@@ -2,10 +2,13 @@
 
 """Tests for the hand synergy postures."""
 
+import re
+
 import pytest
 
 from contact_prediction_rl.robots.franka_hx5d20 import (
     FRANKA_HX5D20_HAND_CLOSED,
+    FRANKA_HX5D20_HAND_CLOSED_THUMB_OPEN,
     FRANKA_HX5D20_HAND_SYNERGIES,
     resolve_joint_posture,
 )
@@ -48,3 +51,20 @@ def test_spread_moves_the_outer_fingers_apart():
 
     assert index < middle < 0.0 < ring < little
     assert index == pytest.approx(-little)
+
+
+def test_thumb_open_posture_is_the_closed_posture_without_the_thumb():
+    closed = resolve_joint_posture(FRANKA_HX5D20_HAND_CLOSED, JOINT_NAMES)
+    thumb_open = resolve_joint_posture(FRANKA_HX5D20_HAND_CLOSED_THUMB_OPEN, JOINT_NAMES)
+
+    assert thumb_open[:4] == [0.0] * 4
+    assert thumb_open[4:] == pytest.approx(closed[4:])
+    assert thumb_open == pytest.approx(posture("curl"))
+
+
+def test_thumb_open_posture_names_every_finger_joint():
+    # the binary hand action raises an error unless every joint it controls has a value
+    for name in JOINT_NAMES:
+        matches = [p for p in FRANKA_HX5D20_HAND_CLOSED_THUMB_OPEN if re.fullmatch(p, name)]
+
+        assert len(matches) == 1, name
