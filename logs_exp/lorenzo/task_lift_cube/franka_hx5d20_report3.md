@@ -1,6 +1,6 @@
 # Lift task: letting the policy shape the hand (hand synergies)
 
-*Status: first results. This report will be updated when the control experiment (section 6) is finished.*
+*Status: synergy results and the control experiment (section 6) are finished. Next: control of every finger joint.*
 
 ## Summary
 
@@ -11,7 +11,8 @@ What we found, in short:
 - **One run is the best grasp we have seen.** With the synergy task, seed 4 holds the block at the goal in **100 %** of 512 test episodes, and holds it **upright** (median tilt **7°**, 96 % under 10°). The best run with the one-value hand holds it at a tilt of 21° and none of its episodes are upright.
 - **But it barely uses the new freedom.** At the end of the episode, curl is fully closed in every episode, **thumb is open (about 0) and spread is 0**. The policy mostly found "close the fingers, keep the thumb open".
 - **The synergy task is not more reliable.** After 300 iterations, 1 of 5 seeds ends up holding the block at the goal (against 3 of 5 for the one-value hand). Two synergy runs found a good grasp and then lost it.
-- **So we cannot yet say the synergies help.** The good grasp may simply be a better *fixed* posture (fingers closed, thumb open). The next step is a control experiment that tests exactly this (section 6).
+- **The control says most of this is the thumb-open posture, not learned control.** A hand with a single open/close value whose closed posture is "fingers curled, thumb open" gets a similar grasp in the seeds that work (100 % held, tilt 13°, closes 46 mm from the grasp point). The synergy hand's best run is somewhat better (tilt 7°, 43 mm), but the control's runs vary from 10° to 25° tilt, so we cannot call that difference real.
+- **So we cannot claim the three synergies help yet.** What the experiments did show: keeping the thumb open gives a good grasp, and spread is never used.
 
 ## 1. What changed
 
@@ -102,28 +103,59 @@ What the numbers say:
 
 One thing we do not understand yet: seed 1 at iteration 150 held the block at the goal in 91 % of *training* episodes, but only 12 % in the deterministic test of the same checkpoint. For the one-value hand the two agree. This policy may rely on its exploration noise.
 
-## 5. What we can and cannot say
+## 5. What we can and cannot say (before the control)
 
 **We can say**
 - A good grasp exists in the synergy space (scripted tests), and one trained policy found it.
-- That policy is clearly better than the one-value policies in tilt and in closing point, with one run each.
+- That policy is better than the one-value policies in tilt and in closing point, with one run each.
 - The extra freedom was used in one way only: keeping the thumb open.
 
-**We cannot say yet**
-- That the synergies are what made the grasp better. A one-value hand that keeps the thumb open might do just as well.
-- That synergies are as reliable to train as the one-value hand (the early numbers suggest not, but 5 seeds is too few).
+**We could not say yet** (section 6 answers the first of these)
+- That the synergies are what made the grasp better, rather than a better fixed posture.
+- That synergies are as reliable to train as the one-value hand (the numbers suggest not, but 5 seeds is too few).
 - Why two runs lose the grasp after finding it.
 
-## 6. Next step: the control experiment
+## 6. The control experiment
 
 **Question:** is the better grasp a result of *learned control*, or just of a *better fixed posture*?
 
-**Control:** the one-value hand (open or closed), but where "closed" means **curl only, thumb open**. The policy has no choice of finger shape at all. We train 5 seeds of it and compare with the synergy hand.
+**Control:** the one-value hand (open or closed), but where "closed" means **fingers curled, thumb open**. The policy has no choice of finger shape at all. Same task, rewards and settings, 5 seeds, 300 iterations.
 
-| If the control gives... | It means |
+### Results (control, thumb open, one value)
+
+| Seed | Reward / held (training, last 20 its.) | Held at goal (test) | Lifted | Tilt | Upright | Closes from grasp point |
+|---|---|---|---|---|---|---|
+| 1 | 5 / 0.00 | 0 % | 0 % | – | – | 83 mm (never grasps) |
+| 2 | 233 / 1.00 | **100 %** | 100 % | 13° | 2 % | 46 mm |
+| 3 | 25 / 0.00 | 0 % | 0 % | – | – | 83 mm (never grasps) |
+| 4 | 74 / 0.06 | 0.2 % | 76 % | 10° | 44 % | 56 mm (90th pct 79 mm) |
+| 42 | 148 / 0.61 | **93 %** | 100 % | 25° | 0 % | 47 mm |
+
+Seeds 1 and 3 never close the hand (the hover failure again). Seed 4 lifts the block but carries it about 10 cm from the goal, as synergy seeds 1 and 42 did.
+
+### The three setups side by side
+
+| Setup | Holds the goal at the end | Never closes the hand | Best grasp (tilt / upright / closing point) |
+|---|---|---|---|
+| One value, thumb closed (report 1 posture) | 3 of 5 | 2 of 5 | 21° / 0 % / 51 mm |
+| **One value, thumb open (control)** | 2 of 5 | 2 of 5 | 13° / 2 % / 46 mm |
+| Three synergies | 1 of 5 | 2 of 5 | 7° / 96 % / 43 mm |
+
+### What it means
+
+| Prediction made before the experiment | What happened |
 |---|---|
-| the same upright grasp (about 7° tilt, about 43 mm) | The synergies add nothing so far. The gain came from the fixed posture the policy happened to find. Then a richer design (for example per-finger curl) is the next thing to try. |
-| a worse grasp (more tilt, farther from the grasp point) | The freedom to keep the thumb open, chosen by the policy, matters. The synergy space is justified. |
+| If the control gives the same grasp, the synergies add nothing yet | **Mostly this.** The control reaches 100 % held at 13° tilt and 46 mm, near the synergy's 7° and 43 mm. |
+| If the control is clearly worse, the learned choice matters | **Not clearly.** The synergy run is better (7° against 13°, 25° and 10°), but that is one synergy run against three control runs that vary by 15°. |
+
+- **Main finding:** the better grasp comes mainly from **keeping the thumb open**. The extra freedom of the synergy hand, as designed, did not show a clear benefit.
+- **Reliability is not a result of the synergies.** About 2 of 5 seeds never close the hand in *every* setup, and 1–3 of 5 finish holding the block. With 5 seeds each, the differences between setups are within chance.
+- **Tilt differs a lot between seeds** within the same setup (control: 10°–25°; synergy: 7°–27°). A single run is not a measure of a setup.
+- **A remaining open question:** why does the best synergy run reach 96 % upright when the control's best reaches 44 %? It could be luck, or something the synergy policy learned about hand placement. More seeds are needed.
+
+### Honest limits
+- 5 seeds per setup, 300 iterations, one evaluation per run.
+- "Held" at the end of 300 iterations is a snapshot. Some runs were still changing (see the lost grasps in section 3).
 
 ## 7. Files and commands
 
@@ -132,6 +164,8 @@ One thing we do not understand yet: seed 1 at iteration 150 held the block at th
 | Hand shapes | `src/contact_prediction_rl/robots/franka_hx5d20.py` (`FRANKA_HX5D20_HAND_SYNERGIES`) |
 | Synergy action | `src/contact_prediction_rl/tasks/lift/mdp/actions.py` (`SynergyJointPositionAction`) |
 | Task ID | `ContactPredictionRl-Lift-Block-Franka-HX5-D20-Synergy-Right` |
+| Control task ID (thumb open, one value) | `ContactPredictionRl-Lift-Block-Franka-HX5-D20-Curl-Right` |
+| Control evaluations (full output) | `logs_exp/lorenzo/task_lift_cube/curl_evals.txt` |
 | Scripted grasp search with synergies | `scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py --synergies "curl,thumb,spread;..."` |
 | Best run | `logs/ppo/lift_block_franka_hx5d20_synergy/2026-10-12_15-37-41_syn_seed4/` |
 | Video of the best policy | `logs/ppo/lift_block_franka_hx5d20_synergy/2026-10-12_15-37-41_syn_seed4/videos/play/clip_model_299_0000.mp4` |
