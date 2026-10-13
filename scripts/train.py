@@ -21,7 +21,9 @@ from isaaclab.utils.io import dump_yaml
 from isaaclab.utils.seed import configure_seed
 
 from isaaclab_rl.entrypoints.common import (
+    apply_video_recording,
     enable_cameras_for_video,
+    pre_launch_video_config,
 )
 
 import isaaclab_tasks  # noqa: F401
@@ -138,8 +140,7 @@ def _parse_args(
         argv,
     )
 
-    if args_cli.video:
-        args_cli.enable_cameras = True
+    enable_cameras_for_video(args_cli)
 
     return (
         args_cli,
@@ -240,9 +241,6 @@ def run(
     # ----------------------------------------------------------
 
     print("[1/3] Launching simulation")
-    print(
-        "[1/3] Launching simulation"
-    )
 
     # The recorder needs a Kit visualizer, which must be requested
     # before the simulation launches
@@ -256,9 +254,6 @@ def run(
         args_cli,
     ):
         print("[2/3] Creating environment")
-        print(
-            "[2/3] Creating environment"
-        )
 
         # Videos go to <run directory>/videos/train
         apply_video_recording(
@@ -271,17 +266,6 @@ def run(
             args_cli.task,
             cfg=env_cfg,
             render_mode=("rgb_array" if args_cli.video else None),
-        )
-
-        # Optional Gym video recording
-        if args_cli.video:
-            env = gym.wrappers.RecordVideo(
-                env,
-                video_folder=str(log_dir / "videos" / "train"),
-                step_trigger=lambda step: (step % args_cli.video_interval == 0),
-                video_length=(args_cli.video_length),
-                disable_logger=True,
-            )
         )
 
         # Convert the Gymnasium step API into the small interface

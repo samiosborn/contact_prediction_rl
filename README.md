@@ -202,7 +202,7 @@ evaluation script also reports the final closure of each synergy.
 Scripted grasps over the synergy space (no training) can be run with:
 
 ```bash
-uv run --extra isaacsim python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py \
+uv run python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py \
   --gravities "0,-1,0" --centers "0.04,0,0.09" --block_height 0.12 --approach 0.06 \
   --synergies "1,1,0;1,0.5,0.5;1,0,0"
 ```

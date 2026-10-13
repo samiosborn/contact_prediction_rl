@@ -21,7 +21,7 @@ at z = 0.
     uv run python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py
     uv run python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py \
         --gravities "0,-0.99,0.14" --centers "0.05,-0.03,0.10" --flex_scales "1.0"
-    uv run --extra isaacsim python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py \
+    uv run python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py \
         --gravities "0,-1,0" --centers "0.04,0,0.09" --block_height 0.12 --approach 0.06 \
         --synergies "1,1,0;1,1,0.5;1,1,1;0.8,1,0.5"
 
@@ -32,10 +32,12 @@ at z = 0.
 import argparse
 import itertools
 import time
-
-from isaaclab.assets import Articulation, RigidObject, RigidObjectCfg
+from typing import TYPE_CHECKING
 
 from isaaclab.app import add_launcher_args, launch_simulation
+
+if TYPE_CHECKING:
+    from isaaclab.assets import Articulation, RigidObject
 
 parser = argparse.ArgumentParser(description="Search a table grasp for the Franka + HX5-D20.")
 parser.add_argument(
