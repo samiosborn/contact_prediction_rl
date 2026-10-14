@@ -1,3 +1,5 @@
+# scripts/test_hx5.py
+
 import argparse
 import json
 from pathlib import Path

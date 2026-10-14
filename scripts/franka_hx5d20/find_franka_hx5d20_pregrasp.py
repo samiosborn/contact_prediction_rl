@@ -1,7 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
+# scripts/franka_hx5d20/find_franka_hx5d20_pregrasp.py
 
 """Find arm joint values that put the grasp centre of the HX5-D20 hand on a cube.
 
