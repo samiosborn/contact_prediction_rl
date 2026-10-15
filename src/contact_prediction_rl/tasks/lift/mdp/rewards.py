@@ -176,3 +176,14 @@ class object_goal_distance_in_hand(mdp.object_goal_distance):
             self._held_now = is_lifted & (distance < success_threshold)
             self._succeeded |= self._held_now
         return is_lifted.float() * (1 - torch.tanh(distance / std))
+
+
+def hand_residual_penalty(env: ManagerBasedRLEnv, action_name: str = "gripper_action") -> torch.Tensor:
+    """Mean squared size of the per-joint corrections of the hand, between 0 and 1 (use with a negative weight).
+
+    Each correction is taken as a fraction of the largest one the action allows, so the value is 0 when the hand
+    follows the prior posture and 1 when every joint is at its largest correction. It pulls joints that do not matter
+    for the grasp back toward the prior.
+    """
+    term = env.action_manager.get_term(action_name)
+    return term.normalised_residual.pow(2).mean(dim=1)

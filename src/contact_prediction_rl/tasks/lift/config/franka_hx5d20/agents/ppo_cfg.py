@@ -127,3 +127,20 @@ class FrankaHX5D20BlockLiftAllJointsLowEntropyPPOCfg(FrankaHX5D20BlockLiftAllJoi
             CONFIG.PPO_NORMALIZE_ADVANTAGE_PER_MINI_BATCH
         ),
     }
+
+
+@configclass
+class FrankaHX5D20BlockLiftPriorResidualPPOCfg(FrankaHX5D20BlockLiftPPOCfg):
+    """PPO configuration of the prior-residual block-lift task: the shared settings, under its own experiment name"""
+
+    experiment_name = "lift_block_franka_hx5d20_prior_residual"
+
+
+@configclass
+class FrankaHX5D20BlockLiftPriorResidualLowEntropyPPOCfg(FrankaHX5D20BlockLiftAllJointsLowEntropyPPOCfg):
+    """Prior-residual task with the lower entropy bonus and the near-zero initial action of the all-joints task.
+
+    Select it with ``--agent ppo_low_entropy_cfg_entry_point``.
+    """
+
+    experiment_name = "lift_block_franka_hx5d20_prior_residual_low_entropy"

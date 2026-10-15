@@ -67,3 +67,34 @@ class PerJointPositionActionCfg(ActionTermCfg):
 
     closing_time: float = 2.0
     """Time [s] a joint takes to go through its whole range at the largest action."""
+
+
+@configclass
+class PriorResidualPositionActionCfg(ActionTermCfg):
+    """Configuration of :class:`PriorResidualPositionAction`."""
+
+    class_type: type | str = "{DIR}.actions:PriorResidualPositionAction"
+
+    joint_names: list[str] = MISSING
+    """List of joint names or regular expressions the action is mapped to."""
+
+    open_command_expr: dict[str, float] = MISSING
+    """Joint values of the open hand. Keys are joint name regular expressions."""
+
+    prior_shape: dict[str, float] = MISSING
+    """Posture (joint displacement [rad] from the open hand) that the closure action blends in.
+
+    Keys are joint name regular expressions.
+    """
+
+    residual_authority: float = 0.5
+    """Largest per-joint correction as a fraction of the joint's range (0.5 allows +-50 % of the range)."""
+
+    joint_ranges: dict[str, tuple[float, float]] | None = None
+    """Optional allowed range [rad] of individual joints, narrower than their limits (keys are regular expressions).
+
+    Used to keep a joint on the natural side of its range, for example the thumb opposition joint.
+    """
+
+    closing_time: float = 2.0
+    """Time [s] the closure goes from open to closed, and a joint correction through its whole range."""
