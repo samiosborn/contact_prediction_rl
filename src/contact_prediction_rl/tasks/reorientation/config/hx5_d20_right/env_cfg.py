@@ -1,12 +1,12 @@
-from pathlib import Path
+# src/contact_prediction_rl/tasks/reorientation/config/hx5_d20_right/env_cfg.py
 
 import isaaclab.sim as sim_utils
-from isaaclab.actuators import ImplicitActuatorCfg
-from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCfg
+from isaaclab.assets import AssetBaseCfg, RigidObjectCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.physics import PhysxAutoCfg
 from isaaclab.scene import InteractiveSceneCfg
@@ -18,11 +18,10 @@ from isaaclab_physx.physics import PhysxCfg
 
 from isaaclab_tasks.utils import PresetCfg
 
+from contact_prediction_rl.robots.franka_hx5d20 import FRANKA_HX5D20_CFG
+from contact_prediction_rl.robots.hx5_d20_contacts import fingertip_contact_sensor_cfg, fingertip_object_contact
+
 from ... import mdp
-
-ASSET_DIR = Path(__file__).resolve().parents[4] / "assets" / "data" / "hx5_d20" / "right"
-
-HX5_USD_PATH = ASSET_DIR / "usd" / "hx5_d20_right" / "hx5_d20_right.usda"
 
 
 @configclass
@@ -64,37 +63,19 @@ class ReorientationPhysicsCfg(PresetCfg):
 
 @configclass
 class ReorientationSceneCfg(InteractiveSceneCfg):
-    """Minimal HX5-D20 scene"""
+    """Minimal Franka + HX5-D20 scene"""
 
     ground = AssetBaseCfg(
         prim_path="/World/ground",
         spawn=sim_utils.GroundPlaneCfg(size=(10.0, 10.0)),
     )
 
-    robot = ArticulationCfg(
-        prim_path="{ENV_REGEX_NS}/Robot",
-        spawn=sim_utils.UsdFileCfg(
-            usd_path=str(HX5_USD_PATH),
-        ),
-        init_state=ArticulationCfg.InitialStateCfg(
-            # URDF fingers extend along +Z and curl toward +X, the palm normal
-            pos=(0.0, 0.0, 0.5),
-            rot=(0.0, -0.7071067811865476, 0.0, 0.7071067811865476),
-            joint_pos={
-                "finger_r_joint.*": 0.0,
-            },
-        ),
-        actuators={
-            "fingers": ImplicitActuatorCfg(
-                joint_names_expr=["finger_r_joint.*"],
-                # Conservative bring-up gains for the small finger inertias at 120 Hz
-                stiffness=1.0,
-                damping=0.05,
-            ),
-        },
-    )
+    robot = FRANKA_HX5D20_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    # Retain the hand's bring-up gains; the shared arm PD holds its default posture.
+    robot.actuators["hx5_d20_fingers"].stiffness = 1.0
+    robot.actuators["hx5_d20_fingers"].damping = 0.05
 
-    # Catch surface 221 mm below the palm, clear of the hand workspace
+    # Catch surface 220 mm below the default palm; shifted forward to clear the arm base.
     table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Table",
         spawn=sim_utils.CuboidCfg(
@@ -102,7 +83,7 @@ class ReorientationSceneCfg(InteractiveSceneCfg):
             collision_props=[sim_utils.UsdPhysicsCollisionCfg(collision_enabled=True)],
             visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.35, 0.4, 0.45)),
         ),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(-0.065, 0.0, 0.28)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.85, 0.0, 0.237824)),
     )
 
     object = RigidObjectCfg(
@@ -122,52 +103,23 @@ class ReorientationSceneCfg(InteractiveSceneCfg):
             ),
         ),
         init_state=RigidObjectCfg.InitialStateCfg(
-            # Palm collision front is at local X <= 21 mm, with 3 mm spawn clearance
-            pos=(-0.075, 0.0, 0.549),
+            # Preserve the old cube offset in the palm frame: (-0.049, 0, 0.075) m.
+            pos=(0.408795, -0.002175, 0.370399),
         ),
     )
 
     palm_contact = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/Geometry/hx5_d20_right_base",
+        prim_path="{ENV_REGEX_NS}/Robot/ConvertedAsset/Geometry/hx5_d20_right_base",
         filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
         update_period=0.0,
         force_threshold=0.1,
     )
 
-    thumb_contact = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/Geometry/hx5_d20_right_base/finger_r_link1/finger_r_link2/finger_r_link3/finger_r_link4",
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
-        update_period=0.0,
-        force_threshold=0.1,
-    )
-
-    index_contact = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/Geometry/hx5_d20_right_base/finger_r_link5/finger_r_link6/finger_r_link7/finger_r_link8",
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
-        update_period=0.0,
-        force_threshold=0.1,
-    )
-
-    middle_contact = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/Geometry/hx5_d20_right_base/finger_r_link9/finger_r_link10/finger_r_link11/finger_r_link12",
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
-        update_period=0.0,
-        force_threshold=0.1,
-    )
-
-    ring_contact = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/Geometry/hx5_d20_right_base/finger_r_link13/finger_r_link14/finger_r_link15/finger_r_link16",
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
-        update_period=0.0,
-        force_threshold=0.1,
-    )
-
-    little_contact = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/Geometry/hx5_d20_right_base/finger_r_link17/finger_r_link18/finger_r_link19/finger_r_link20",
-        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
-        update_period=0.0,
-        force_threshold=0.1,
-    )
+    thumb_contact = fingertip_contact_sensor_cfg("thumb")
+    index_contact = fingertip_contact_sensor_cfg("index")
+    middle_contact = fingertip_contact_sensor_cfg("middle")
+    ring_contact = fingertip_contact_sensor_cfg("ring")
+    little_contact = fingertip_contact_sensor_cfg("little")
 
     dome_light = AssetBaseCfg(
         prim_path="/World/DomeLight",
@@ -192,18 +144,29 @@ class ActionsCfg:
 
 @configclass
 class ObservationsCfg:
-    """For now expose only hand proprioception"""
+    """Public proprioception and separate privileged fingertip labels."""
 
     @configclass
     class PolicyCfg(ObsGroup):
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel)
-        joint_vel = ObsTerm(func=mdp.joint_vel_rel)
+        joint_pos = ObsTerm(func=mdp.joint_pos_rel, params={"asset_cfg": SceneEntityCfg("robot", joint_names=["finger_r_joint.*"])})
+        joint_vel = ObsTerm(func=mdp.joint_vel_rel, params={"asset_cfg": SceneEntityCfg("robot", joint_names=["finger_r_joint.*"])})
 
         def __post_init__(self) -> None:
             self.enable_corruption = False
             self.concatenate_terms = True
 
     policy: PolicyCfg = PolicyCfg()
+
+    @configclass
+    class ContactCfg(ObsGroup):
+        fingertip_object = ObsTerm(func=fingertip_object_contact)
+
+        def __post_init__(self) -> None:
+            self.enable_corruption = False
+            self.concatenate_terms = True
+
+    # A distinct group ensures PPO never treats privileged labels as policy input.
+    contact: ContactCfg = ContactCfg()
 
 
 @configclass
@@ -228,7 +191,7 @@ class TerminationsCfg:
 
 @configclass
 class ReorientationEnvCfg(ManagerBasedRLEnvCfg):
-    """Minimal HX5-D20 environment"""
+    """Minimal Franka + HX5-D20 environment"""
 
     scene: ReorientationSceneCfg = ReorientationSceneCfg(
         num_envs=1,
@@ -241,6 +204,9 @@ class ReorientationEnvCfg(ManagerBasedRLEnvCfg):
     terminations: TerminationsCfg = TerminationsCfg()
 
     def __post_init__(self) -> None:
+        # The policy only writes finger targets; hold the arm at its initial PD targets.
+        self.events.reset_scene_to_default.params["reset_joint_targets"] = True
+
         self.decimation = 4
         self.episode_length_s = 100.0
 

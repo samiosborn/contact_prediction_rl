@@ -82,9 +82,7 @@ def test_synergies_are_independent():
 
 def posture_tensors() -> tuple[torch.Tensor, torch.Tensor]:
     open_posture = torch.zeros(len(JOINT_NAMES))
-    shapes = torch.tensor(
-        [resolve_joint_posture(p, JOINT_NAMES) for p in FRANKA_HX5D20_HAND_SYNERGIES.values()]
-    )
+    shapes = torch.tensor([resolve_joint_posture(p, JOINT_NAMES) for p in FRANKA_HX5D20_HAND_SYNERGIES.values()])
     return open_posture, shapes
 
 

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import os
 import sys
 import time
 from pathlib import Path
@@ -13,9 +14,20 @@ from typing import Any
 
 import gymnasium as gym
 
+os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
+
 from isaaclab.app import add_launcher_args, launch_simulation, report_activity
 from isaaclab.utils.io import dump_yaml
 from isaaclab.utils.seed import configure_seed
+
+from isaaclab_rl.entrypoints.common import (
+    apply_video_recording,
+    enable_cameras_for_video,
+    pre_launch_video_config,
+)
+
+import isaaclab_tasks  # noqa: F401
+from isaaclab_tasks.utils import resolve_task_config, setup_preset_cli
 
 import contact_prediction_rl.tasks  # noqa: F401
 from contact_prediction_rl.learning.checkpoints import (
@@ -25,15 +37,6 @@ from contact_prediction_rl.learning.checkpoints import (
 from contact_prediction_rl.learning.isaaclab_env import (
     IsaacLabPPOEnvWrapper,
 )
-import isaaclab_tasks  # noqa: F401
-
-from isaaclab_rl.entrypoints.common import (
-    apply_video_recording,
-    enable_cameras_for_video,
-    pre_launch_video_config,
-)
-from isaaclab_tasks.utils import resolve_task_config, setup_preset_cli
-
 
 DEFAULT_SEED = 42
 
@@ -48,9 +51,7 @@ def _parse_args(
 ) -> tuple[argparse.Namespace, list[str]]:
     """Parse PPO training arguments"""
 
-    parser = argparse.ArgumentParser(
-        description="Train the contact_prediction_rl PPO agent."
-    )
+    parser = argparse.ArgumentParser(description="Train the contact_prediction_rl PPO agent.")
 
     # Task
     parser.add_argument(
@@ -132,26 +133,19 @@ def _parse_args(
     )
 
     # Isaac Lab simulator arguments
-    add_launcher_args(
-        parser
+    add_launcher_args(parser)
+
+    args_cli, hydra_args = setup_preset_cli(
+        parser,
+        argv,
     )
 
-    args_cli, hydra_args = (
-        setup_preset_cli(
-            parser,
-            argv,
-        )
-    )
-
-    enable_cameras_for_video(
-        args_cli
-    )
+    enable_cameras_for_video(args_cli)
 
     return (
         args_cli,
         hydra_args,
     )
-
 
 
 def _dump_configs(
@@ -161,10 +155,7 @@ def _dump_configs(
 ) -> None:
     """Store environment, agent, and command configuration"""
 
-    params_dir = (
-        log_dir
-        / "params"
-    )
+    params_dir = log_dir / "params"
 
     params_dir.mkdir(
         parents=True,
@@ -172,28 +163,17 @@ def _dump_configs(
     )
 
     dump_yaml(
-        str(
-            params_dir
-            / "env.yaml"
-        ),
+        str(params_dir / "env.yaml"),
         env_cfg,
     )
 
     dump_yaml(
-        str(
-            params_dir
-            / "agent.yaml"
-        ),
+        str(params_dir / "agent.yaml"),
         agent_cfg,
     )
 
-    (
-        log_dir
-        / "command.txt"
-    ).write_text(
-        " ".join(
-            sys.orig_argv
-        ),
+    (log_dir / "command.txt").write_text(
+        " ".join(sys.orig_argv),
         encoding="utf-8",
     )
 
@@ -207,19 +187,13 @@ def run(
         OnPolicyRunner,
     )
 
-    args_cli, hydra_args = (
-        _parse_args(
-            argv
-        )
-    )
+    args_cli, hydra_args = _parse_args(argv)
 
     # Load the environment and our PPO configuration from Gym registration
-    env_cfg, agent_cfg = (
-        resolve_task_config(
-            args_cli.task,
-            args_cli.agent,
-            overrides=hydra_args,
-        )
+    env_cfg, agent_cfg = resolve_task_config(
+        args_cli.task,
+        args_cli.agent,
+        overrides=hydra_args,
     )
 
     # ----------------------------------------------------------
@@ -227,51 +201,33 @@ def run(
     # ----------------------------------------------------------
 
     if args_cli.num_envs is not None:
-        env_cfg.scene.num_envs = (
-            args_cli.num_envs
-        )
+        env_cfg.scene.num_envs = args_cli.num_envs
 
     if args_cli.device is not None:
-        env_cfg.sim.device = (
-            args_cli.device
-        )
+        env_cfg.sim.device = args_cli.device
 
     # Ensure the simulator launcher uses the resolved task device
-    args_cli.device = (
-        env_cfg.sim.device
-    )
+    args_cli.device = env_cfg.sim.device
 
-    seed = (
-        args_cli.seed
-        if args_cli.seed is not None
-        else DEFAULT_SEED
-    )
+    seed = args_cli.seed if args_cli.seed is not None else DEFAULT_SEED
 
     env_cfg.seed = seed
 
     if args_cli.max_iterations is not None:
-        agent_cfg.max_iterations = (
-            args_cli.max_iterations
-        )
+        agent_cfg.max_iterations = args_cli.max_iterations
 
     # ----------------------------------------------------------
     # Logging
     # ----------------------------------------------------------
 
-    log_root_path, log_dir = (
-        create_log_directory(
-            experiment_name=(
-                agent_cfg.experiment_name
-            ),
-            run_name=args_cli.run_name,
-        )
+    log_root_path, log_dir = create_log_directory(
+        experiment_name=(agent_cfg.experiment_name),
+        run_name=args_cli.run_name,
     )
 
-    resume_path = (
-        resolve_checkpoint(
-            args_cli.checkpoint,
-            log_root_path,
-        )
+    resume_path = resolve_checkpoint(
+        args_cli.checkpoint,
+        log_root_path,
     )
 
     _dump_configs(
@@ -284,9 +240,7 @@ def run(
     # Simulation
     # ----------------------------------------------------------
 
-    print(
-        "[1/3] Launching simulation"
-    )
+    print("[1/3] Launching simulation")
 
     # The recorder needs a Kit visualizer, which must be requested
     # before the simulation launches
@@ -299,9 +253,7 @@ def run(
         env_cfg,
         args_cli,
     ):
-        print(
-            "[2/3] Creating environment"
-        )
+        print("[2/3] Creating environment")
 
         # Videos go to <run directory>/videos/train
         apply_video_recording(
@@ -313,44 +265,31 @@ def run(
         env = gym.make(
             args_cli.task,
             cfg=env_cfg,
+            render_mode=("rgb_array" if args_cli.video else None),
         )
 
         # Convert the Gymnasium step API into the small interface
         # expected by our runner
-        report_activity(
-            "Wrapping environment"
-        )
+        report_activity("Wrapping environment")
 
-        env = IsaacLabPPOEnvWrapper(
-            env
-        )
+        env = IsaacLabPPOEnvWrapper(env)
 
-        report_activity(
-            None
-        )
+        report_activity(None)
 
-        print(
-            "[3/3] Preparing agent"
-        )
+        print("[3/3] Preparing agent")
 
         start_time = time.time()
 
-        report_activity(
-            "Building policy"
-        )
+        report_activity("Building policy")
 
         runner = OnPolicyRunner(
             env=env,
             train_cfg=agent_cfg.to_dict(),
-            log_dir=str(
-                log_dir
-            ),
+            log_dir=str(log_dir),
             device=env.device,
         )
 
-        report_activity(
-            None
-        )
+        report_activity(None)
 
         # Configure deterministic Torch behaviour only after model
         # construction so it does not alter network initialisation
@@ -360,47 +299,27 @@ def run(
                 torch_deterministic=True,
             )
 
-        runner.add_git_repo_to_log(
-            __file__
-        )
+        runner.add_git_repo_to_log(__file__)
 
         if resume_path is not None:
-            print(
-                f"[INFO]: Loading model checkpoint from: "
-                f"{resume_path}"
-            )
+            print(f"[INFO]: Loading model checkpoint from: {resume_path}")
 
-            runner.load(
-                str(
-                    resume_path
-                )
-            )
+            runner.load(str(resume_path))
 
         try:
             runner.learn(
-                num_learning_iterations=(
-                    agent_cfg.max_iterations
-                ),
-                init_at_random_ep_len=(
-                    not args_cli.no_random_episode_lengths
-                ),
+                num_learning_iterations=(agent_cfg.max_iterations),
+                init_at_random_ep_len=(not args_cli.no_random_episode_lengths),
             )
 
-            print(
-                f"Training time: "
-                f"{round(time.time() - start_time, 2)} seconds"
-            )
+            print(f"Training time: {round(time.time() - start_time, 2)} seconds")
 
         except KeyboardInterrupt:
-            print(
-                "\n[INFO]: Training interrupted"
-            )
+            print("\n[INFO]: Training interrupted")
 
         finally:
             env.close()
 
 
 if __name__ == "__main__":
-    run(
-        sys.argv[1:]
-    )
+    run(sys.argv[1:])

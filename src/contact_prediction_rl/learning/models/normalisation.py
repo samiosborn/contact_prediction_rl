@@ -37,11 +37,7 @@ class ObservationNormaliser(nn.Module):
     ) -> torch.Tensor:
         std = torch.sqrt(self.variance)
 
-        return (
-            observations - self.mean
-        ) / (
-            std + self.eps
-        )
+        return (observations - self.mean) / (std + self.eps)
 
     @torch.no_grad()
     def update(
@@ -72,37 +68,16 @@ class ObservationNormaliser(nn.Module):
 
         delta = batch_mean - self.mean
 
-        new_mean = (
-            self.mean
-            + delta
-            * batch_count
-            / total_count
-        )
+        new_mean = self.mean + delta * batch_count / total_count
 
-        previous_sum_squares = (
-            self.variance
-            * self.count
-        )
+        previous_sum_squares = self.variance * self.count
 
-        batch_sum_squares = (
-            batch_variance
-            * batch_count
-        )
+        batch_sum_squares = batch_variance * batch_count
 
-        correction = (
-            delta.square()
-            * self.count
-            * batch_count
-            / total_count
-        )
+        correction = delta.square() * self.count * batch_count / total_count
 
-        new_variance = (
-            previous_sum_squares
-            + batch_sum_squares
-            + correction
-        ) / total_count
+        new_variance = (previous_sum_squares + batch_sum_squares + correction) / total_count
 
         self.mean.copy_(new_mean)
         self.variance.copy_(new_variance)
         self.count.copy_(total_count)
-        

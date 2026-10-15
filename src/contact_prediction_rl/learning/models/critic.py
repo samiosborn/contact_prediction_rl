@@ -22,11 +22,7 @@ class Critic(nn.Module):
         if len(hidden_dims) < 1:
             raise ValueError("Critic requires at least one hidden dimension")
 
-        self.normaliser = (
-            ObservationNormaliser(observation_dim)
-            if observation_normalisation
-            else nn.Identity()
-        )
+        self.normaliser = ObservationNormaliser(observation_dim) if observation_normalisation else nn.Identity()
 
         encoder_hidden_dims = list(hidden_dims[:-1])
         latent_dim = hidden_dims[-1]
@@ -60,4 +56,3 @@ class Critic(nn.Module):
 
         if isinstance(self.normaliser, ObservationNormaliser):
             self.normaliser.update(observations)
-            

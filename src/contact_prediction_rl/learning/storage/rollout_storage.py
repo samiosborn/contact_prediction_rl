@@ -148,9 +148,7 @@ class RolloutStorage:
         """Store one transition at the current rollout step"""
 
         if self.step >= self.num_transitions_per_env:
-            raise OverflowError(
-                "Rollout buffer overflow. Call clear() before adding more transitions."
-            )
+            raise OverflowError("Rollout buffer overflow. Call clear() before adding more transitions.")
 
         if transition.observations is None:
             raise ValueError("Transition observations are missing")
@@ -174,42 +172,18 @@ class RolloutStorage:
             raise ValueError("Transition distribution parameters are missing")
 
         # Environment data
-        self.observations[
-            self.step
-        ].copy_(
-            transition.observations
-        )
+        self.observations[self.step].copy_(transition.observations)
 
-        self.actions[
-            self.step
-        ].copy_(
-            transition.actions
-        )
+        self.actions[self.step].copy_(transition.actions)
 
-        self.rewards[
-            self.step
-        ].copy_(
-            transition.rewards.view(-1, 1)
-        )
+        self.rewards[self.step].copy_(transition.rewards.view(-1, 1))
 
-        self.dones[
-            self.step
-        ].copy_(
-            transition.dones.view(-1, 1)
-        )
+        self.dones[self.step].copy_(transition.dones.view(-1, 1))
 
         # PPO data
-        self.values[
-            self.step
-        ].copy_(
-            transition.values
-        )
+        self.values[self.step].copy_(transition.values)
 
-        self.actions_log_prob[
-            self.step
-        ].copy_(
-            transition.actions_log_prob.view(-1, 1)
-        )
+        self.actions_log_prob[self.step].copy_(transition.actions_log_prob.view(-1, 1))
 
         # Allocate policy-distribution buffers on the first step
         if self.distribution_params is None:
@@ -224,16 +198,8 @@ class RolloutStorage:
             )
 
         # Store the policy distribution parameters
-        for index, parameter in enumerate(
-            transition.distribution_params
-        ):
-            self.distribution_params[
-                index
-            ][
-                self.step
-            ].copy_(
-                parameter
-            )
+        for index, parameter in enumerate(transition.distribution_params):
+            self.distribution_params[index][self.step].copy_(parameter)
 
         self.step += 1
 
@@ -252,29 +218,17 @@ class RolloutStorage:
         """Yield shuffled feed-forward PPO mini-batches"""
 
         if self.step != self.num_transitions_per_env:
-            raise RuntimeError(
-                "Cannot generate mini-batches before the rollout buffer is full"
-            )
+            raise RuntimeError("Cannot generate mini-batches before the rollout buffer is full")
 
         if self.distribution_params is None:
-            raise RuntimeError(
-                "Policy distribution parameters have not been stored"
-            )
+            raise RuntimeError("Policy distribution parameters have not been stored")
 
-        batch_size = (
-            self.num_envs
-            * self.num_transitions_per_env
-        )
+        batch_size = self.num_envs * self.num_transitions_per_env
 
         if batch_size % num_mini_batches != 0:
-            raise ValueError(
-                "Rollout batch size must be divisible by the number of mini-batches"
-            )
+            raise ValueError("Rollout batch size must be divisible by the number of mini-batches")
 
-        mini_batch_size = (
-            batch_size
-            // num_mini_batches
-        )
+        mini_batch_size = batch_size // num_mini_batches
 
         # Flatten time and environment dimensions
         observations = self.observations.flatten(
@@ -302,11 +256,9 @@ class RolloutStorage:
             1,
         )
 
-        old_actions_log_prob = (
-            self.actions_log_prob.flatten(
-                0,
-                1,
-            )
+        old_actions_log_prob = self.actions_log_prob.flatten(
+            0,
+            1,
         )
 
         old_distribution_params = tuple(
@@ -324,46 +276,19 @@ class RolloutStorage:
                 device=self.device,
             )
 
-            for mini_batch_index in range(
-                num_mini_batches
-            ):
-                start = (
-                    mini_batch_index
-                    * mini_batch_size
-                )
+            for mini_batch_index in range(num_mini_batches):
+                start = mini_batch_index * mini_batch_size
 
-                stop = (
-                    start
-                    + mini_batch_size
-                )
+                stop = start + mini_batch_size
 
-                batch_indices = indices[
-                    start:stop
-                ]
+                batch_indices = indices[start:stop]
 
                 yield RolloutStorage.Batch(
-                    observations=observations[
-                        batch_indices
-                    ],
-                    actions=actions[
-                        batch_indices
-                    ],
-                    values=values[
-                        batch_indices
-                    ],
-                    advantages=advantages[
-                        batch_indices
-                    ],
-                    returns=returns[
-                        batch_indices
-                    ],
-                    old_actions_log_prob=old_actions_log_prob[
-                        batch_indices
-                    ],
-                    old_distribution_params=tuple(
-                        parameter[
-                            batch_indices
-                        ]
-                        for parameter in old_distribution_params
-                    ),
+                    observations=observations[batch_indices],
+                    actions=actions[batch_indices],
+                    values=values[batch_indices],
+                    advantages=advantages[batch_indices],
+                    returns=returns[batch_indices],
+                    old_actions_log_prob=old_actions_log_prob[batch_indices],
+                    old_distribution_params=tuple(parameter[batch_indices] for parameter in old_distribution_params),
                 )

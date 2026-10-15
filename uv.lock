@@ -640,14 +640,11 @@ name = "contact-prediction-rl"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "isaaclab", extra = ["rsl-rl"] },
+    { name = "isaaclab", extra = ["isaacsim", "rsl-rl"] },
     { name = "xacro" },
 ]
 
 [package.optional-dependencies]
-isaacsim = [
-    { name = "isaaclab", extra = ["isaacsim"] },
-]
 ov = [
     { name = "isaaclab", extra = ["ov"] },
 ]
@@ -673,15 +670,14 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "imageio-ffmpeg", marker = "extra == 'video'" },
-    { name = "isaaclab", extras = ["isaacsim"], marker = "extra == 'isaacsim'", specifier = "==3.0.0rc1" },
     { name = "isaaclab", extras = ["ov"], marker = "extra == 'ov'", specifier = "==3.0.0rc1" },
     { name = "isaaclab", extras = ["ovphysx"], marker = "extra == 'ovphysx'", specifier = "==3.0.0rc1" },
     { name = "isaaclab", extras = ["ovrtx"], marker = "extra == 'ovrtx'", specifier = "==3.0.0rc1" },
-    { name = "isaaclab", extras = ["rsl-rl"], specifier = "==3.0.0rc1" },
+    { name = "isaaclab", extras = ["rsl-rl", "isaacsim"], specifier = "==3.0.0rc1" },
     { name = "moviepy", marker = "extra == 'video'", specifier = ">=1.0.3,<2.0.0.dev0" },
     { name = "xacro", specifier = ">=2.1.1" },
 ]
-provides-extras = ["isaacsim", "ov", "ovphysx", "ovrtx", "video"]
+provides-extras = ["ov", "ovphysx", "ovrtx", "video"]
 
 [package.metadata.requires-dev]
 dev = [

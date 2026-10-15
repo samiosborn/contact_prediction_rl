@@ -13,7 +13,6 @@ import torch
 from contact_prediction_rl.learning.algorithms.ppo import PPO
 from contact_prediction_rl.learning.models.actor import Actor
 
-
 try:
     from torch.utils.tensorboard import SummaryWriter
 except ImportError:
@@ -34,7 +33,6 @@ class OnPolicyRunner:
         self.cfg = train_cfg
         self.device = device
         self.log_dir = log_dir
-
 
         # Build PPO from the environment observation and action dimensions
         obs = self.env.get_observations()
@@ -73,26 +71,17 @@ class OnPolicyRunner:
         if init_at_random_ep_len:
             self.env.episode_length_buf = torch.randint_like(
                 self.env.episode_length_buf,
-                high=int(
-                    self.env.max_episode_length
-                ),
+                high=int(self.env.max_episode_length),
             )
 
         # Initial observations
-        obs = self.env.get_observations().to(
-            self.device
-        )
+        obs = self.env.get_observations().to(self.device)
 
         self.alg.train_mode()
 
         # Create TensorBoard writer if logging is enabled
-        if (
-            self.log_dir is not None
-            and SummaryWriter is not None
-        ):
-            self.writer = SummaryWriter(
-                log_dir=self.log_dir
-            )
+        if self.log_dir is not None and SummaryWriter is not None:
+            self.writer = SummaryWriter(log_dir=self.log_dir)
 
         # Track unfinished episodes across rollout iterations
         current_episode_rewards = torch.zeros(
@@ -105,14 +94,9 @@ class OnPolicyRunner:
             device=self.device,
         )
 
-        start_iteration = (
-            self.current_learning_iteration
-        )
+        start_iteration = self.current_learning_iteration
 
-        total_iteration = (
-            start_iteration
-            + num_learning_iterations
-        )
+        total_iteration = start_iteration + num_learning_iterations
 
         for iteration in range(
             start_iteration,
@@ -133,22 +117,12 @@ class OnPolicyRunner:
             with torch.inference_mode():
                 collection_start = time.time()
 
-                for _ in range(
-                    self.cfg["num_steps_per_env"]
-                ):
+                for _ in range(self.cfg["num_steps_per_env"]):
                     # Sample actions from the current policy
-                    actions = self.alg.act(
-                        obs
-                    )
+                    actions = self.alg.act(obs)
 
                     # Step the environment
-                    obs, rewards, dones, extras = (
-                        self.env.step(
-                            actions.to(
-                                self.env.device
-                            )
-                        )
-                    )
+                    obs, rewards, dones, extras = self.env.step(actions.to(self.env.device))
 
                     # Check environment outputs before storing them
                     if self.cfg.get(
@@ -162,17 +136,11 @@ class OnPolicyRunner:
                         )
 
                     # Move tensors to the training device
-                    obs = obs.to(
-                        self.device
-                    )
+                    obs = obs.to(self.device)
 
-                    rewards = rewards.to(
-                        self.device
-                    )
+                    rewards = rewards.to(self.device)
 
-                    dones = dones.to(
-                        self.device
-                    )
+                    dones = dones.to(self.device)
 
                     # Store transition in PPO rollout storage
                     self.alg.process_env_step(
@@ -183,46 +151,22 @@ class OnPolicyRunner:
                     )
 
                     # Episode statistics
-                    rewards_flat = rewards.view(
-                        -1
-                    )
+                    rewards_flat = rewards.view(-1)
 
-                    dones_flat = dones.view(
-                        -1
-                    ).bool()
+                    dones_flat = dones.view(-1).bool()
 
-                    current_episode_rewards += (
-                        rewards_flat
-                    )
+                    current_episode_rewards += rewards_flat
 
                     current_episode_lengths += 1
 
                     if dones_flat.any():
-                        completed_episode_rewards.extend(
-                            current_episode_rewards[
-                                dones_flat
-                            ]
-                            .detach()
-                            .cpu()
-                            .tolist()
-                        )
+                        completed_episode_rewards.extend(current_episode_rewards[dones_flat].detach().cpu().tolist())
 
-                        completed_episode_lengths.extend(
-                            current_episode_lengths[
-                                dones_flat
-                            ]
-                            .detach()
-                            .cpu()
-                            .tolist()
-                        )
+                        completed_episode_lengths.extend(current_episode_lengths[dones_flat].detach().cpu().tolist())
 
-                        current_episode_rewards[
-                            dones_flat
-                        ] = 0
+                        current_episode_rewards[dones_flat] = 0
 
-                        current_episode_lengths[
-                            dones_flat
-                        ] = 0
+                        current_episode_lengths[dones_flat] = 0
 
                     # Environment metrics
                     self._accumulate_metrics(
@@ -231,15 +175,10 @@ class OnPolicyRunner:
                         metric_counts,
                     )
 
-                collection_time = (
-                    time.time()
-                    - collection_start
-                )
+                collection_time = time.time() - collection_start
 
                 # Compute return and advantage targets
-                self.alg.compute_returns(
-                    obs
-                )
+                self.alg.compute_returns(obs)
 
             # ----------------------------------------------------------
             # PPO update
@@ -249,51 +188,23 @@ class OnPolicyRunner:
 
             loss_dict = self.alg.update()
 
-            learning_time = (
-                time.time()
-                - learning_start
-            )
+            learning_time = time.time() - learning_start
 
             # Number of environment transitions in this rollout
-            rollout_steps = (
-                self.cfg["num_steps_per_env"]
-                * self.env.num_envs
-            )
+            rollout_steps = self.cfg["num_steps_per_env"] * self.env.num_envs
 
             self.total_steps += rollout_steps
 
-            self.current_learning_iteration = (
-                iteration
-            )
+            self.current_learning_iteration = iteration
 
             # Average metrics collected during the rollout
-            metrics = {
-                name: (
-                    metric_sums[name]
-                    / metric_counts[name]
-                )
-                for name in metric_sums
-                if metric_counts[name] > 0
-            }
+            metrics = {name: (metric_sums[name] / metric_counts[name]) for name in metric_sums if metric_counts[name] > 0}
 
-            mean_episode_reward = (
-                sum(completed_episode_rewards)
-                / len(completed_episode_rewards)
-                if completed_episode_rewards
-                else None
-            )
+            mean_episode_reward = sum(completed_episode_rewards) / len(completed_episode_rewards) if completed_episode_rewards else None
 
-            mean_episode_length = (
-                sum(completed_episode_lengths)
-                / len(completed_episode_lengths)
-                if completed_episode_lengths
-                else None
-            )
+            mean_episode_length = sum(completed_episode_lengths) / len(completed_episode_lengths) if completed_episode_lengths else None
 
-            iteration_time = (
-                time.time()
-                - iteration_start
-            )
+            iteration_time = time.time() - iteration_start
 
             # Log iteration
             self._log_iteration(
@@ -310,12 +221,7 @@ class OnPolicyRunner:
             )
 
             # Periodic checkpoint
-            if (
-                self.log_dir is not None
-                and iteration
-                % self.cfg["save_interval"]
-                == 0
-            ):
+            if self.log_dir is not None and iteration % self.cfg["save_interval"] == 0:
                 self.save(
                     os.path.join(
                         self.log_dir,
@@ -344,13 +250,9 @@ class OnPolicyRunner:
 
         saved_dict = self.alg.save()
 
-        saved_dict[
-            "iter"
-        ] = self.current_learning_iteration
+        saved_dict["iter"] = self.current_learning_iteration
 
-        saved_dict[
-            "infos"
-        ] = infos
+        saved_dict["infos"] = infos
 
         torch.save(
             saved_dict,
@@ -379,13 +281,9 @@ class OnPolicyRunner:
         )
 
         if load_iteration:
-            self.current_learning_iteration = (
-                loaded_dict["iter"]
-            )
+            self.current_learning_iteration = loaded_dict["iter"]
 
-        return loaded_dict.get(
-            "infos"
-        )
+        return loaded_dict.get("infos")
 
     def get_inference_policy(
         self,
@@ -398,9 +296,7 @@ class OnPolicyRunner:
         policy = self.alg.get_policy()
 
         if device is not None:
-            policy = policy.to(
-                device
-            )
+            policy = policy.to(device)
 
         return policy
 
@@ -413,9 +309,7 @@ class OnPolicyRunner:
         if self.log_dir is None:
             return
 
-        file_path = Path(
-            repo_file_path
-        ).resolve()
+        file_path = Path(repo_file_path).resolve()
 
         try:
             repo_root = subprocess.run(
@@ -460,9 +354,7 @@ class OnPolicyRunner:
             exist_ok=True,
         )
 
-        repo_name = Path(
-            repo_root
-        ).name
+        repo_name = Path(repo_root).name
 
         diff_path = os.path.join(
             git_log_dir,
@@ -474,13 +366,9 @@ class OnPolicyRunner:
             "w",
             encoding="utf-8",
         ) as file:
-            file.write(
-                diff
-            )
+            file.write(diff)
 
-        print(
-            f"Storing git diff for '{repo_name}' in: {diff_path}"
-        )
+        print(f"Storing git diff for '{repo_name}' in: {diff_path}")
 
     def _check_finite(
         self,
@@ -500,30 +388,15 @@ class OnPolicyRunner:
                         value,
                         torch.Tensor,
                     )
-                    and not torch.isfinite(
-                        value
-                    ).all()
+                    and not torch.isfinite(value).all()
                 ):
-                    raise FloatingPointError(
-                        f"Non-finite values found in observation '{name}'"
-                    )
+                    raise FloatingPointError(f"Non-finite values found in observation '{name}'")
 
-        if not torch.isfinite(
-            rewards
-        ).all():
-            raise FloatingPointError(
-                "Non-finite values found in rewards"
-            )
+        if not torch.isfinite(rewards).all():
+            raise FloatingPointError("Non-finite values found in rewards")
 
-        if (
-            dones.is_floating_point()
-            and not torch.isfinite(
-                dones
-            ).all()
-        ):
-            raise FloatingPointError(
-                "Non-finite values found in done flags"
-            )
+        if dones.is_floating_point() and not torch.isfinite(dones).all():
+            raise FloatingPointError("Non-finite values found in done flags")
 
     def _accumulate_metrics(
         self,
@@ -533,9 +406,7 @@ class OnPolicyRunner:
     ) -> None:
         """Accumulate scalar environment metrics for logging"""
 
-        log_data = extras.get(
-            "log"
-        )
+        log_data = extras.get("log")
 
         if not isinstance(
             log_data,
@@ -559,11 +430,7 @@ class OnPolicyRunner:
         """Recursively accumulate scalar values from a dictionary"""
 
         for name, value in values.items():
-            metric_name = (
-                f"{prefix}/{name}"
-                if prefix
-                else name
-            )
+            metric_name = f"{prefix}/{name}" if prefix else name
 
             if isinstance(
                 value,
@@ -585,27 +452,18 @@ class OnPolicyRunner:
                 if value.numel() == 0:
                     continue
 
-                scalar = (
-                    value.detach()
-                    .float()
-                    .mean()
-                    .item()
-                )
+                scalar = value.detach().float().mean().item()
 
             elif isinstance(
                 value,
                 (int, float),
             ):
-                scalar = float(
-                    value
-                )
+                scalar = float(value)
 
             else:
                 continue
 
-            metric_sums[
-                metric_name
-            ] = (
+            metric_sums[metric_name] = (
                 metric_sums.get(
                     metric_name,
                     0.0,
@@ -613,9 +471,7 @@ class OnPolicyRunner:
                 + scalar
             )
 
-            metric_counts[
-                metric_name
-            ] = (
+            metric_counts[metric_name] = (
                 metric_counts.get(
                     metric_name,
                     0,
@@ -646,83 +502,44 @@ class OnPolicyRunner:
             )
         )
 
-        action_std = (
-            self.alg.get_policy()
-            .output_std
-            .detach()
-            .mean()
-            .item()
-        )
+        action_std = self.alg.get_policy().output_std.detach().mean().item()
 
-        print(
-            "\n"
-            + "#" * 80
-        )
+        print("\n" + "#" * 80)
 
-        print(
-            f"{f'Learning iteration {iteration}/{total_iteration}':^80}"
-        )
+        print(f"{f'Learning iteration {iteration}/{total_iteration}':^80}")
 
         print()
 
-        print(
-            f"{'Total steps:':>35} {self.total_steps}"
-        )
+        print(f"{'Total steps:':>35} {self.total_steps}")
 
-        print(
-            f"{'Steps per second:':>35} {steps_per_second}"
-        )
+        print(f"{'Steps per second:':>35} {steps_per_second}")
 
-        print(
-            f"{'Collection time:':>35} {collection_time:.3f}s"
-        )
+        print(f"{'Collection time:':>35} {collection_time:.3f}s")
 
-        print(
-            f"{'Learning time:':>35} {learning_time:.3f}s"
-        )
+        print(f"{'Learning time:':>35} {learning_time:.3f}s")
 
-        print(
-            f"{'Mean value loss:':>35} {loss_dict['value']:.4f}"
-        )
+        print(f"{'Mean value loss:':>35} {loss_dict['value']:.4f}")
 
-        print(
-            f"{'Mean surrogate loss:':>35} {loss_dict['surrogate']:.4f}"
-        )
+        print(f"{'Mean surrogate loss:':>35} {loss_dict['surrogate']:.4f}")
 
-        print(
-            f"{'Mean entropy loss:':>35} {loss_dict['entropy']:.4f}"
-        )
+        print(f"{'Mean entropy loss:':>35} {loss_dict['entropy']:.4f}")
 
-        print(
-            f"{'Learning rate:':>35} {self.alg.learning_rate:.6g}"
-        )
+        print(f"{'Learning rate:':>35} {self.alg.learning_rate:.6g}")
 
-        print(
-            f"{'Mean action std:':>35} {action_std:.4f}"
-        )
+        print(f"{'Mean action std:':>35} {action_std:.4f}")
 
         if mean_episode_reward is not None:
-            print(
-                f"{'Mean reward:':>35} {mean_episode_reward:.2f}"
-            )
+            print(f"{'Mean reward:':>35} {mean_episode_reward:.2f}")
 
         if mean_episode_length is not None:
-            print(
-                f"{'Mean episode length:':>35} {mean_episode_length:.2f}"
-            )
+            print(f"{'Mean episode length:':>35} {mean_episode_length:.2f}")
 
         for name, value in metrics.items():
-            print(
-                f"{name:>35}: {value:.4f}"
-            )
+            print(f"{name:>35}: {value:.4f}")
 
-        print(
-            "-" * 80
-        )
+        print("-" * 80)
 
-        print(
-            f"{'Iteration time:':>35} {iteration_time:.2f}s"
-        )
+        print(f"{'Iteration time:':>35} {iteration_time:.2f}s")
 
         # TensorBoard logging
         if self.writer is None:

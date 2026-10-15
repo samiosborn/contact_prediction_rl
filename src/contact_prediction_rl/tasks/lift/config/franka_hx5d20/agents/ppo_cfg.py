@@ -46,9 +46,7 @@ class FrankaHX5D20BlockLiftPPOCfg:
         "lam": CONFIG.PPO_LAM,
         "desired_kl": CONFIG.PPO_DESIRED_KL,
         "max_grad_norm": CONFIG.PPO_MAX_GRAD_NORM,
-        "normalize_advantage_per_mini_batch": (
-            CONFIG.PPO_NORMALIZE_ADVANTAGE_PER_MINI_BATCH
-        ),
+        "normalize_advantage_per_mini_batch": (CONFIG.PPO_NORMALIZE_ADVANTAGE_PER_MINI_BATCH),
     }
 
 

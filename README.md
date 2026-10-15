@@ -79,14 +79,10 @@ git lfs pull
 Install the Isaac Sim dependencies:
 
 ```bash
-uv sync --extra isaacsim
+uv sync
 ```
 
-Isaac Sim requires acceptance of the NVIDIA Omniverse EULA. To launch it non-interactively:
-
-```bash
-export OMNI_KIT_ACCEPT_EULA=YES
-```
+The training, playback, and evaluation entrypoints accept the NVIDIA Omniverse EULA non-interactively by default. An existing `OMNI_KIT_ACCEPT_EULA` value is preserved. For GPU tests, set `OMNI_KIT_ACCEPT_EULA=YES` as shown below.
 
 ## Validation
 
@@ -111,13 +107,13 @@ uv run pytest tests/test_actor.py -v
 Run GPU smoke tests for all registered tasks:
 
 ```bash
-OMNI_KIT_ACCEPT_EULA=YES uv run --extra isaacsim pytest -m gpu
+OMNI_KIT_ACCEPT_EULA=YES uv run pytest -m gpu
 ```
 
 Run the complete test suite:
 
 ```bash
-OMNI_KIT_ACCEPT_EULA=YES uv run --extra isaacsim pytest
+OMNI_KIT_ACCEPT_EULA=YES uv run pytest
 ```
 
 ## Tasks
@@ -131,7 +127,7 @@ Move the Franka-mounted HX5-D20 hand to random end-effector poses with the finge
 Train:
 
 ```bash
-uv run --extra isaacsim python scripts/train.py \
+uv run python scripts/train.py \
   --task ContactPredictionRl-Reach-Franka-HX5-D20-Right
 ```
 
@@ -146,7 +142,7 @@ Grasp a 6 × 6 × 12 cm block from a table and hold it 10 cm above its initial p
 Train:
 
 ```bash
-uv run --extra isaacsim python scripts/train.py \
+uv run python scripts/train.py \
   --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right \
   --num_envs 1024 \
   --max_iterations 1000
@@ -155,7 +151,7 @@ uv run --extra isaacsim python scripts/train.py \
 Run a short training check:
 
 ```bash
-uv run --extra isaacsim python scripts/train.py \
+uv run python scripts/train.py \
   --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right \
   --num_envs 64 \
   --max_iterations 3
@@ -164,7 +160,7 @@ uv run --extra isaacsim python scripts/train.py \
 Evaluate a checkpoint with deterministic rollouts (`--checkpoint` accepts a file, a run directory or `latest`):
 
 ```bash
-uv run --extra isaacsim python scripts/franka_hx5d20/evaluate_franka_hx5d20_lift.py \
+uv run python scripts/franka_hx5d20/evaluate_franka_hx5d20_lift.py \
   --num_envs 512 \
   --checkpoint logs/ppo/lift_block_franka_hx5d20/<run>/model_<n>.pt
 ```
@@ -172,11 +168,11 @@ uv run --extra isaacsim python scripts/franka_hx5d20/evaluate_franka_hx5d20_lift
 Watch a trained policy in the viewport, or record a video:
 
 ```bash
-uv run --extra isaacsim python scripts/play.py \
+uv run python scripts/play.py \
   --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right \
   --checkpoint latest --visualizer kit --real_time
 
-uv run --extra isaacsim --extra video python scripts/play.py \
+uv run python scripts/play.py \
   --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right \
   --checkpoint latest --video
 ```
@@ -206,7 +202,7 @@ evaluation script also reports the final closure of each synergy.
 Scripted grasps over the synergy space (no training) can be run with:
 
 ```bash
-uv run --extra isaacsim python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py \
+uv run python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py \
   --gravities "0,-1,0" --centers "0.04,0,0.09" --block_height 0.12 --approach 0.06 \
   --synergies "1,1,0;1,0.5,0.5;1,0,0"
 ```

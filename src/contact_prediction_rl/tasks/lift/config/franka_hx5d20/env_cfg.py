@@ -159,9 +159,7 @@ class FrankaHX5D20BlockLiftEnvCfg(LiftEnvCfg):
         }
 
         # actions: seven arm joints and one open/close action for the hand
-        self.actions.arm_action = mdp.JointPositionActionCfg(
-            asset_name="robot", joint_names=["panda_joint.*"], scale=ARM_ACTION_SCALE, use_default_offset=True
-        )
+        self.actions.arm_action = mdp.JointPositionActionCfg(asset_name="robot", joint_names=["panda_joint.*"], scale=ARM_ACTION_SCALE, use_default_offset=True)
         self.actions.gripper_action = RateLimitedBinaryJointPositionActionCfg(
             asset_name="robot",
             joint_names=["finger_r_joint.*"],
@@ -242,9 +240,7 @@ class FrankaHX5D20BlockLiftEnvCfg(LiftEnvCfg):
         # object are measured to the held (upper) part of the block, not to its centre.
         lifted = REST_HEIGHT + 0.02
         held = {"grasp_offset_z": GRASP_OFFSET_Z}
-        self.rewards.reaching_object = RewTerm(
-            func=rewards.grasp_point_reaching, params={"std": REACHING_STD, **held}, weight=REACHING_WEIGHT
-        )
+        self.rewards.reaching_object = RewTerm(func=rewards.grasp_point_reaching, params={"std": REACHING_STD, **held}, weight=REACHING_WEIGHT)
         # the lift and goal terms only count while the block is in the hand, so knocking it into the air pays nothing
         in_hand = 0.08
         self.rewards.lifting_object = RewTerm(
@@ -298,9 +294,7 @@ class FrankaHX5D20BlockLiftEnvCfg(LiftEnvCfg):
             },
             weight=5.0,
         )
-        self.rewards.hand_closed_near_object = RewTerm(
-            func=rewards.hand_closed_near_object, params={"std": CLOSED_NEAR_STD, **held}, weight=CLOSED_NEAR_WEIGHT
-        )
+        self.rewards.hand_closed_near_object = RewTerm(func=rewards.hand_closed_near_object, params={"std": CLOSED_NEAR_STD, **held}, weight=CLOSED_NEAR_WEIGHT)
         self.rewards.hand_orientation = RewTerm(
             func=rewards.hand_gravity_alignment,
             params={

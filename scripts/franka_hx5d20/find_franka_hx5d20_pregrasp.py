@@ -1,7 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
+# scripts/franka_hx5d20/find_franka_hx5d20_pregrasp.py
 
 """Find arm joint values that put the grasp centre of the HX5-D20 hand on a cube.
 
@@ -14,7 +11,7 @@ kinematic model is duplicated here.
 
 .. code-block:: bash
 
-    uv run --extra isaacsim python scripts/franka_hx5d20/find_franka_hx5d20_pregrasp.py
+    uv run python scripts/franka_hx5d20/find_franka_hx5d20_pregrasp.py
 
 """
 
@@ -26,12 +23,8 @@ import math
 from isaaclab.app import add_launcher_args, launch_simulation
 
 parser = argparse.ArgumentParser(description="Inverse kinematics for the grasp pose of the Franka + HX5-D20.")
-parser.add_argument(
-    "--cube", type=str, default="0.45,0.0,0.03", help="Cube centre 'x,y,z' [m] in the robot base frame."
-)
-parser.add_argument(
-    "--hovers", type=float, nargs="+", default=[0.15, 0.0], help="Heights [m] above the cube to solve for."
-)
+parser.add_argument("--cube", type=str, default="0.45,0.0,0.03", help="Cube centre 'x,y,z' [m] in the robot base frame.")
+parser.add_argument("--hovers", type=float, nargs="+", default=[0.15, 0.0], help="Heights [m] above the cube to solve for.")
 parser.add_argument("--tilt", type=float, default=35.0, help="Angle [deg] of the finger axis below the horizontal.")
 parser.add_argument(
     "--gravity",
@@ -59,9 +52,7 @@ parser.add_argument(
     default=None,
     help="Arm posture [rad] the spare freedom of the arm is pulled toward; defaults to --start.",
 )
-parser.add_argument(
-    "--posture_gain", type=float, default=0.1, help="Strength of the pull toward the reference posture."
-)
+parser.add_argument("--posture_gain", type=float, default=0.1, help="Strength of the pull toward the reference posture.")
 parser.add_argument("--iterations", type=int, default=80, help="Solver iterations per pose.")
 add_launcher_args(parser)
 args_cli = parser.parse_args()
@@ -138,10 +129,7 @@ def main():
             for i in range(args_cli.iterations):
                 err = error(q, goal)
                 if i % 20 == 0:
-                    print(
-                        f"  iter {i}: position error {err[:3].norm() * 1000:.1f} mm, "
-                        f"gravity-direction error {err[3:].norm():.3f} rad"
-                    )
+                    print(f"  iter {i}: position error {err[:3].norm() * 1000:.1f} mm, gravity-direction error {err[3:].norm():.3f} rad")
                 jac = torch.zeros(6, 7, device=device)
                 for k, j in enumerate(arm_ids):
                     q_pert = q.clone()
@@ -158,10 +146,7 @@ def main():
             gravity = math_utils.quat_apply_inverse(pose[hand_id, 3:7], torch.tensor([0.0, 0.0, -1.0], device=device))
             names = robot.body_names
             lowest = min((pose[i, 2].item(), names[i]) for i in range(len(names)))
-            print(
-                f"\nhover {hover:.2f} m: position error {err[:3].norm() * 1000:.1f} mm, "
-                f"gravity-direction error {err[3:].norm():.3f} rad"
-            )
+            print(f"\nhover {hover:.2f} m: position error {err[:3].norm() * 1000:.1f} mm, gravity-direction error {err[3:].norm():.3f} rad")
             print(f"  arm joints [rad]: {[round(v, 3) for v in q[0, arm_ids].tolist()]}")
             margins = torch.minimum(q[0, arm_ids] - limits[:, 0], limits[:, 1] - q[0, arm_ids])
             print(f"  margin to joint limits [rad]: {[round(v, 2) for v in margins.tolist()]}")

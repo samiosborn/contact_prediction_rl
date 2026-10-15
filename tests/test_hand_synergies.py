@@ -26,21 +26,21 @@ def posture(name: str) -> list[float]:
 
 def test_curl_and_thumb_make_the_closed_posture():
     closed = resolve_joint_posture(FRANKA_HX5D20_HAND_CLOSED, JOINT_NAMES)
-    combined = [c + t for c, t in zip(posture("curl"), posture("thumb"))]
+    combined = [c + t for c, t in zip(posture("curl"), posture("thumb"), strict=True)]
 
     assert combined == pytest.approx(closed)
 
 
 def test_synergies_act_on_separate_joints():
     for first, second in [("curl", "thumb"), ("curl", "spread"), ("thumb", "spread")]:
-        moved = [a != 0.0 and b != 0.0 for a, b in zip(posture(first), posture(second))]
+        moved = [a != 0.0 and b != 0.0 for a, b in zip(posture(first), posture(second), strict=True)]
 
         assert not any(moved), f"{first} and {second} move the same joint"
 
 
 def test_synergies_stay_inside_the_joint_limits_at_full_closure():
     for name in FRANKA_HX5D20_HAND_SYNERGIES:
-        for value, (lower, upper) in zip(posture(name), JOINT_LIMITS):
+        for value, (lower, upper) in zip(posture(name), JOINT_LIMITS, strict=True):
             # the thumb opposition of the closed posture (1.571) is 1 mrad past the rounded URDF limit
             assert lower - 2e-3 <= value <= upper + 2e-3
 

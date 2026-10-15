@@ -1,7 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
+# scripts/list_envs.py
 
 """List the environments registered by the generated project."""
 
@@ -38,9 +35,7 @@ def main() -> None:
     parser.add_argument("--show_presets", action="store_true", help="Show physics, renderer, and domain presets.")
     args = parser.parse_args()
 
-    task_specs = [
-        spec for spec in gym.registry.values() if args.keyword in spec.id and not spec.kwargs.get("deprecated")
-    ]
+    task_specs = [spec for spec in gym.registry.values() if args.keyword in spec.id and not spec.kwargs.get("deprecated")]
     columns = ["S. No.", "Task Name", "Entry Point", "Config"]
     if args.show_presets:
         columns.append("Presets")

@@ -1,7 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
+# scripts/franka_hx5d20/evaluate_franka_hx5d20_lift.py
 
 """Evaluate a trained policy of the Franka + HX5-D20 cube-lift task with deterministic rollouts.
 
@@ -20,16 +17,19 @@ The "in hand", "lifted" and "goal" thresholds are read from the reward terms of 
 
 .. code-block:: bash
 
-    uv run --extra isaacsim python scripts/franka_hx5d20/evaluate_franka_hx5d20_lift.py --checkpoint latest
+    uv run python scripts/franka_hx5d20/evaluate_franka_hx5d20_lift.py --checkpoint latest
 
 """
 
 import argparse
 import math
+import os
 import sys
 
 import gymnasium as gym
 import torch
+
+os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
 
 import isaaclab.utils.math as math_utils
 from isaaclab.app import add_launcher_args, launch_simulation
@@ -37,8 +37,11 @@ from isaaclab.utils.math import combine_frame_transforms
 
 from isaaclab_tasks.utils import resolve_task_config, setup_preset_cli
 
-import contact_prediction_rl.tasks  # noqa: F401  (registers this project's tasks)
-from contact_prediction_rl.learning.checkpoints import get_log_root_path, resolve_checkpoint
+import contact_prediction_rl.tasks  # noqa: F401
+from contact_prediction_rl.learning.checkpoints import (
+    get_log_root_path,
+    resolve_checkpoint,
+)
 from contact_prediction_rl.learning.inference import load_policy
 from contact_prediction_rl.learning.isaaclab_env import IsaacLabPPOEnvWrapper
 
@@ -51,9 +54,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--task", type=str, default=TASK, help="Name of the task.")
     parser.add_argument("--num_envs", type=int, default=256, help="Number of environments, one episode each.")
     parser.add_argument("--seed", type=int, default=42, help="Seed used for the environment.")
-    parser.add_argument(
-        "--agent", type=str, default="ppo_cfg_entry_point", help="Name of the PPO agent configuration entry point."
-    )
+    parser.add_argument("--agent", type=str, default="ppo_cfg_entry_point", help="Name of the PPO agent configuration entry point.")
     parser.add_argument(
         "--checkpoint",
         type=str,
@@ -199,10 +200,7 @@ def main() -> None:
             if seen.numel() == 0:
                 print(f"{name}: never")
                 continue
-            print(
-                f"{name}: median {seen.median().item():.1f} cm, 90th pct {seen.quantile(0.9).item():.1f} cm, "
-                f"worst {seen.max().item():.1f} cm"
-            )
+            print(f"{name}: median {seen.median().item():.1f} cm, 90th pct {seen.quantile(0.9).item():.1f} cm, worst {seen.max().item():.1f} cm")
         print("signed error at end (cube - goal) [cm]:")
         for axis, name in enumerate("xyz"):
             e = final_error[:, axis] * 100
@@ -236,10 +234,7 @@ def main() -> None:
             )
         seen = gap_when_closed[~gap_when_closed.isnan()] * 1000
         if seen.numel():
-            print(
-                f"grasp centre to held part when the hand finished closing: median {seen.median().item():.0f} mm, "
-                f"90th pct {seen.quantile(0.9).item():.0f} mm  ({seen.numel()} envs)"
-            )
+            print(f"grasp centre to held part when the hand finished closing: median {seen.median().item():.0f} mm, 90th pct {seen.quantile(0.9).item():.0f} mm  ({seen.numel()} envs)")
         if closure_dim > 1:
             names = getattr(hand_term, "synergy_names", [str(i) for i in range(closure_dim)])
             # the episodes that ended with the cube held at the goal, else the ones that ended with it lifted in hand
@@ -250,18 +245,10 @@ def main() -> None:
             for k, name in enumerate(names):
                 values = final_closure[group, k]
                 std = values.std().item() if values.numel() > 1 else 0.0
-                print(
-                    f"  {name}: mean {values.mean().item():.2f}, std {std:.2f}, "
-                    f"range {values.min().item():.2f}-{values.max().item():.2f}"
-                )
+                print(f"  {name}: mean {values.mean().item():.2f}, std {std:.2f}, range {values.min().item():.2f}-{values.max().item():.2f}")
         print(f"regrasps per env that lifted: mean {regrasps.mean().item() if regrasps.numel() else 0.0:.2f}")
-        print(
-            f"share of the episode holding the cube at the goal: mean {100 * (held_steps / steps).mean().item():.1f} %"
-        )
-        print(
-            f"thresholds: lift above {lift_height:.3f} m, in hand within {in_hand_distance} m, "
-            f"goal within {goal_threshold} m"
-        )
+        print(f"share of the episode holding the cube at the goal: mean {100 * (held_steps / steps).mean().item():.1f} %")
+        print(f"thresholds: lift above {lift_height:.3f} m, in hand within {in_hand_distance} m, goal within {goal_threshold} m")
         env.close()
 
 

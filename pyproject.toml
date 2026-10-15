@@ -1,7 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
+# pyproject.toml
 
 [build-system]
 requires = ["uv_build>=0.12.6,<0.13"]
@@ -16,15 +13,11 @@ license = { file = "LICENSE" }
 authors = [{ name = "Isaac Lab Project Developers" }]
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "isaaclab[rsl-rl]==3.0.0rc1",
+    "isaaclab[rsl-rl,isaacsim]==3.0.0rc1",
     "xacro>=2.1.1",
 ]
 
-[project.entry-points."isaaclab.tasks"]
-"contact_prediction_rl" = "contact_prediction_rl.tasks"
-
 [project.optional-dependencies]
-isaacsim = ["isaaclab[isaacsim]==3.0.0rc1"]
 ov = ["isaaclab[ov]==3.0.0rc1"]
 ovphysx = ["isaaclab[ovphysx]==3.0.0rc1"]
 ovrtx = ["isaaclab[ovrtx]==3.0.0rc1"]
@@ -32,6 +25,9 @@ video = ["moviepy>=1.0.3,<2.0.0.dev0", "imageio-ffmpeg"]
 
 [dependency-groups]
 dev = ["codespell>=2.4", "pre-commit>=4.2", "pytest>=8.3", "ruff>=0.11"]
+
+[project.entry-points."isaaclab.tasks"]
+"contact_prediction_rl" = "contact_prediction_rl.tasks"
 
 [tool.uv]
 index-strategy = "unsafe-best-match"
@@ -66,7 +62,7 @@ override-dependencies = [
 module-name = "contact_prediction_rl"
 
 [tool.ruff]
-line-length = 120
+line-length = 200
 target-version = "py312"
 
 [tool.ruff.lint]
@@ -137,4 +133,3 @@ explicit = true
 name = "pytorch-cu130"
 url = "https://download.pytorch.org/whl/cu130"
 explicit = true
-

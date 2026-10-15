@@ -52,9 +52,7 @@ class RateLimitedBinaryJointPositionAction(BinaryJointPositionAction):
         self._closure += (close.float() - self._closure).clamp(-max_change, max_change)
         self._processed_actions = self._open_command + self._closure * (self._close_command - self._open_command)
         if self.cfg.clip is not None:
-            self._processed_actions = torch.clamp(
-                self._processed_actions, min=self._clip[:, :, 0], max=self._clip[:, :, 1]
-            )
+            self._processed_actions = torch.clamp(self._processed_actions, min=self._clip[:, :, 0], max=self._clip[:, :, 1])
 
     def reset(self, env_ids: Sequence[int] | None = None) -> None:
         super().reset(env_ids)
@@ -95,9 +93,7 @@ class SynergyJointPositionAction(ActionTerm):
         if self.cfg.clip is not None:
             if not isinstance(self.cfg.clip, dict):
                 raise ValueError(f"Unsupported clip type: {type(self.cfg.clip)}. Supported types are dict.")
-            self._clip = torch.tensor([[-float("inf"), float("inf")]], device=self.device).repeat(
-                self.num_envs, self._num_joints, 1
-            )
+            self._clip = torch.tensor([[-float("inf"), float("inf")]], device=self.device).repeat(self.num_envs, self._num_joints, 1)
             index_list, _, value_list = string_utils.resolve_matching_names_values(self.cfg.clip, self._joint_names)
             self._clip[:, index_list] = torch.tensor(value_list, device=self.device)
 
@@ -135,9 +131,7 @@ class SynergyJointPositionAction(ActionTerm):
         self._closure = step_closures(self._closure, actions, max_change)
         self._processed_actions = synergy_posture(self._open_command, self._shapes, self._closure)
         if self.cfg.clip is not None:
-            self._processed_actions = torch.clamp(
-                self._processed_actions, min=self._clip[:, :, 0], max=self._clip[:, :, 1]
-            )
+            self._processed_actions = torch.clamp(self._processed_actions, min=self._clip[:, :, 0], max=self._clip[:, :, 1])
 
     def apply_actions(self):
         self._asset.set_joint_position_target_index(target=self._processed_actions, joint_ids=self._joint_ids)

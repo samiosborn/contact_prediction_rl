@@ -50,13 +50,9 @@ class IsaacLabPPOEnvWrapper:
             self.unwrapped,
             "action_manager",
         ):
-            return int(
-                self.unwrapped.action_manager.total_action_dim
-            )
+            return int(self.unwrapped.action_manager.total_action_dim)
 
-        return int(
-            self.unwrapped.single_action_space.shape[-1]
-        )
+        return int(self.unwrapped.single_action_space.shape[-1])
 
     @property
     def device(
@@ -102,14 +98,10 @@ class IsaacLabPPOEnvWrapper:
     ) -> tuple[TensorDict, dict]:
         """Reset the environment"""
 
-        observations, extras = (
-            self.env.reset()
-        )
+        observations, extras = self.env.reset()
 
         return (
-            self._to_tensordict(
-                observations
-            ),
+            self._to_tensordict(observations),
             extras,
         )
 
@@ -118,25 +110,9 @@ class IsaacLabPPOEnvWrapper:
     ) -> TensorDict:
         """Return the current environment observations"""
 
-        if hasattr(
-            self.unwrapped,
-            "observation_manager",
-        ):
-            observations = (
-                self.unwrapped
-                .observation_manager
-                .compute()
-            )
+        observations = self.unwrapped.observation_manager.compute() if hasattr(self.unwrapped, "observation_manager") else self.unwrapped._get_observations()
 
-        else:
-            observations = (
-                self.unwrapped
-                ._get_observations()
-            )
-
-        return self._to_tensordict(
-            observations
-        )
+        return self._to_tensordict(observations)
 
     def step(
         self,
@@ -162,27 +138,18 @@ class IsaacLabPPOEnvWrapper:
             terminated,
             truncated,
             extras,
-        ) = self.env.step(
-            actions
-        )
+        ) = self.env.step(actions)
 
         # PPO treats both environment termination and truncation as done
-        dones = (
-            terminated
-            | truncated
-        )
+        dones = terminated | truncated
 
         # Store truncation information separately so PPO can bootstrap
         # time-limit terminations when using an infinite-horizon task
         if not self.unwrapped.cfg.is_finite_horizon:
-            extras[
-                "time_outs"
-            ] = truncated
+            extras["time_outs"] = truncated
 
         return (
-            self._to_tensordict(
-                observations
-            ),
+            self._to_tensordict(observations),
             rewards,
             dones,
             extras,
@@ -209,7 +176,5 @@ class IsaacLabPPOEnvWrapper:
 
         return TensorDict(
             observations,
-            batch_size=[
-                self.num_envs
-            ],
+            batch_size=[self.num_envs],
         )

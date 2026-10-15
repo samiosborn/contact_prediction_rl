@@ -6,7 +6,7 @@ Use ``--visualizer kit`` to watch the rollout in the Isaac Sim viewport, or ``--
 
 .. code-block:: bash
 
-    uv run --extra isaacsim python scripts/play.py \
+    uv run python scripts/play.py \
       --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-Right \
       --checkpoint latest --visualizer kit
 """
@@ -14,12 +14,15 @@ Use ``--visualizer kit`` to watch the rollout in the Isaac Sim viewport, or ``--
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
 
 import gymnasium as gym
 import torch
+
+os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
 
 from isaaclab.app import add_launcher_args, launch_simulation
 
@@ -28,6 +31,7 @@ from isaaclab_rl.entrypoints.common import (
     enable_cameras_for_video,
     pre_launch_video_config,
 )
+
 from isaaclab_tasks.utils import resolve_task_config, setup_preset_cli
 
 import contact_prediction_rl.tasks  # noqa: F401
@@ -44,9 +48,7 @@ def _parse_args(
 ) -> tuple[argparse.Namespace, list[str]]:
     """Parse playback arguments"""
 
-    parser = argparse.ArgumentParser(
-        description="Play a trained contact_prediction_rl PPO policy."
-    )
+    parser = argparse.ArgumentParser(description="Play a trained contact_prediction_rl PPO policy.")
     parser.add_argument("--task", type=str, required=True, help="Isaac Lab task name.")
     parser.add_argument(
         "--agent",
@@ -69,12 +71,8 @@ def _parse_args(
         help="Slow the loop down to the environment step time, for watching in a viewer.",
     )
     parser.add_argument("--video", action="store_true", help="Record a video of the rollout.")
-    parser.add_argument(
-        "--video_length", type=int, default=None, help="Length of the video in environment steps (default 200)."
-    )
-    parser.add_argument(
-        "--video_interval", type=int, default=None, help="Start a new video clip every this many environment steps."
-    )
+    parser.add_argument("--video_length", type=int, default=None, help="Length of the video in environment steps (default 200).")
+    parser.add_argument("--video_interval", type=int, default=None, help="Start a new video clip every this many environment steps.")
 
     add_launcher_args(parser)
 
