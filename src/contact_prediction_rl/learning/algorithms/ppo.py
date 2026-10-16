@@ -44,7 +44,6 @@ class PPO:
     ) -> None:
         self.device = device
 
-        # Models
         self.actor = actor.to(self.device)
         self.critic = critic.to(self.device)
 
@@ -52,7 +51,6 @@ class PPO:
         self._raw_actor = self.actor
         self._raw_critic = self.critic
 
-        # Optimiser
         if optimizer != "adam":
             raise ValueError(f"Unsupported optimizer: {optimizer}")
 
@@ -64,11 +62,9 @@ class PPO:
             lr=learning_rate,
         )
 
-        # Rollout storage
         self.storage = storage
         self.transition = RolloutStorage.Transition()
 
-        # PPO parameters
         self.clip_param = clip_param
         self.num_learning_epochs = num_learning_epochs
         self.num_mini_batches = num_mini_batches
@@ -92,26 +88,21 @@ class PPO:
         self,
         obs: TensorDict,
     ) -> torch.Tensor:
-        """Sample actions and store transition data"""
+        """Sample actions and retain detached behaviour-policy statistics for PPO."""
 
         observations = obs["policy"]
 
-        # Sample actions from the current policy
         self.transition.actions = self.actor(
             observations,
             stochastic_output=True,
         ).detach()
 
-        # Estimate the current state values
         self.transition.values = self.critic(observations).detach()
 
-        # Store action log probabilities under the current policy
         self.transition.actions_log_prob = self.actor.get_output_log_prob(self.transition.actions).detach()
 
-        # Store the current Gaussian distribution parameters
         self.transition.distribution_params = tuple(parameter.detach() for parameter in self.actor.output_distribution_params)
 
-        # Store observations before stepping the environment
         self.transition.observations = obs
 
         return self.transition.actions
@@ -123,16 +114,14 @@ class PPO:
         dones: torch.Tensor,
         extras: dict[str, Any],
     ) -> None:
-        """Store one completed environment transition"""
+        """Store rewards and done flags, adding value bootstrap for timeouts."""
 
         observations = obs["policy"]
 
-        # Update running observation statistics
         self.actor.update_normalisation(observations)
 
         self.critic.update_normalisation(observations)
 
-        # Store rewards and termination state
         self.transition.rewards = rewards.clone()
         self.transition.dones = dones
 
@@ -143,7 +132,6 @@ class PPO:
                 1,
             )
 
-        # Add the completed transition to rollout storage
         self.storage.add_transition(self.transition)
 
         self.transition.clear()
@@ -152,7 +140,7 @@ class PPO:
         self,
         obs: TensorDict,
     ) -> None:
-        """Compute GAE advantages and return targets"""
+        """Compute GAE over time-major rollouts, stopping recursion at resets."""
 
         storage = self.storage
 
@@ -162,26 +150,20 @@ class PPO:
         advantage = 0
 
         for step in reversed(range(storage.num_transitions_per_env)):
-            # V(s_{t+1})
             next_values = (
                 last_values
                 if step == storage.num_transitions_per_env - 1
                 else storage.values[step + 1]
             )  # fmt: skip
 
-            # 1 for non-terminal transitions and 0 for terminal transitions
             next_is_not_terminal = 1.0 - storage.dones[step].float()
 
-            # One-step TD error
             delta = storage.rewards[step] + next_is_not_terminal * self.gamma * next_values - storage.values[step]
 
-            # Generalised Advantage Estimation
             advantage = delta + next_is_not_terminal * self.gamma * self.lam * advantage
 
-            # Return target
             storage.returns[step] = advantage + storage.values[step]
 
-        # A_t = R_t - V(s_t)
         storage.advantages = storage.returns - storage.values
 
         # Normalise advantages over the full rollout
@@ -197,7 +179,6 @@ class PPO:
         mean_surrogate_loss = 0.0
         mean_entropy = 0.0
 
-        # Generate shuffled feed-forward mini-batches
         generator = self.storage.mini_batch_generator(
             self.num_mini_batches,
             self.num_learning_epochs,
@@ -211,22 +192,17 @@ class PPO:
 
             observations = batch.observations["policy"]
 
-            # Recompute the current policy distribution
             self.actor(
                 observations,
                 stochastic_output=True,
             )
 
-            # Log probability of stored actions under the new policy
             actions_log_prob = self.actor.get_output_log_prob(batch.actions)
 
-            # Policy entropy
             entropy = self.actor.output_entropy
 
-            # Current Gaussian distribution parameters
             distribution_params = self.actor.output_distribution_params
 
-            # Current critic estimates
             values = self.critic(observations)
 
             # Adaptive learning-rate schedule based on KL divergence
@@ -254,13 +230,10 @@ class PPO:
                     for param_group in self.optimizer.param_groups:
                         param_group["lr"] = self.learning_rate
 
-            # Probability ratio between new and old policies
             ratio = torch.exp(actions_log_prob - torch.squeeze(batch.old_actions_log_prob))
 
-            # Unclipped PPO objective
             surrogate = -torch.squeeze(batch.advantages) * ratio
 
-            # Clipped PPO objective
             surrogate_clipped = -torch.squeeze(batch.advantages) * torch.clamp(
                 ratio,
                 1.0 - self.clip_param,
@@ -273,7 +246,6 @@ class PPO:
                 surrogate_clipped,
             ).mean()
 
-            # Critic value loss
             if self.use_clipped_value_loss:
                 value_clipped = batch.values + (values - batch.values).clamp(
                     -self.clip_param,
@@ -292,10 +264,8 @@ class PPO:
             else:
                 value_loss = (batch.returns - values).pow(2).mean()
 
-            # Combined PPO loss
             loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy.mean()
 
-            # Backpropagation
             self.optimizer.zero_grad()
 
             loss.backward()
@@ -311,10 +281,8 @@ class PPO:
                 self.max_grad_norm,
             )
 
-            # Apply parameter update
             self.optimizer.step()
 
-            # Accumulate logging statistics
             mean_value_loss += value_loss.item()
 
             mean_surrogate_loss += surrogate_loss.item()
@@ -327,7 +295,6 @@ class PPO:
         mean_surrogate_loss /= num_updates
         mean_entropy /= num_updates
 
-        # Rollout has now been consumed
         self.storage.clear()
 
         return {
@@ -422,7 +389,6 @@ class PPO:
 
         action_dim = env.num_actions
 
-        # Build actor directly from our actor configuration
         actor = Actor(
             observation_dim=observation_dim,
             action_dim=action_dim,
@@ -431,7 +397,6 @@ class PPO:
 
         print(f"Actor Model: {actor}")
 
-        # Build critic directly from our critic configuration
         critic = Critic(
             observation_dim=observation_dim,
             **cfg["critic"],
@@ -439,7 +404,6 @@ class PPO:
 
         print(f"Critic Model: {critic}")
 
-        # Allocate rollout storage
         storage = RolloutStorage(
             num_envs=env.num_envs,
             num_transitions_per_env=cfg["num_steps_per_env"],
@@ -448,7 +412,6 @@ class PPO:
             device=device,
         )
 
-        # Build PPO directly from our algorithm configuration
         algorithm = PPO(
             actor=actor,
             critic=critic,

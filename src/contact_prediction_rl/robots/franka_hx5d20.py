@@ -1,7 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
+# src/contact_prediction_rl/robots/franka_hx5d20.py
 
 """Configuration for the Franka Emika Panda arm with the Robotis HX5-D20 right hand.
 

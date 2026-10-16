@@ -9,7 +9,7 @@ from tensordict import TensorDict
 
 
 class RolloutStorage:
-    """Storage for feed-forward PPO rollout data"""
+    """Time-major PPO buffers with leading dimensions ``(steps, environments)``."""
 
     class Transition:
         """Data collected for one environment step"""
@@ -215,7 +215,7 @@ class RolloutStorage:
         num_mini_batches: int,
         num_epochs: int,
     ) -> Generator[Batch, None, None]:
-        """Yield shuffled feed-forward PPO mini-batches"""
+        """Yield equal shuffled batches, preserving alignment across observation groups."""
 
         if self.step != self.num_transitions_per_env:
             raise RuntimeError("Cannot generate mini-batches before the rollout buffer is full")

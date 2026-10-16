@@ -1,7 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
+# src/contact_prediction_rl/tasks/lift/mdp/rewards.py
 
 """Reward terms that shape the grasp of the Franka + HX5-D20 hand."""
 
@@ -19,7 +16,7 @@ from isaaclab_tasks.contrib.lift import mdp
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
-# default scene entities, defined once so that the defaults are not built at every call
+# Reuse scene selectors across reward evaluations
 _OBJECT = SceneEntityCfg("object")
 _EE_FRAME = SceneEntityCfg("ee_frame")
 _ROBOT = SceneEntityCfg("robot")
@@ -29,8 +26,8 @@ _PANDA_HAND = SceneEntityCfg("robot", body_names=["panda_hand"])
 def _hand_to_object_distance(env: ManagerBasedRLEnv, object_cfg: SceneEntityCfg, ee_frame_cfg: SceneEntityCfg, grasp_offset_z: float = 0.0) -> torch.Tensor:
     """Distance [m] between the grasp centre of the hand and the part of the object the hand is meant to hold.
 
-    The held part is the object's centre shifted up by ``grasp_offset_z`` [m]: zero for a cube, and half the extra
-    height for a tall block that is gripped on its upper part.
+    The offset is along world +Z, not the rotated object axis: zero for a cube
+    and half the extra height for an upright block gripped on its upper part.
     """
     object = env.scene[object_cfg.name]
     ee_frame = env.scene[ee_frame_cfg.name]
@@ -61,10 +58,9 @@ def hand_closed_near_object(
 ) -> torch.Tensor:
     """Reward a closed hand while the grasp centre is close to the part to hold (tanh kernel).
 
-    How closed the hand is comes from the ``closure`` fraction of a rate-limited hand action, so the reward needs the
-    hand to actually close and stay closed. For a hand action with several synergies, ``closure_index`` selects the
-    one that counts as closing the hand (0, the finger curl, in the synergy action). For an action term without a
-    closure fraction, the commanded state (negative action = closed) is used instead.
+    ``closure`` is the commanded fraction, not realised joint closure. For
+    synergy actions, ``closure_index`` selects the relevant shape (0 is curl).
+    Without a closure fraction, a negative raw action counts as closed.
     """
     distance = _hand_to_object_distance(env, object_cfg, ee_frame_cfg, grasp_offset_z)
     term = env.action_manager.get_term(action_name)
@@ -108,7 +104,7 @@ def object_lifted_in_hand(
 ) -> torch.Tensor:
     """Reward the object being above the minimal height *and* within ``max_distance`` of the grasp centre.
 
-    Without the distance condition, an object knocked into the air is rewarded like a held one.
+    Proximity is a geometric proxy for holding, not a contact or force test.
     """
     object = env.scene[object_cfg.name]
     in_hand = _hand_to_object_distance(env, object_cfg, ee_frame_cfg, grasp_offset_z) < max_distance
@@ -139,7 +135,7 @@ class object_goal_distance_in_hand(mdp.object_goal_distance):
     """Goal-tracking reward (and success metric) that only counts while the object is held in the hand.
 
     Same as :class:`~isaaclab_tasks.contrib.lift.mdp.object_goal_distance`, except that the object must also be within
-    ``max_distance`` of the grasp centre, so that a thrown object passing the goal is neither rewarded nor a success.
+    ``max_distance`` of the grasp centre, which rejects distant objects but does not prove a force-supported grasp.
 
     When ``success_threshold`` is given, it also logs ``Metrics/held_at_goal_at_end``: the share of finished episodes
     whose last step had the object held within the threshold of the goal. ``Metrics/success_rate`` only needs the
