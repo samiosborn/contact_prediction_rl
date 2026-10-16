@@ -15,7 +15,6 @@ kinematic model is duplicated here.
 
 """
 
-"""Parse the command-line arguments first."""
 
 import argparse
 import math
@@ -60,13 +59,11 @@ args_cli = parser.parse_args()
 args_cli.require_kit = True
 args_cli.physics = "isaacsim_physx"
 
-"""Rest everything follows."""
 
 import torch
 
 import isaaclab.sim as sim_utils
 import isaaclab.utils.math as math_utils
-from isaaclab.assets import Articulation
 from isaaclab.physics import PhysicsCfg
 from isaaclab.sim import SimulationContext
 
@@ -79,6 +76,9 @@ ARM_JOINTS = [f"panda_joint{i}" for i in range(1, 8)]
 def main():
     cube = torch.tensor([float(v) for v in args_cli.cube.split(",")])
     with launch_simulation(PhysicsCfg(), args_cli) as physics_cfg:
+        # Load PhysX asset classes after Kit has initialised its USD context
+        from isaaclab.assets import Articulation
+
         sim = SimulationContext(sim_utils.SimulationCfg(device=args_cli.device, physics=physics_cfg))
         cfg = FRANKA_HX5D20_CFG.copy()
         cfg.prim_path = "/World/Robot"

@@ -1,7 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
+# tests/test_smoke_envs.py
 
 """Smoke test: every registered task builds and steps. Needs a CUDA GPU; run with `pytest -m gpu`."""
 
@@ -31,3 +28,21 @@ def test_task_builds_and_steps(task):
         timeout=900,
     )
     assert f"SMOKE_OK {task}" in proc.stdout, proc.stdout[-3000:] + proc.stderr[-3000:]
+
+
+@pytest.mark.gpu
+@pytest.mark.integration
+@pytest.mark.smoke
+def test_pregrasp_initialises_kit_before_assets():
+    """Exercise the PhysX pregrasp entry point through one short pose solve."""
+    script = SCRIPT.parent / "franka_hx5d20" / "find_franka_hx5d20_pregrasp.py"
+    proc = subprocess.run(
+        [sys.executable, str(script), "--iterations", "2", "--hovers", "0.15"],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    output = proc.stdout + proc.stderr
+    # Kit can return zero after a startup exception, so require a completed solve
+    assert proc.returncode == 0 and "hover 0.15 m: position error" in output, output[-4000:]
+    assert "Traceback (most recent call last)" not in output, output[-4000:]
