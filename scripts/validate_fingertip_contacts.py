@@ -32,6 +32,9 @@ from contact_prediction_rl.robots.hx5_d20_contacts import (
     FINGERTIP_SENSOR_NAMES,
 )
 
+# HX5_PAD_DIAGNOSTIC_INTEGRATION_V1 -- purely optional debug functionality.
+from contact_prediction_rl.robots.hx5_d20_patches import NewtonPatchDiagnostic, PatchSelection
+
 TASK = "ContactPredictionRl-Reorientation-HX5-D20-Right"
 
 # Original placement is retained for the separate free-cube experiment.
@@ -70,6 +73,18 @@ def _parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
         help="Square raised-support width [m], must be smaller than the cube footprint.",
     )
     parser.add_argument("--report-positions", action="store_true", help="Print cube, palm and fingertip world positions at key phases.")
+    parser.add_argument("--placement-region", choices=("tip", "proximal"), default="tip", help="Search all extremal vertices or proximal ordinary-finger vertices for a physical negative control.")
+    parser.add_argument("--placement-rank", type=int, default=0, help="Select a ranked collision-free swept-mesh cube placement for negative-control exploration.")
+    parser.add_argument("--measure-patches", action="store_true", help="Classify real active Newton cube/distal contact events in candidate regions.")
+    parser.add_argument("--show-patches", action="store_true", help="Overlay diagnostic green regions and live yellow/red collision points (implies --measure-patches).")
+    parser.add_argument("--patch-tolerance-mm", type=float, default=1.5, help="Candidate box inclusion tolerance in mm.")
+    parser.add_argument("--contact-distance-mm", type=float, default=2.0, help="Largest active Newton constraint signed distance in mm.")
+    parser.add_argument("--ordinary-x-tail", type=float, default=.38, help="Fraction of high +X ordinary-finger collision bounds.")
+    parser.add_argument("--ordinary-z-tail", type=float, default=.38, help="Fraction of distal +Z ordinary-finger collision bounds.")
+    parser.add_argument("--ordinary-y-central", type=float, default=.84, help="Fraction of central Y ordinary-finger width.")
+    parser.add_argument("--thumb-y-tail", type=float, default=.35, help="Fraction of distal +Y thumb collision bounds.")
+    parser.add_argument("--thumb-x-central", type=float, default=.80, help="Fraction of central X thumb width.")
+    parser.add_argument("--thumb-z-central", type=float, default=.80, help="Fraction of central Z thumb width.")
     parser.add_argument("--inspect-only", action="store_true", help="Keep the hand open in the viewer; do not run closing/contact trials.")
     parser.add_argument("--inspect-steps", type=int, default=9000, help="Maximum open-hand steps in --inspect-only mode; Ctrl+C exits early.")
     add_launcher_args(parser)
@@ -442,7 +457,7 @@ class NewtonContactProbe:
                 local = quat_apply_inverse(poses[idx, 3:7].unsqueeze(0), point - poses[idx, :3])
                 print(f"CONTACT_POINT phase={phase} finger={name} world_m={position.tolist()} distal_local_m={local[0].tolist()} signed_distance_m={float(depth):.6f}", flush=True)
                 points.append(position)
-        if points:
+        if points and not getattr(self, "pad_diagnostic", None):
             if not hasattr(self, "markers"):
                 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
                 self.markers = VisualizationMarkers(VisualizationMarkersCfg(
@@ -454,7 +469,7 @@ class NewtonContactProbe:
             print("CONTACT_POINT yellow markers show first measured points; pad attribution requires comparing local coordinates with the unmodified distal mesh", flush=True)
 
 
-def _plan_cube_placement(env, probe, finger):
+def _plan_cube_placement(env, probe, finger, placement_rank=0, placement_region="tip"):
     """Search compiled collision surfaces, without advancing or editing physics.
 
     Each isolated trial may use a different reset placement. MuJoCo's convex
@@ -523,6 +538,13 @@ def _plan_cube_placement(env, probe, finger):
             mesh = model.geom_dataid[g]
             first, count = model.mesh_vertadr[mesh], model.mesh_vertnum[mesh]
             vertices = model.mesh_vert[first:first+count]
+            if placement_region == "proximal":
+                from contact_prediction_rl.robots.hx5_d20_patches import wxyz_to_rotation
+                if selected == "thumb":
+                    raise ValueError("Proximal placement search currently supports ordinary fingers only")
+                body_vertices = vertices @ wxyz_to_rotation(model.geom_quat[g]).T + model.geom_pos[g]
+                z = body_vertices[:, 2]
+                vertices = vertices[z <= z.min() + .45 * np.ptp(z)]
             world = vertices @ scratch.geom_xmat[g].reshape(3, 3).T + scratch.geom_xpos[g]
             # Use actual mesh extremal surface points; no assumed pad or origin.
             for direction in (np.array([1., 0., 0.]), np.array([-1., 0., 0.]),
@@ -544,7 +566,10 @@ def _plan_cube_placement(env, probe, finger):
             feasible.append((alpha + np.linalg.norm(center-np.array([0.475, 0., 0.370])), center, clearance, alpha))
     if not feasible:
         raise RuntimeError(f"HAND_CUBE_ALIGNMENT FAIL: no separated {selected} swept-mesh placement above table; candidates={len(candidates)}")
-    _, center, clearance, alpha = min(feasible, key=lambda item: item[0])
+    ranked = sorted(feasible, key=lambda item: item[0])
+    if not 0 <= placement_rank < len(ranked):
+        raise ValueError(f"placement-rank must be in [0, {len(ranked)-1}]")
+    _, center, clearance, alpha = ranked[placement_rank]
     _tensor(env.scene["object"].data.default_root_pose)[0, :3] = torch.tensor(center, device=env.device)
     print(f"HAND_CUBE_ALIGNMENT PASS finger={selected} cube_world={center.tolist()} open_mesh_clearance_m={clearance:.6f} predicted_contact_closure={alpha:.3f}", flush=True)
     for name, geoms in tip_geoms.items():
@@ -562,6 +587,11 @@ class PhaseResult:
     confirmed_steps: dict[str, int] = field(default_factory=lambda: dict.fromkeys(FINGERTIP_NAMES, 0))
     peak_force_n: dict[str, float] = field(default_factory=lambda: dict.fromkeys(FINGERTIP_NAMES, 0.0))
     other_body_steps: int = 0
+    pad_steps: dict[str, int] = field(default_factory=lambda: dict.fromkeys(FINGERTIP_NAMES, 0))
+    pad_inside_events: dict[str, int] = field(default_factory=lambda: dict.fromkeys(FINGERTIP_NAMES, 0))
+    pad_outside_events: dict[str, int] = field(default_factory=lambda: dict.fromkeys(FINGERTIP_NAMES, 0))
+    patch_examples: set[tuple[str, bool]] = field(default_factory=set)
+    last_10_pad: list[list[int]] = field(default_factory=list)
     last_action: torch.Tensor | None = None
     last_10_raw: list[bool] = field(default_factory=list)
     last_bits: list[int] = field(default_factory=list)
@@ -574,6 +604,23 @@ class PhaseResult:
         if not bool(torch.all((labels == 0) | (labels == 1))):
             raise AssertionError("Contact observations must contain only binary labels.")
         bits = [int(value) for value in labels[0].tolist()]
+        pad_bits = [0] * len(FINGERTIP_NAMES)
+        if getattr(probe, "pad_diagnostic", None) is not None:
+            candidate_bits, pad_events = probe.pad_diagnostic.sample(env)
+            pad_bits = [int(v) for v in candidate_bits]
+            for event in pad_events:
+                finger, inside = event["finger"], event["inside"]
+                target = self.pad_inside_events if inside else self.pad_outside_events
+                target[finger] += 1
+                key = (finger, inside)
+                if key not in self.patch_examples:
+                    self.patch_examples.add(key)
+                    print(f"PATCH_CONTACT_EXAMPLE phase={self.name} finger={finger} "
+                          f"inside={inside} local_m={event['local_m']} "
+                          f"distance_m={event['signed_distance_m']:.6f}", flush=True)
+            self.last_10_pad = (self.last_10_pad + [pad_bits])[-10:]
+            for i, finger in enumerate(FINGERTIP_NAMES):
+                self.pad_steps[finger] += pad_bits[i]
         raw_contacts = probe.count_contacts()
         self.other_body_steps += int(probe.cube_robot_count > sum(raw_contacts.values()))
         first = [name for name in FINGERTIP_NAMES if raw_contacts[name] and not self.raw_steps[name]]
@@ -607,12 +654,18 @@ class PhaseResult:
                 f"    {name:<6} label_steps={self.label_steps[name]:>3} "
                 f"raw_collision_steps={self.raw_steps[name]:>3} "
                 f"confirmed_steps={self.confirmed_steps[name]:>3} "
-                f"peak_filtered_force={self.peak_force_n[name]:.4f} N",
+                f"peak_filtered_force={self.peak_force_n[name]:.4f} N "
+                f"pad_steps={self.pad_steps[name]:>3} "
+                f"pad_inside_events={self.pad_inside_events[name]:>3} "
+                f"pad_outside_events={self.pad_outside_events[name]:>3}",
                 flush=True,
             )
 
     def clear_at_end(self) -> bool:
         return bool(self.last_10_bits) and all(not any(bits) for bits in self.last_10_bits)
+
+    def pad_clear_at_end(self) -> bool:
+        return bool(self.last_10_pad) and all(not any(bits) for bits in self.last_10_pad)
 
 
 def _closed_action(env, finger: str):
@@ -766,10 +819,24 @@ def run(argv: list[str]) -> int:
             env.reset()  # initialise live poses before comparing against scratch MuJoCo FK
             _solve_fingers_down_pose(env)
             probe = NewtonContactProbe()
+            probe.pad_diagnostic = None
+            if args_cli.measure_patches or args_cli.show_patches:
+                patch_cfg = PatchSelection(
+                    inclusion_tolerance_m=args_cli.patch_tolerance_mm / 1000,
+                    max_signed_distance_m=args_cli.contact_distance_mm / 1000,
+                    ordinary_x_tail=args_cli.ordinary_x_tail,
+                    ordinary_z_tail=args_cli.ordinary_z_tail,
+                    ordinary_y_central=args_cli.ordinary_y_central,
+                    thumb_y_tail=args_cli.thumb_y_tail,
+                    thumb_x_central=args_cli.thumb_x_central,
+                    thumb_z_central=args_cli.thumb_z_central,
+                )
+                probe.pad_diagnostic = NewtonPatchDiagnostic(
+                    probe, env, cfg=patch_cfg, show_patches=args_cli.show_patches)
             for finger in trials:
                 print(f"\n=== Trial: {finger} ===", flush=True)
                 if args_cli.cube_mode == "fixed":
-                    _plan_cube_placement(env, probe, finger)
+                    _plan_cube_placement(env, probe, finger, args_cli.placement_rank, args_cli.placement_region)
                 observations, _ = env.reset()
                 _check_palm_direction(env, "initial")
                 if observations["policy"].shape != (1, 40) or observations["contact"].shape != (1, 5):
@@ -788,6 +855,8 @@ def run(argv: list[str]) -> int:
                     try:
                         for _ in range(args_cli.inspect_steps):
                             env.step(opened)
+                            if probe.pad_diagnostic is not None:
+                                probe.pad_diagnostic.sample(env)
                     except KeyboardInterrupt:
                         print("INSPECT_ONLY stopped by user.", flush=True)
                     _check_palm_direction(env, "inspect final")
@@ -831,6 +900,19 @@ def run(argv: list[str]) -> int:
                     passed = False
                     reason = f"{stability_reason} {reason}"
                 print(f"RESULT {finger}: {'PASS' if passed else 'FAIL'} — {reason}", flush=True)
+                if probe.pad_diagnostic is not None:
+                    selected_fingers = FINGERTIP_NAMES if finger == "grasp" else (finger,)
+                    for name in selected_fingers:
+                        print(
+                            f"PATCH_RESULT finger={name} "
+                            f"link_force_label_steps={closing.label_steps[name]} "
+                            f"pad_active_steps={closing.pad_steps[name]} "
+                            f"active_inside_events={closing.pad_inside_events[name]} "
+                            f"active_outside_events={closing.pad_outside_events[name]} "
+                            f"pad_release_clear={released.pad_clear_at_end()} "
+                            f"link_release_clear={released.clear_at_end()}",
+                            flush=True,
+                        )
                 successes += int(passed)
         finally:
             env.close()
