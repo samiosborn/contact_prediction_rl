@@ -195,3 +195,21 @@ def test_actor_normalisation_updates():
 
     # The normaliser should now have processed the full batch
     assert actor.normaliser.count.item() == 32
+
+def test_action_head_init_scale_starts_with_small_mean_actions():
+    kwargs = dict(
+        observation_dim=12,
+        action_dim=27,
+        hidden_dims=[256, 128],
+        latent_dim=64,
+        activation="elu",
+    )
+    observations = torch.randn(64, 12)
+
+    default = Actor(**kwargs)
+    small = Actor(**kwargs, action_head_init_scale=0.01)
+
+    # the default initialisation is untouched, and the scaled one starts close to zero action
+    assert default(observations).abs().mean() > 5 * small(observations).abs().mean()
+    assert small(observations).abs().max() < 0.05
+    assert torch.all(small.action_head.bias == 0.0)

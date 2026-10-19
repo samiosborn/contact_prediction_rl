@@ -1,0 +1,160 @@
+################ model_400
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end     98.0 %  (+/- 0.6)
+lifted in hand at end   98.4 %  (+/- 0.5)
+reached goal ever      100.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 2.00 s, 90th pct 2.10 s  (512 envs)
+time to first goal     median 2.12 s, 90th pct 2.22 s  (512 envs)
+closest to goal while held: median 0.6 cm, 90th pct 1.0 cm, worst 4.7 cm
+distance to goal at end: median 1.4 cm, 90th pct 2.1 cm, worst 16.8 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -0.5, std 1.2
+  y: mean +0.3, std 0.7
+  z: mean +0.5, std 1.7
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 39 deg, 90th pct 45 deg; upright (<10 deg) 0 %
+hand joint targets at end [rad], episodes that held the cube at the goal (502):
+  finger_r_joint1: mean -1.57, std 0.03
+  finger_r_joint2: mean -0.72, std 0.24
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +1.57, std 0.00
+  finger_r_joint5: mean +0.25, std 0.16
+  finger_r_joint6: mean +1.98, std 0.08
+  finger_r_joint7: mean +0.00, std 0.00
+  finger_r_joint8: mean +0.00, std 0.00
+  finger_r_joint9: mean +0.60, std 0.00
+  finger_r_joint10: mean +2.00, std 0.00
+  finger_r_joint11: mean +0.00, std 0.00
+  finger_r_joint12: mean +1.57, std 0.00
+  finger_r_joint13: mean -0.50, std 0.08
+  finger_r_joint14: mean +2.00, std 0.00
+  finger_r_joint15: mean +0.00, std 0.00
+  finger_r_joint16: mean +1.33, std 0.13
+  finger_r_joint17: mean +0.60, std 0.00
+  finger_r_joint18: mean +0.08, std 0.13
+  finger_r_joint19: mean +1.22, std 0.19
+  finger_r_joint20: mean +0.00, std 0.00
+################ model_450
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end     92.8 %  (+/- 1.1)
+lifted in hand at end   93.0 %  (+/- 1.1)
+reached goal ever      100.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 1.90 s, 90th pct 2.04 s  (512 envs)
+time to first goal     median 2.02 s, 90th pct 2.16 s  (512 envs)
+closest to goal while held: median 0.7 cm, 90th pct 1.5 cm, worst 4.9 cm
+distance to goal at end: median 1.4 cm, 90th pct 2.5 cm, worst 37.2 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +0.6, std 3.0
+  y: mean +0.5, std 0.9
+  z: mean -0.4, std 3.5
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 40 deg, 90th pct 47 deg; upright (<10 deg) 0 %
+hand joint targets at end [rad], episodes that held the cube at the goal (475):
+  finger_r_joint1: mean -1.54, std 0.07
+  finger_r_joint2: mean -0.81, std 0.36
+  finger_r_joint3: mean +0.01, std 0.10
+  finger_r_joint4: mean +1.57, std 0.00
+  finger_r_joint5: mean +0.14, std 0.22
+  finger_r_joint6: mean +1.98, std 0.07
+  finger_r_joint7: mean +0.00, std 0.00
+  finger_r_joint8: mean +0.00, std 0.00
+  finger_r_joint9: mean +0.60, std 0.00
+  finger_r_joint10: mean +2.00, std 0.00
+  finger_r_joint11: mean +0.00, std 0.00
+  finger_r_joint12: mean +1.57, std 0.00
+  finger_r_joint13: mean -0.59, std 0.03
+  finger_r_joint14: mean +2.00, std 0.00
+  finger_r_joint15: mean +0.00, std 0.00
+  finger_r_joint16: mean +0.93, std 0.20
+  finger_r_joint17: mean +0.60, std 0.00
+  finger_r_joint18: mean +0.56, std 0.29
+  finger_r_joint19: mean +1.57, std 0.00
+  finger_r_joint20: mean +0.00, std 0.00
+################ model_500
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end     85.5 %  (+/- 1.6)
+lifted in hand at end   85.5 %  (+/- 1.6)
+reached goal ever       99.0 %  (+/- 0.4)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 1.84 s, 90th pct 2.08 s  (511 envs)
+time to first goal     median 2.04 s, 90th pct 2.28 s  (507 envs)
+closest to goal while held: median 1.1 cm, 90th pct 1.9 cm, worst 9.0 cm
+distance to goal at end: median 1.9 cm, 90th pct 3.2 cm, worst 34.4 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +0.6, std 2.4
+  y: mean -0.4, std 1.3
+  z: mean +0.5, std 3.4
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 48 deg, 90th pct 56 deg; upright (<10 deg) 0 %
+hand joint targets at end [rad], episodes that held the cube at the goal (438):
+  finger_r_joint1: mean -1.57, std 0.00
+  finger_r_joint2: mean -0.98, std 0.14
+  finger_r_joint3: mean +0.00, std 0.05
+  finger_r_joint4: mean +1.57, std 0.00
+  finger_r_joint5: mean -0.55, std 0.10
+  finger_r_joint6: mean +2.00, std 0.03
+  finger_r_joint7: mean +0.00, std 0.00
+  finger_r_joint8: mean +0.00, std 0.00
+  finger_r_joint9: mean +0.60, std 0.00
+  finger_r_joint10: mean +2.00, std 0.00
+  finger_r_joint11: mean +0.00, std 0.01
+  finger_r_joint12: mean +1.57, std 0.00
+  finger_r_joint13: mean -0.60, std 0.00
+  finger_r_joint14: mean +2.00, std 0.00
+  finger_r_joint15: mean +0.00, std 0.00
+  finger_r_joint16: mean +1.44, std 0.11
+  finger_r_joint17: mean +0.60, std 0.00
+  finger_r_joint18: mean +0.63, std 0.10
+  finger_r_joint19: mean +1.57, std 0.00
+  finger_r_joint20: mean +0.00, std 0.00
+################ model_550
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end     25.8 %  (+/- 1.9)
+lifted in hand at end   26.4 %  (+/- 1.9)
+reached goal ever       45.1 %  (+/- 2.2)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 1.98 s, 90th pct 2.31 s  (405 envs)
+time to first goal     median 2.08 s, 90th pct 2.34 s  (231 envs)
+closest to goal while held: median 4.0 cm, 90th pct 9.4 cm, worst 13.4 cm
+distance to goal at end: median 4.2 cm, 90th pct 8.0 cm, worst 22.8 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -1.4, std 3.9
+  y: mean -0.2, std 1.6
+  z: mean +1.0, std 4.4
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 41 deg, 90th pct 49 deg; upright (<10 deg) 2 %
+hand joint targets at end [rad], episodes that held the cube at the goal (132):
+  finger_r_joint1: mean -1.57, std 0.00
+  finger_r_joint2: mean -1.02, std 0.21
+  finger_r_joint3: mean +0.16, std 0.30
+  finger_r_joint4: mean +1.57, std 0.00
+  finger_r_joint5: mean -0.60, std 0.02
+  finger_r_joint6: mean +1.99, std 0.04
+  finger_r_joint7: mean +0.00, std 0.00
+  finger_r_joint8: mean +0.00, std 0.00
+  finger_r_joint9: mean +0.60, std 0.00
+  finger_r_joint10: mean +1.99, std 0.08
+  finger_r_joint11: mean +0.01, std 0.08
+  finger_r_joint12: mean +1.57, std 0.00
+  finger_r_joint13: mean -0.60, std 0.00
+  finger_r_joint14: mean +2.00, std 0.00
+  finger_r_joint15: mean +0.00, std 0.00
+  finger_r_joint16: mean +1.55, std 0.10
+  finger_r_joint17: mean +0.60, std 0.00
+  finger_r_joint18: mean +0.01, std 0.04
+  finger_r_joint19: mean +1.57, std 0.00
+  finger_r_joint20: mean +0.00, std 0.00

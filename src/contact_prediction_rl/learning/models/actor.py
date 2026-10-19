@@ -20,6 +20,7 @@ class Actor(nn.Module):
         activation: str,
         initial_std: float = 0.2,
         observation_normalisation: bool = False,
+        action_head_init_scale: float | None = None,
     ) -> None:
         super().__init__()
 
@@ -42,6 +43,13 @@ class Actor(nn.Module):
             latent_dim,
             action_dim,
         )
+
+        # Optionally start with small mean actions, so an untrained policy sits close to
+        # zero action. This matters when actions are integrated into joint targets
+        if action_head_init_scale is not None:
+            with torch.no_grad():
+                self.action_head.weight.mul_(action_head_init_scale)
+                self.action_head.bias.zero_()
 
         # State-independent learned standard deviation
         self.std = nn.Parameter(
