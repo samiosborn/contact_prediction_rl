@@ -25,7 +25,11 @@ from contact_prediction_rl.robots.franka_hx5d20 import (  # isort: skip
 )
 
 from ...mdp import rewards
-from ...mdp.actions_cfg import RateLimitedBinaryJointPositionActionCfg, SynergyJointPositionActionCfg
+from ...mdp.actions_cfg import (
+    PerJointPositionActionCfg,
+    RateLimitedBinaryJointPositionActionCfg,
+    SynergyJointPositionActionCfg,
+)
 
 CUBE_SIZE = 0.06
 """Edge length [m] of the cube-sized part of the block that the hand holds, which is also the block's footprint."""
@@ -340,3 +344,24 @@ class FrankaHX5D20BlockLiftCurlEnvCfg(FrankaHX5D20BlockLiftEnvCfg):
         super().__post_init__()
 
         self.actions.gripper_action.close_command_expr = FRANKA_HX5D20_HAND_CLOSED_THUMB_OPEN
+
+
+@configclass
+class FrankaHX5D20BlockLiftAllJointsEnvCfg(FrankaHX5D20BlockLiftEnvCfg):
+    """The block-lift task where the policy controls every finger joint (7 arm + 20 hand actions).
+
+    Each hand action moves one joint target at a limited rate (the whole joint range in ``HAND_CLOSING_TIME``), so the
+    policy builds the hand shape itself, starting from the open hand, with no designed finger posture. The closed-hand
+    reward counts how far the targets are along the curl posture. Everything else is as in the single-closure task.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.actions.gripper_action = PerJointPositionActionCfg(
+            asset_name="robot",
+            joint_names=["finger_r_joint.*"],
+            open_command_expr=FRANKA_HX5D20_HAND_OPEN,
+            closure_shape=FRANKA_HX5D20_HAND_SYNERGIES["curl"],
+            closing_time=HAND_CLOSING_TIME,
+        )

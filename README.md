@@ -230,6 +230,23 @@ uv run python scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py \
   --synergies "1,1,0;1,0.5,0.5;1,0,0"
 ```
 
+### Franka + HX5-D20 Lift with every finger joint controlled
+
+`ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right`
+
+The same block-lift task, but the policy controls each of the 20 finger joints directly (7 arm + 20 hand actions)
+with no designed finger posture. Each hand action moves one joint target at a limited rate: the whole joint range in
+2 s, the same speed limit as the single-closure hand. An action of 0 holds the posture and a positive action raises the
+joint angle. The hand starts open, and the closed-hand reward counts how far the targets are along the curl posture.
+Checkpoints go to `logs/ppo/lift_block_franka_hx5d20_all_joints/`, and the evaluation script also prints the final
+target of every hand joint.
+
+```bash
+uv run --extra isaacsim python scripts/train.py \
+  --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right \
+  --num_envs 1024 --max_iterations 600 --seed 42
+```
+
 The combined Franka + HX5-D20 asset is documented in:
 
 ```text

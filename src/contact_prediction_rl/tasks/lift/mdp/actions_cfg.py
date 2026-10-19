@@ -44,3 +44,26 @@ class SynergyJointPositionActionCfg(ActionTermCfg):
 
     closing_time: float = 2.0
     """Time [s] a synergy takes to go from fully open to fully closed (and back)."""
+
+
+@configclass
+class PerJointPositionActionCfg(ActionTermCfg):
+    """Configuration of :class:`PerJointPositionAction`."""
+
+    class_type: type | str = "{DIR}.actions:PerJointPositionAction"
+
+    joint_names: list[str] = MISSING
+    """List of joint names or regular expressions the action is mapped to; one action dimension per joint."""
+
+    open_command_expr: dict[str, float] = MISSING
+    """Joint values of the open hand, where the targets start. Keys are joint name regular expressions."""
+
+    closure_shape: dict[str, float] = MISSING
+    """Posture (joint displacement [rad] from the open hand) that counts as a closed hand for the rewards.
+
+    Only used to report a ``closure`` fraction: how far the joint targets are along this posture. Keys are joint name
+    regular expressions.
+    """
+
+    closing_time: float = 2.0
+    """Time [s] a joint takes to go through its whole range at the largest action."""

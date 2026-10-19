@@ -1,0 +1,83 @@
+################ logs/ppo/lift_block_franka_hx5d20_all_joints/2026-10-13_17-18-35_alljoints_seed42
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      4.5 %  (+/- 0.9)
+lifted in hand at end    4.9 %  (+/- 1.0)
+reached goal ever       93.0 %  (+/- 1.1)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 1.82 s, 90th pct 1.98 s  (506 envs)
+time to first goal     median 1.92 s, 90th pct 2.06 s  (476 envs)
+closest to goal while held: median 1.8 cm, 90th pct 3.5 cm, worst 8.5 cm
+distance to goal at end: median 3.0 cm, 90th pct 3.8 cm, worst 21.3 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -2.4, std 2.0
+  y: mean +0.9, std 0.8
+  z: mean -0.0, std 1.9
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 18 deg, 90th pct 36 deg; upright (<10 deg) 24 %
+hand joint targets at end [rad], episodes that held the cube at the goal (23):
+  finger_r_joint1: mean -1.57, std 0.00
+  finger_r_joint2: mean -1.15, std 0.39
+  finger_r_joint3: mean +0.50, std 0.62
+  finger_r_joint4: mean +1.57, std 0.00
+  finger_r_joint5: mean -0.60, std 0.00
+  finger_r_joint6: mean +1.85, std 0.34
+  finger_r_joint7: mean +0.00, std 0.00
+  finger_r_joint8: mean +0.00, std 0.00
+  finger_r_joint9: mean +0.60, std 0.00
+  finger_r_joint10: mean +1.71, std 0.60
+  finger_r_joint11: mean +0.09, std 0.21
+  finger_r_joint12: mean +1.57, std 0.00
+  finger_r_joint13: mean -0.60, std 0.00
+  finger_r_joint14: mean +1.99, std 0.04
+  finger_r_joint15: mean +0.00, std 0.00
+  finger_r_joint16: mean +1.41, std 0.21
+  finger_r_joint17: mean +0.60, std 0.00
+  finger_r_joint18: mean +0.00, std 0.00
+  finger_r_joint19: mean +1.57, std 0.00
+  finger_r_joint20: mean +0.00, std 0.01
+regrasps per env that lifted: mean 0.08
+share of the episode holding the cube at the goal: mean 16.6 %
+################ logs/ppo/lift_block_franka_hx5d20_all_joints/2026-10-13_17-28-05_alljoints_seed1
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 4.58 s, 90th pct 6.46 s  (68 envs)
+time to first goal     never
+closest to goal while held: median 6.3 cm, 90th pct 8.1 cm, worst 8.2 cm
+distance to goal at end: median 10.2 cm, 90th pct 10.4 cm, worst 15.3 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +1.8, std 0.7
+  y: mean +0.5, std 1.5
+  z: mean -10.1, std 0.7
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (512):
+  finger_r_joint1: mean -0.34, std 0.36
+  finger_r_joint2: mean -0.24, std 0.17
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.49, std 0.22
+  finger_r_joint5: mean -0.60, std 0.01
+  finger_r_joint6: mean +0.90, std 0.45
+  finger_r_joint7: mean +0.38, std 0.23
+  finger_r_joint8: mean +0.24, std 0.17
+  finger_r_joint9: mean +0.07, std 0.27
+  finger_r_joint10: mean +0.75, std 0.38
+  finger_r_joint11: mean +0.29, std 0.21
+  finger_r_joint12: mean +0.06, std 0.06
+  finger_r_joint13: mean -0.10, std 0.04
+  finger_r_joint14: mean +0.01, std 0.04
+  finger_r_joint15: mean +0.00, std 0.00
+  finger_r_joint16: mean +1.32, std 0.23
+  finger_r_joint17: mean -0.46, std 0.08
+  finger_r_joint18: mean +0.99, std 0.41
+  finger_r_joint19: mean +0.63, std 0.36
+  finger_r_joint20: mean +0.45, std 0.25
+regrasps per env that lifted: mean 0.40
+share of the episode holding the cube at the goal: mean 0.0 %
