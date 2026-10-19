@@ -1,7 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
+# src/contact_prediction_rl/tasks/reorientation/config/hx5_d20_right/__init__.py
 
 import gymnasium as gym
 

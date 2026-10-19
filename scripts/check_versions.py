@@ -8,15 +8,17 @@ import tomllib
 from importlib import metadata
 from pathlib import Path
 
+from packaging.specifiers import SpecifierSet
+
 PYPROJECT = Path(__file__).resolve().parents[1] / "pyproject.toml"
 
-# distribution -> pinned in [tool.uv] override-dependencies (exact "==" pins only)
+# Check both exact and compatible-release constraints from uv overrides
 CHECKED = ["torch", "torchvision", "torchaudio", "newton", "mujoco", "mujoco-warp"]
 REPORTED = ["isaaclab", "isaacsim", "rsl-rl-lib"]
 
 
-def expected_pins() -> dict[str, str]:
-    """Return exact version pins from the uv override list, keyed by normalised distribution name."""
+def expected_pins() -> dict[str, tuple[str, str]]:
+    """Return operators and versions from uv overrides, keyed by distribution name."""
     data = tomllib.loads(PYPROJECT.read_text())
     pins = {}
     for req in data["tool"]["uv"]["override-dependencies"]:
@@ -44,9 +46,9 @@ def mismatches() -> list[str]:
             continue
         if have is None:
             problems.append(f"{dist}: not installed (expected {op}{want})")
-        elif op == "==" and have != want or op == "~=" and not have.startswith(".".join(want.split(".")[:-1])):
+        elif not SpecifierSet(f"{op}{want}").contains(have):
             problems.append(f"{dist}: installed {have}, pyproject expects {op}{want}")
-    # isaaclab is pinned in [project] dependencies, e.g. "isaaclab[rsl-rl]==3.0.0rc1"
+    # Isaac Lab is pinned in project dependencies rather than uv overrides
     for req in tomllib.loads(PYPROJECT.read_text())["project"]["dependencies"]:
         m = re.match(r"^isaaclab(?:\[[^\]]*\])?==([\w.]+)$", req)
         if m and installed("isaaclab") != m.group(1):

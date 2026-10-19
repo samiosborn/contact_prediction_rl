@@ -74,6 +74,7 @@ class ObservationNormaliser(nn.Module):
 
         batch_sum_squares = batch_variance * batch_count
 
+        # Account for the difference between batch means when merging population variances
         correction = delta.square() * self.count * batch_count / total_count
 
         new_variance = (previous_sum_squares + batch_sum_squares + correction) / total_count

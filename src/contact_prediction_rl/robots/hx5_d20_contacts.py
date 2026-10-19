@@ -1,3 +1,5 @@
+# src/contact_prediction_rl/robots/hx5_d20_contacts.py
+
 """Shared HX5-D20 right-hand fingertip-to-object contact supervision.
 
 The order of output columns is always thumb, index, middle, ring, little.
@@ -21,8 +23,7 @@ FINGERTIP_NAMES = ("thumb", "index", "middle", "ring", "little")
 FINGERTIP_SENSOR_NAMES = tuple(f"{finger}_contact" for finger in FINGERTIP_NAMES)
 CONTACT_FORCE_THRESHOLD_N = 0.1
 
-# Paths within the converted right-hand USD. Keep these in one place so
-# subsequent tasks (e.g. Lift) can use exactly the same sensors and ordering.
+# Preserve anatomical ordering when resolving distal links in the converted USD
 _FINGERTIP_LINK_PATHS = {
     "thumb": "finger_r_link1/finger_r_link2/finger_r_link3/finger_r_link4",
     "index": "finger_r_link5/finger_r_link6/finger_r_link7/finger_r_link8",
@@ -51,12 +52,13 @@ def fingertip_contact_sensor_cfg(
 
 
 def fingertip_object_contact(env: ManagerBasedRLEnv) -> torch.Tensor:
-    """Current-state binary fingertip/object contacts, with shape ``(num_envs, 5)``.
+    """Return force-thresholded distal-link contacts with shape ``(num_envs, 5)``.
 
     Read the filtered force matrix (not net forces, which include the table).
     One sensor body and one filter body are expected for each finger. The
     0.1-N criterion is applied explicitly: the sensor's ``force_threshold``
-    only governs optional air/contact-time tracking.
+    only governs optional air/contact-time tracking. These are link-level
+    labels, with no localisation to a geometric patch.
     """
     labels = []
     for name in FINGERTIP_SENSOR_NAMES:

@@ -11,7 +11,7 @@ from tensordict import TensorDict
 
 
 class IsaacLabPPOEnvWrapper:
-    """Minimal adapter between an Isaac Lab environment and our PPO runner"""
+    """Adapt Isaac Lab observations and termination flags for local PPO; reset on construction."""
 
     def __init__(
         self,
@@ -123,7 +123,7 @@ class IsaacLabPPOEnvWrapper:
         torch.Tensor,
         dict,
     ]:
-        """Step the environment"""
+        """Step auto-reset environments and retain timeouts for infinite-horizon bootstrapping."""
 
         if self.clip_actions is not None:
             actions = torch.clamp(
@@ -143,8 +143,7 @@ class IsaacLabPPOEnvWrapper:
         # PPO treats both environment termination and truncation as done
         dones = terminated | truncated
 
-        # Store truncation information separately so PPO can bootstrap
-        # time-limit terminations when using an infinite-horizon task
+        # Preserve timeouts so infinite-horizon PPO can bootstrap truncated episodes
         if not self.unwrapped.cfg.is_finite_horizon:
             extras["time_outs"] = truncated
 

@@ -1,7 +1,4 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
+# src/contact_prediction_rl/tasks/reorientation/mdp/rewards.py
 
 from __future__ import annotations
 
@@ -18,10 +15,7 @@ if TYPE_CHECKING:
 
 
 def joint_pos_target_l2(env: ManagerBasedRLEnv, target: float, asset_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Penalize joint position deviation from a target value."""
-    # extract the used quantities (to enable type-hinting)
+    """Return summed squared error from a scalar target after wrapping joint angles to the principal interval."""
     asset: Articulation = env.scene[asset_cfg.name]
-    # wrap the joint positions to (-pi, pi)
     joint_pos = wrap_to_pi(asset.data.joint_pos.torch[:, asset_cfg.joint_ids])
-    # compute the reward
     return torch.sum(torch.square(joint_pos - target), dim=1)

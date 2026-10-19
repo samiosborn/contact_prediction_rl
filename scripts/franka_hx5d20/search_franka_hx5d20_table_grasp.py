@@ -27,7 +27,6 @@ at z = 0.
 
 """
 
-"""Parse the command-line arguments first."""
 
 import argparse
 import itertools
@@ -115,7 +114,6 @@ args_cli = parser.parse_args()
 args_cli.require_kit = True
 args_cli.physics = "isaacsim_physx"
 
-"""Rest everything follows."""
 
 import math
 import re

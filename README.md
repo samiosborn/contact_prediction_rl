@@ -64,9 +64,9 @@ cd contact_prediction_rl
 uv sync
 ```
 
-### PhysX / Isaac Sim
+### Physics and robot assets
 
-The Franka + HX5-D20 tasks use PhysX and require Isaac Sim.
+The Franka + HX5-D20 tasks default to Newton MJWarp. PhysX is also supported, while the `kit` visualiser requires Isaac Sim.
 
 The combined Franka + HX5-D20 USD is stored with Git LFS:
 
@@ -74,12 +74,6 @@ The combined Franka + HX5-D20 USD is stored with Git LFS:
 sudo apt install git-lfs
 git lfs install
 git lfs pull
-```
-
-Install the Isaac Sim dependencies:
-
-```bash
-uv sync
 ```
 
 The training, playback, and evaluation entrypoints accept the NVIDIA Omniverse EULA non-interactively by default. An existing `OMNI_KIT_ACCEPT_EULA` value is preserved. For GPU tests, set `OMNI_KIT_ACCEPT_EULA=YES` as shown below.
@@ -117,6 +111,35 @@ OMNI_KIT_ACCEPT_EULA=YES uv run pytest
 ```
 
 ## Tasks
+
+### Franka + HX5-D20 Reorientation
+
+`ContactPredictionRl-Reorientation-HX5-D20-Right`
+
+An experimental environment for dexterous manipulation and fingertip-contact research. A meaningful object-reorientation objective has not yet been implemented.
+
+Five binary fingertip-object contact labels are available. The existing labels use force-thresholded distal-link contact, while a separate diagnostic classifies Newton contact points against candidate fingertip patches.
+
+Validate all five fingers:
+
+```bash
+uv run python scripts/validate_fingertip_contacts.py \
+  --finger all \
+  --cube-mode fixed \
+  --measure-patches \
+  --visualizer newton_gl
+```
+
+Inspect the candidate patches:
+
+```bash
+uv run python scripts/validate_fingertip_contacts.py \
+  --inspect-only \
+  --show-patches \
+  --visualizer newton_gl
+```
+
+The five isolated contact trials and a proximal outside-patch negative control have been validated using Newton MJWarp. The patches are geometric proxies, not calibrated tactile sensors.
 
 ### Franka + HX5-D20 Reach
 

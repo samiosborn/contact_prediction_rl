@@ -26,7 +26,7 @@ from ... import mdp
 
 @configclass
 class ReorientationPhysicsCfg(PresetCfg):
-    """Physics backends supported by this task"""
+    """Available physics presets; Newton MJWarp is the contact-validation backend."""
 
     isaacsim_physx: PhysxCfg = PhysxCfg()
     ovphysx: OvPhysxCfg = OvPhysxCfg()
@@ -63,7 +63,7 @@ class ReorientationPhysicsCfg(PresetCfg):
 
 @configclass
 class ReorientationSceneCfg(InteractiveSceneCfg):
-    """Minimal Franka + HX5-D20 scene"""
+    """Franka-mounted HX5-D20 with a free cube and catch table."""
 
     ground = AssetBaseCfg(
         prim_path="/World/ground",
@@ -71,11 +71,11 @@ class ReorientationSceneCfg(InteractiveSceneCfg):
     )
 
     robot = FRANKA_HX5D20_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-    # Retain the hand's bring-up gains; the shared arm PD holds its default posture.
+    # Retain the hand gains used for contact validation
     robot.actuators["hx5_d20_fingers"].stiffness = 1.0
     robot.actuators["hx5_d20_fingers"].damping = 0.05
 
-    # Catch surface 220 mm below the default palm; shifted forward to clear the arm base.
+    # Clear the arm base with a catch surface 220 mm below the default palm
     table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Table",
         spawn=sim_utils.CuboidCfg(
@@ -165,7 +165,7 @@ class ObservationsCfg:
             self.enable_corruption = False
             self.concatenate_terms = True
 
-    # A distinct group ensures PPO never treats privileged labels as policy input.
+    # Keep privileged labels separate from the PPO policy observation group
     contact: ContactCfg = ContactCfg()
 
 
@@ -191,7 +191,7 @@ class TerminationsCfg:
 
 @configclass
 class ReorientationEnvCfg(ManagerBasedRLEnvCfg):
-    """Minimal Franka + HX5-D20 environment"""
+    """Contact-validation scaffold with finger control and an alive reward."""
 
     scene: ReorientationSceneCfg = ReorientationSceneCfg(
         num_envs=1,
@@ -204,7 +204,7 @@ class ReorientationEnvCfg(ManagerBasedRLEnvCfg):
     terminations: TerminationsCfg = TerminationsCfg()
 
     def __post_init__(self) -> None:
-        # The policy only writes finger targets; hold the arm at its initial PD targets.
+        # Hold the arm at its initial PD targets while the policy controls the fingers
         self.events.reset_scene_to_default.params["reset_joint_targets"] = True
 
         self.decimation = 4
