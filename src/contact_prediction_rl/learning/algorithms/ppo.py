@@ -10,6 +10,7 @@ import torch.nn as nn
 from tensordict import TensorDict
 
 from contact_prediction_rl.learning.models.actor import Actor
+from contact_prediction_rl.learning.models.contact_prediction import ContactPredictionHead
 from contact_prediction_rl.learning.models.critic import Critic
 from contact_prediction_rl.learning.storage.rollout_storage import RolloutStorage
 
@@ -41,6 +42,8 @@ class PPO:
         desired_kl: float = 0.01,
         normalize_advantage_per_mini_batch: bool = False,
         device: str = "cpu",
+        contact_head: ContactPredictionHead | None = None,
+        contact_loss_weight: float = 0.0,
     ) -> None:
         self.device = device
 
@@ -50,6 +53,10 @@ class PPO:
         # Keep raw models for checkpointing and inference
         self._raw_actor = self.actor
         self._raw_critic = self.critic
+        self.contact_head = contact_head.to(self.device) if contact_head is not None else None
+        self.contact_loss_weight = float(contact_loss_weight)
+        if self.contact_loss_weight < 0 or (self.contact_loss_weight > 0 and self.contact_head is None):
+            raise ValueError("Nonzero contact BCE weight requires an auxiliary contact head")
 
         if optimizer != "adam":
             raise ValueError(f"Unsupported optimizer: {optimizer}")
@@ -58,6 +65,7 @@ class PPO:
             chain(
                 self.actor.parameters(),
                 self.critic.parameters(),
+                self.contact_head.parameters() if self.contact_head is not None else (),
             ),
             lr=learning_rate,
         )
@@ -178,6 +186,8 @@ class PPO:
         mean_value_loss = 0.0
         mean_surrogate_loss = 0.0
         mean_entropy = 0.0
+        mean_contact_loss = 0.0
+        contact_metrics: dict[str, float] = {}
 
         generator = self.storage.mini_batch_generator(
             self.num_mini_batches,
@@ -265,6 +275,15 @@ class PPO:
                 value_loss = (batch.returns - values).pow(2).mean()
 
             loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy.mean()
+            if self.contact_head is not None and self.contact_loss_weight > 0:
+                # Stored observations are pre-action o_t; labels are c_t.
+                contact_loss, batch_metrics = self.contact_head.compute_loss(
+                    self.actor.encode(observations), batch.observations["contact"]
+                )
+                loss = loss + self.contact_loss_weight * contact_loss
+                mean_contact_loss += contact_loss.item()
+                for name, value in batch_metrics.items():
+                    contact_metrics[name] = contact_metrics.get(name, 0.0) + value
 
             self.optimizer.zero_grad()
 
@@ -272,7 +291,7 @@ class PPO:
 
             # Clip actor and critic gradients independently
             nn.utils.clip_grad_norm_(
-                self.actor.parameters(),
+                chain(self.actor.parameters(), self.contact_head.parameters() if self.contact_head is not None else ()),
                 self.max_grad_norm,
             )
 
@@ -294,14 +313,19 @@ class PPO:
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
         mean_entropy /= num_updates
+        mean_contact_loss /= num_updates
 
         self.storage.clear()
 
-        return {
+        result = {
             "value": mean_value_loss,
             "surrogate": mean_surrogate_loss,
             "entropy": mean_entropy,
         }
+        if self.contact_head is not None:
+            result["contact_bce"] = mean_contact_loss
+            result.update({name: value / num_updates for name, value in contact_metrics.items()})
+        return result
 
     def train_mode(
         self,
@@ -310,6 +334,8 @@ class PPO:
 
         self.actor.train()
         self.critic.train()
+        if self.contact_head is not None:
+            self.contact_head.train()
 
     def eval_mode(
         self,
@@ -318,6 +344,8 @@ class PPO:
 
         self.actor.eval()
         self.critic.eval()
+        if self.contact_head is not None:
+            self.contact_head.eval()
 
     def save(
         self,
@@ -328,6 +356,7 @@ class PPO:
             "actor_state_dict": (self._raw_actor.state_dict()),
             "critic_state_dict": (self._raw_critic.state_dict()),
             "optimizer_state_dict": (self.optimizer.state_dict()),
+            "contact_head_state_dict": self.contact_head.state_dict() if self.contact_head is not None else None,
         }
 
     def load(
@@ -343,6 +372,7 @@ class PPO:
                 "actor": True,
                 "critic": True,
                 "optimizer": True,
+                "contact_prediction": True,
                 "iteration": True,
             }
 
@@ -357,6 +387,14 @@ class PPO:
                 loaded_dict["critic_state_dict"],
                 strict=strict,
             )
+
+        if load_cfg.get("contact_prediction", True) and self.contact_head is not None:
+            state = loaded_dict.get("contact_head_state_dict")
+            if state is None:
+                if strict:
+                    raise RuntimeError("Checkpoint has no contact head. Load actor/critic only or use a new run.")
+            else:
+                self.contact_head.load_state_dict(state, strict=strict)
 
         if load_cfg.get("optimizer"):
             self.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
@@ -404,6 +442,21 @@ class PPO:
 
         print(f"Critic Model: {critic}")
 
+        contact_cfg = cfg.get("contact_prediction")
+        contact_head = None
+        contact_loss_weight = 0.0
+        if contact_cfg is not None:
+            if "contact" not in obs:
+                raise ValueError("Contact BCE requires a privileged 'contact' observation group")
+            contact_loss_weight = float(contact_cfg["loss_weight"])
+            contact_head = ContactPredictionHead(
+                latent_dim=cfg["actor"]["latent_dim"],
+                num_contacts=obs["contact"].shape[-1],
+                hidden_dims=contact_cfg["hidden_dims"],
+                activation=contact_cfg["activation"],
+                pos_weight=float(contact_cfg["pos_weight"]),
+            ).to(device)
+
         storage = RolloutStorage(
             num_envs=env.num_envs,
             num_transitions_per_env=cfg["num_steps_per_env"],
@@ -417,6 +470,8 @@ class PPO:
             critic=critic,
             storage=storage,
             device=device,
+            contact_head=contact_head,
+            contact_loss_weight=contact_loss_weight,
             **cfg["algorithm"],
         )
 

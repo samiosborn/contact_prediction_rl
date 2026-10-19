@@ -2,6 +2,7 @@
 
 from isaaclab.utils import configclass
 
+import contact_prediction_rl.learning.configs.contact_prediction as CONTACT_CONFIG
 import contact_prediction_rl.learning.configs.ppo as CONFIG
 
 
@@ -29,6 +30,14 @@ class PPORunnerCfg:
         "hidden_dims": [128, 128, 32],
         "activation": CONFIG.CRITIC_ACTIVATION,
         "observation_normalisation": CONFIG.CRITIC_OBS_NORMALIZATION,
+    }
+
+    # Same architecture for both conditions; only loss_weight changes.
+    contact_prediction = {
+        "hidden_dims": CONTACT_CONFIG.HEAD_HIDDEN_DIMS,
+        "activation": CONTACT_CONFIG.HEAD_ACTIVATION,
+        "loss_weight": CONTACT_CONFIG.LOSS_WEIGHT,
+        "pos_weight": CONTACT_CONFIG.POS_WEIGHT,
     }
 
     # PPO
