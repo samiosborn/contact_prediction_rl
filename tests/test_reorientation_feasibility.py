@@ -5,6 +5,9 @@ import math
 import pytest
 
 from contact_prediction_rl.tasks.reorientation.feasibility import (
+    ARM_IK_SEED,
+    FINGERS_FORWARD_WORLD,
+    PALM_NORMAL_WORLD,
     ROLL_PATTERNS,
     angle_error_deg,
     apply_rotation_pattern,
@@ -42,3 +45,12 @@ def test_action_order_and_rotation_templates():
         assert targets != diagnostic
     with pytest.raises(ValueError):
         grasp_targets(names[:-1], "diagnostic")
+
+
+def test_palm_up_axis_targets_and_ik_seed():
+    """Constrain the intended Franka orientation, independent of the hand posture."""
+    assert PALM_NORMAL_WORLD == (0.0, 0.0, 1.0)
+    assert FINGERS_FORWARD_WORLD == (1.0, 0.0, 0.0)
+    assert sum(x * y for x, y in zip(PALM_NORMAL_WORLD, FINGERS_FORWARD_WORLD, strict=True)) == 0.0
+    assert len(ARM_IK_SEED) == 7
+    assert all(math.isfinite(x) for x in ARM_IK_SEED)
