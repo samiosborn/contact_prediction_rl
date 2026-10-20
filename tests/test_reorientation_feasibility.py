@@ -9,6 +9,7 @@ from contact_prediction_rl.tasks.reorientation.feasibility import (
     FINGERS_FORWARD_WORLD,
     PALM_NORMAL_WORLD,
     ROLL_PATTERNS,
+    finger_gait_phases,
     angle_error_deg,
     apply_rotation_pattern,
     axis_angle_xyzw,
@@ -54,3 +55,28 @@ def test_palm_up_axis_targets_and_ik_seed():
     assert sum(x * y for x, y in zip(PALM_NORMAL_WORLD, FINGERS_FORWARD_WORLD, strict=True)) == 0.0
     assert len(ARM_IK_SEED) == 7
     assert all(math.isfinite(x) for x in ARM_IK_SEED)
+
+
+def test_gait_has_continuous_waypoints_and_returns_to_closed_grasp():
+    names = [f"finger_r_joint{i}" for i in range(20, 0, -1)]
+    closed = grasp_targets(names, "diagnostic")
+    for pattern in ROLL_PATTERNS:
+        for amplitude in (-0.2, 0.2):
+            phases = finger_gait_phases(closed, names, pattern, amplitude)
+            assert [phase.name for phase in phases] == ["unload", "sweep", "regrasp", "recover"]
+            assert sum(phase.fraction for phase in phases) == pytest.approx(1.0)
+            assert all(len(phase.targets) == 20 for phase in phases)
+            assert all(math.isfinite(x) for phase in phases for x in phase.targets)
+            assert phases[0].targets != tuple(closed)
+            assert phases[1].targets != phases[0].targets
+            assert phases[2].targets != phases[1].targets
+            assert phases[-1].targets == tuple(closed)
+            # The thumb stays engaged while one other finger unloads;
+            # no phase commands a zero hand posture.
+            for phase in phases:
+                assert phase.targets[names.index("finger_r_joint2")] != 0.0
+
+    with pytest.raises(ValueError):
+        finger_gait_phases(closed, names, "unknown", 0.2)
+    with pytest.raises(ValueError):
+        finger_gait_phases(closed, names, "spread", float("nan"))
