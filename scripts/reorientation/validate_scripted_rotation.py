@@ -43,6 +43,7 @@ from contact_prediction_rl.tasks.reorientation.feasibility import (  # noqa: E40
     GraspCandidate,
     angle_error_deg,
     apply_rotation_pattern,
+    finger_gait_phases,
     axis_angle_xyzw,
     grasp_targets,
     quat_mul_xyzw,
@@ -67,7 +68,7 @@ def _xyz(values):
     return tuple(float(x) for x in values)
 
 
-def _solve_palm_up_pose(env):
+def _solve_palm_up_pose(env, *, margin_rad: float):
     """Find a reachable flat-hand arm pose using compiled Newton MuJoCo FK.
 
     Optimisation is offline in scratch MjData. No stepping a simulated object,
@@ -116,7 +117,9 @@ def _solve_palm_up_pose(env):
 
     q_start = _tensor(robot.data.default_joint_pos)[0, art_joints].detach().cpu().numpy().astype(float)
     limits = _tensor(robot.data.joint_pos_limits)[0, art_joints].detach().cpu().numpy()
-    lower, upper = limits[:, 0] + 0.005, limits[:, 1] - 0.005
+    if margin_rad <= 0 or np.any((limits[:, 1] - limits[:, 0]) < 2 * margin_rad):
+        raise ValueError(f"Requested arm joint-limit margin {margin_rad:.3f} rad is infeasible")
+    lower, upper = limits[:, 0] + margin_rad, limits[:, 1] - margin_rad
     qadr = np.array([model.jnt_qposadr[j] for j in mj_joints], dtype=int)
     scratch = mujoco.MjData(model)
     # Initialise finger joints from the reset pose; avoid solving a different
@@ -212,9 +215,11 @@ def _solve_palm_up_pose(env):
     _tensor(robot.data.default_joint_pos)[0, art_joints] = torch.tensor(
         q, device=env.device, dtype=_tensor(robot.data.default_joint_pos).dtype,
     )
+    actual_margin = float(np.min(np.minimum(q - limits[:, 0], limits[:, 1] - q)))
     print(f"PALM_UP_IK_SELECTED arm_joints={[round(float(x), 4) for x in q]} "
           f"palm_dot={normal_alignment:.5f} fingers_dot={finger_alignment:.5f} "
-          f"position_error_m={position_error:.5f}", flush=True)
+          f"position_error_m={position_error:.5f} joint_limit_margin_rad={actual_margin:.4f}",
+          flush=True)
     return tuple(float(x) for x in q)
 
 
@@ -266,6 +271,17 @@ class FeasibilityExperiment:
         if any(value not in (0, 1) for value in labels):
             raise RuntimeError(f"Nonbinary contact labels: {labels}")
         return labels
+
+    def cube_palm_local(self):
+        """Measured object position in the hand frame after physics settles."""
+        from isaaclab.utils.math import quat_apply_inverse
+
+        palm_pos, palm_quat = self.hand_pose()
+        cube_pos, _ = self.cube_state()
+        position = torch.tensor([cube_pos], device=self.env.device)
+        palm = torch.tensor([palm_pos], device=self.env.device)
+        quat = torch.tensor([palm_quat], device=self.env.device)
+        return _xyz(quat_apply_inverse(quat, position - palm)[0].cpu().tolist())
 
     def cube_state(self):
         pos = _xyz(_tensor(self.cube.data.root_pos_w)[0].detach().cpu().tolist())
@@ -384,43 +400,39 @@ class FeasibilityExperiment:
             contact_rate=fractions, start_quat=initial_quat, axis_world=axis_world,
             centre_world=cube_centre, closing_target=close,
         )
+        measured_local = self.cube_palm_local()
         print(
             f"GRASP_TRIAL candidate={candidate.label()} valid={valid} "
             f"drift_m={max_drift:.4f} total_displacement_m={math.dist(cube_centre, current_pos):.4f} "
+            f"cube_palm_local_m={[round(x, 4) for x in measured_local]} "
             f"arm_drift_rad={max_arm_drift:.4f} opposing_fraction={opposing_fraction:.3f} "
             f"contact_fraction={[round(x, 3) for x in fractions]}",
             flush=True,
         )
         return result
 
-    def rotation_trial(self, candidate: GraspCandidate, pattern: str, signed_amplitude: float):
-        grip = self.grasp(candidate)  # same physics setup and independent reset per trial
+    def rotation_trial(self, candidate: GraspCandidate, pattern: str, signed_amplitude: float, controller: str):
+        grip = self.grasp(candidate)  # independent dynamic free-cube grasp each trial
         if not grip.valid:
-            print(f"ROTATION_SKIPPED pattern={pattern} amplitude={signed_amplitude:.3f} reason=grasp_not_reproduced", flush=True)
+            print(f"ROTATION_SKIPPED controller={controller} pattern={pattern} amplitude={signed_amplitude:.3f} reason=grasp_not_reproduced", flush=True)
             return None
 
-        # Use the observed cube orientation *after* the two-second hold.
+        # Define goals from the actual cube and palm orientations after grasp.
         start_position, start_quat = self.cube_state()
         _, palm_quat = self.hand_pose()
         axis = rotate_vector_xyzw(palm_quat, LOCAL_ROTATION_AXIS)
-        goals = {
-            deg: quat_mul_xyzw(axis_angle_xyzw(axis, deg), start_quat)
-            for deg in (15, 45)
-        }
+        goals = {deg: quat_mul_xyzw(axis_angle_xyzw(axis, deg), start_quat) for deg in (15, 45)}
 
-        desired = apply_rotation_pattern(
-            grip.closing_target[0].tolist(), self.names, pattern, signed_amplitude
-        )
-        commanded = self.clip(torch.tensor([desired], device=self.env.device))
         errors = {deg: math.inf for deg in goals}
         best_twist = 0.0
         max_drift = 0.0
         opposing_steps = 0
         retained_steps = 0
         success = {deg: False for deg in goals}
-        for t in range(self.args.rotate_steps):
-            fraction = min((t + 1) / self.args.rotate_ramp_steps, 1.0)
-            action = torch.lerp(grip.closing_target, commanded, fraction)
+        total_steps = 0
+
+        def observe(action):
+            nonlocal best_twist, max_drift, opposing_steps, retained_steps, total_steps
             labels = self.step(action)
             position, quat = self.cube_state()
             drift = math.dist(start_position, position)
@@ -436,29 +448,72 @@ class FeasibilityExperiment:
                 if retained and labels[0] and any(labels[1:]):
                     errors[deg] = min(errors[deg], error)
                     success[deg] |= error <= self.args.goal_tolerance_deg
+            total_steps += 1
 
-        # A fleeting orientation match followed by dropping the object isn't success.
+        if controller == "offset":
+            desired = apply_rotation_pattern(grip.closing_target[0].tolist(), self.names, pattern, signed_amplitude)
+            commanded = self.clip(torch.tensor([desired], device=self.env.device))
+            for step in range(self.args.rotate_steps):
+                fraction = min((step + 1) / self.args.rotate_ramp_steps, 1.0)
+                observe(torch.lerp(grip.closing_target, commanded, fraction))
+        elif controller == "gait":
+            phases = finger_gait_phases(grip.closing_target[0].tolist(), self.names, pattern, signed_amplitude)
+            previous = grip.closing_target
+            for cycle in range(self.args.gait_cycles):
+                cycle_start = round(cycle * self.args.rotate_steps / self.args.gait_cycles)
+                cycle_end = round((cycle + 1) * self.args.rotate_steps / self.args.gait_cycles)
+                previous_end = cycle_start
+                accumulated = 0.0
+                for index, phase in enumerate(phases):
+                    accumulated += phase.fraction
+                    boundary = cycle_end if index == len(phases) - 1 else round(
+                        cycle_start + accumulated * (cycle_end - cycle_start)
+                    )
+                    steps = boundary - previous_end
+                    if steps < 1:
+                        raise RuntimeError("Too few rotate steps for the selected gait cycles")
+                    target = self.clip(torch.tensor([phase.targets], device=self.env.device))
+                    for step in range(steps):
+                        alpha = (step + 1) / steps
+                        observe(torch.lerp(previous, target, alpha))
+                    previous = target
+                    previous_end = boundary
+                    _, pose = self.cube_state()
+                    current_twist = signed_twist_deg(start_quat, pose, axis)
+                    print(f"GAIT_PHASE cycle={cycle + 1}/{self.args.gait_cycles} "
+                          f"name={phase.name} steps={steps} twist_deg={current_twist:+.2f}",
+                          flush=True)
+        else:
+            raise ValueError(f"Unknown rotation controller {controller!r}")
+
+        # Briefly achieving an angle before dropping the cube is not success.
         final_pos, _ = self.cube_state()
         final_retained = (
             math.dist(start_position, final_pos) < self.args.max_drift_m
-            and retained_steps >= int(0.8 * self.args.rotate_steps)
-            and opposing_steps >= int(self.args.min_opposing_fraction * self.args.rotate_steps)
+            and retained_steps >= int(0.8 * total_steps)
+            and opposing_steps >= int(self.args.min_opposing_fraction * total_steps)
         )
         success = {deg: hit and final_retained for deg, hit in success.items()}
         print(
-            f"ROTATION_TRIAL pattern={pattern} amplitude_rad={signed_amplitude:+.3f} "
+            f"ROTATION_TRIAL controller={controller} pattern={pattern} amplitude_rad={signed_amplitude:+.3f} "
             f"twist_deg={best_twist:+.2f} error15_deg={errors[15]:.2f} error45_deg={errors[45]:.2f} "
-            f"max_drift_m={max_drift:.4f} opposing_fraction={opposing_steps/self.args.rotate_steps:.3f} "
+            f"max_drift_m={max_drift:.4f} opposing_fraction={opposing_steps/total_steps:.3f} "
             f"retained={final_retained} success15={success[15]} success45={success[45]}",
             flush=True,
         )
-        return {"pattern": pattern, "amplitude": signed_amplitude, "success15": success[15],
-                "success45": success[45], "twist": best_twist, "error45": errors[45]}
+        return {"controller": controller, "pattern": pattern, "amplitude": signed_amplitude,
+                "success15": success[15], "success45": success[45], "twist": best_twist, "error45": errors[45]}
 
 
 def _parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--arm-limit-margin-rad", type=float, default=0.15,
+                        help="Minimum Franka joint-position margin from either hard limit for the palm-up IK pose")
+    parser.add_argument("--controller", choices=("gait", "offset", "both"), default="gait",
+                        help="Staged finger gait, old one-way offset baseline, or both")
+    parser.add_argument("--gait-cycles", type=int, default=1,
+                        help="Number of complete unload/sweep/regrasp/recover gait cycles")
     parser.add_argument("--use-pedestal", action="store_true",
                         help="Optional temporary cube support during closure; default is cube resting in palm")
     parser.add_argument("--max-grasps", type=int, default=12, help="Number of candidate cube-centre/posture trials")
@@ -476,10 +531,13 @@ def _parse_args():
     add_launcher_args(parser)
     args = parser.parse_args()
     if min(args.max_grasps, args.max_rotation_trials, args.settle_steps, args.close_steps,
-           args.hold_steps, args.rotate_steps, args.rotate_ramp_steps, args.close_ramp_steps) <= 0:
+           args.hold_steps, args.rotate_steps, args.rotate_ramp_steps, args.close_ramp_steps,
+           args.gait_cycles, args.arm_limit_margin_rad) <= 0:
         parser.error("Trial counts and durations must be positive")
     if args.close_ramp_steps > args.close_steps or args.rotate_ramp_steps > args.rotate_steps:
         parser.error("Ramp steps cannot exceed their phase durations")
+    if args.controller != "offset" and args.rotate_steps < 8 * args.gait_cycles:
+        parser.error("Gait requires at least eight rotation steps per cycle")
     return args
 
 
@@ -519,7 +577,7 @@ def main() -> int:
         env = ManagerBasedRLEnv(cfg=cfg)
         try:
             env.reset()
-            _solve_palm_up_pose(env)
+            _solve_palm_up_pose(env, margin_rad=args.arm_limit_margin_rad)
             env.reset()  # apply solved arm pose to both joints and PD reset targets
             exp = FeasibilityExperiment(env, args)
             exp.check_arm_orientation("solved")
@@ -549,15 +607,17 @@ def main() -> int:
                   f"centre_world_m={[round(v,4) for v in selected.centre_world]} "
                   f"opposing_fraction={selected.opposing_fraction:.3f}", flush=True)
 
+            controllers = ("gait", "offset") if args.controller == "both" else (args.controller,)
             trajectories = [
-                (pattern, direction * amplitude)
+                (controller, pattern, direction * amplitude)
+                for controller in controllers
                 for amplitude in (0.2, 0.4, 0.6)
                 for pattern in ROLL_PATTERNS
                 for direction in (1, -1)
             ][:args.max_rotation_trials]
             results = [
-                exp.rotation_trial(selected.candidate, pattern, amplitude)
-                for pattern, amplitude in trajectories
+                exp.rotation_trial(selected.candidate, pattern, amplitude, controller)
+                for controller, pattern, amplitude in trajectories
             ]
             completed = [result for result in results if result is not None]
             hit15 = any(r["success15"] for r in completed)
