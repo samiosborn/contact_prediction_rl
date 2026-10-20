@@ -19,21 +19,21 @@ ARM_IK_SEED = (0.3697, -0.2897, -0.3216, -2.0356, -0.0921, 1.7594, -2.277)
 PALM_NORMAL_WORLD = (0.0, 0.0, 1.0)
 FINGERS_FORWARD_WORLD = (1.0, 0.0, 0.0)
 
-# Cube-centre candidates in the panda_hand frame. The first derives from the
-# existing Lift grasp-centre estimate; none is assumed to be a valid grasp.
+# Search near the central palm first (shorter +Z and neutral lateral Y).
+# The previously verified stable grasp (0.050, 0.025, 0.100) is retained
+# within the first three centres as a fallback; no new pose is prevalidated.
 GRASP_CENTRES = (
-    (0.05, 0.00, 0.10),
-    (0.05, 0.025, 0.10),
-    (0.05, -0.025, 0.10),
-    (0.04, 0.00, 0.12),
-    (0.04, 0.025, 0.12),
-    (0.04, -0.025, 0.12),
-    (0.05, 0.00, 0.14),
-    (0.05, 0.040, 0.14),
-    (0.05, -0.040, 0.14),
-    (0.04, 0.00, 0.16),
-    (0.04, 0.025, 0.16),
-    (0.04, -0.025, 0.16),
+    (0.050, 0.000, 0.070),
+    (0.045, 0.000, 0.085),
+    (0.050, 0.025, 0.100),  # stable in the prior palm-up Newton run
+    (0.050, 0.000, 0.100),
+    (0.045, -0.025, 0.080),
+    (0.045, 0.025, 0.080),
+    (0.040, 0.000, 0.060),
+    (0.050, 0.000, 0.055),
+    (0.040, 0.000, 0.120),
+    (0.040, -0.025, 0.120),
+    (0.040, 0.025, 0.120),
 )
 DIAGNOSTIC_THUMB = (0.4, -0.8, 1.0, 1.0)
 DIAGNOSTIC_FINGER = (0.0, 1.8, 1.4, 1.4)
@@ -82,6 +82,53 @@ def apply_rotation_pattern(closed: list[float], joint_names: list[str], pattern:
         index = joint_names.index(f"finger_r_joint{joint_no}")
         result[index] += signed_amplitude_rad * direction
     return result
+
+
+@dataclass(frozen=True)
+class GaitPhase:
+    """One finger-position waypoint and relative share of a rotation cycle."""
+
+    name: str
+    fraction: float
+    targets: tuple[float, ...]
+
+
+def finger_gait_phases(closed: list[float], joint_names: list[str], pattern: str, signed_amplitude_rad: float) -> tuple[GaitPhase, ...]:
+    """Create a staged unload / tangential sweep / regrasp / recovery motion.
+
+    One non-thumb finger reduces curl while another and the thumb continue
+    opposing the cube. A tangential finger displacement is applied during
+    the sweep; the finger reloads *before* recovering the sweep. All motions
+    are continuous joint-position interpolations, never object teleports.
+    """
+    if len(closed) != 20 or len(joint_names) != 20:
+        raise ValueError("Finger gait requires a 20-dimensional hand target")
+    if pattern not in ROLL_PATTERNS:
+        raise ValueError(f"Unknown finger gait pattern: {pattern}")
+    if not math.isfinite(signed_amplitude_rad):
+        raise ValueError("Non-finite finger gait amplitude")
+
+    # The thumb is held during the unloading phase. The other finger remains
+    # a potential opposing contact, but actual contact is checked in physics.
+    unloading = {
+        "spread": (6, 7, 8),
+        "differential_curl": (10, 11, 12),
+        "thumb_index": (6, 7, 8),
+    }[pattern]
+    relaxed = list(closed)
+    magnitude = 0.75 * abs(signed_amplitude_rad)
+    for joint_no in unloading:
+        index = joint_names.index(f"finger_r_joint{joint_no}")
+        relaxed[index] = max(0.0, closed[index] - magnitude)
+
+    sweep = apply_rotation_pattern(relaxed, joint_names, pattern, signed_amplitude_rad)
+    reload = apply_rotation_pattern(closed, joint_names, pattern, signed_amplitude_rad)
+    return (
+        GaitPhase("unload", 0.20, tuple(relaxed)),
+        GaitPhase("sweep", 0.30, tuple(sweep)),
+        GaitPhase("regrasp", 0.25, tuple(reload)),
+        GaitPhase("recover", 0.25, tuple(closed)),
+    )
 
 
 def quat_mul_xyzw(a, b) -> tuple[float, float, float, float]:
