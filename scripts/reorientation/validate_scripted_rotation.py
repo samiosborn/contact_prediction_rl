@@ -20,7 +20,6 @@ import argparse
 import math
 import os
 from dataclasses import dataclass
-from pathlib import Path
 
 os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
 
@@ -35,7 +34,6 @@ from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 
 import contact_prediction_rl.tasks  # noqa: E402, F401
 from contact_prediction_rl.tasks.reorientation.feasibility import (  # noqa: E402
-    FINGERS,
     FINGERS_DOWN_ARM,
     GRASP_CENTRES,
     ROLL_PATTERNS,
