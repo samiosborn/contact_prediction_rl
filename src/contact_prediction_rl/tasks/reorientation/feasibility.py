@@ -10,8 +10,14 @@ import math
 from dataclasses import dataclass
 
 FINGERS = ("thumb", "index", "middle", "ring", "little")
-# Arm configuration validated against Newton kinematics, fingers down.
-FINGERS_DOWN_ARM = (0.3697, -0.2897, -0.3216, -2.0356, -0.0921, 1.7594, -2.277)
+# A known reachable posture used only as the initial guess for the
+# compiled-Newton palm-up IK solve. It is NOT the trial's reset pose.
+ARM_IK_SEED = (0.3697, -0.2897, -0.3216, -2.0356, -0.0921, 1.7594, -2.277)
+
+# Hand-link conventions: local +X is the palm normal; local +Z points
+# along the fingers. World +Z = palm up, world +X = fingers forward.
+PALM_NORMAL_WORLD = (0.0, 0.0, 1.0)
+FINGERS_FORWARD_WORLD = (1.0, 0.0, 0.0)
 
 # Cube-centre candidates in the panda_hand frame. The first derives from the
 # existing Lift grasp-centre estimate; none is assumed to be a valid grasp.
