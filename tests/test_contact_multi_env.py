@@ -159,6 +159,8 @@ def _run_child():
     with launch_simulation(env_cfg, launcher):
         from isaaclab.envs import ManagerBasedRLEnv
 
+        # A directly executed tests/ file otherwise has only tests/ on sys.path.
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
         # Reuse the existing hand-action mapping; do not assume joint indices.
         from scripts.validate_fingertip_contacts import _closed_action
 
