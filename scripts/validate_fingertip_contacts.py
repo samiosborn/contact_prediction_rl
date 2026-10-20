@@ -33,7 +33,10 @@ from contact_prediction_rl.robots.hx5_d20_contacts import (
 )
 
 # HX5_PAD_DIAGNOSTIC_INTEGRATION_V1 -- purely optional debug functionality.
-from contact_prediction_rl.robots.hx5_d20_patches import NewtonPatchDiagnostic, PatchSelection
+from contact_prediction_rl.robots.hx5_d20_patches import (
+    NewtonPatchDiagnostic, PatchSelection, candidate_patches_from_compiled_mjcf,
+    patch_surface_samples, wxyz_to_rotation,
+)
 
 TASK = "ContactPredictionRl-Reorientation-HX5-D20-Right"
 
@@ -73,7 +76,7 @@ def _parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
         help="Square raised-support width [m], must be smaller than the cube footprint.",
     )
     parser.add_argument("--report-positions", action="store_true", help="Print cube, palm and fingertip world positions at key phases.")
-    parser.add_argument("--placement-region", choices=("tip", "proximal"), default="tip", help="Search all extremal vertices or proximal ordinary-finger vertices for a physical negative control.")
+    parser.add_argument("--placement-region", choices=("tip", "proximal"), default="tip", help="Target fingertip-patch mesh surface, or proximal mesh as a negative control.")
     parser.add_argument("--placement-rank", type=int, default=0, help="Select a ranked collision-free swept-mesh cube placement for negative-control exploration.")
     parser.add_argument("--measure-patches", action="store_true", help="Classify real active Newton cube/distal contact events in candidate regions.")
     parser.add_argument("--show-patches", action="store_true", help="Overlay diagnostic green regions and live yellow/red collision points (implies --measure-patches).")
@@ -529,49 +532,96 @@ def _plan_cube_placement(env, probe, finger, placement_rank=0, placement_region=
 
     table = env.cfg.scene.table
     table_top = float(table.init_state.pos[2]) + float(table.spawn.size[2])/2
+    patches = candidate_patches_from_compiled_mjcf(
+        model, probe.geometry_bodies, probe.tip_bodies,
+        getattr(probe, "placement_patch_cfg", PatchSelection()),
+    )
+    patch = patches[selected]
     candidates = []
     for alpha in np.linspace(0.15, 0.8, 14):
         pose(alpha)
         for g in tip_geoms[selected]:
             if model.geom_type[g] != mujoco.mjtGeom.mjGEOM_MESH:
                 raise RuntimeError("Expected existing distal mesh geometry")
-            mesh = model.geom_dataid[g]
-            first, count = model.mesh_vertadr[mesh], model.mesh_vertnum[mesh]
-            vertices = model.mesh_vert[first:first+count]
-            if placement_region == "proximal":
-                from contact_prediction_rl.robots.hx5_d20_patches import wxyz_to_rotation
-                if selected == "thumb":
-                    raise ValueError("Proximal placement search currently supports ordinary fingers only")
-                body_vertices = vertices @ wxyz_to_rotation(model.geom_quat[g]).T + model.geom_pos[g]
+            mesh = int(model.geom_dataid[g])
+            first, count = int(model.mesh_vertadr[mesh]), int(model.mesh_vertnum[mesh])
+            vertices = model.mesh_vert[first:first + count]
+            body_vertices = vertices @ wxyz_to_rotation(model.geom_quat[g]).T + model.geom_pos[g]
+            if placement_region == "tip":
+                face_first, face_count = int(model.mesh_faceadr[mesh]), int(model.mesh_facenum[mesh])
+                points = patch_surface_samples(
+                    body_vertices, model.mesh_face[face_first:face_first + face_count], patch,
+                )
+            else:
+                # Explicit negative control: collide with proximal distal mesh.
                 z = body_vertices[:, 2]
-                vertices = vertices[z <= z.min() + .45 * np.ptp(z)]
-            world = vertices @ scratch.geom_xmat[g].reshape(3, 3).T + scratch.geom_xpos[g]
-            # Use actual mesh extremal surface points; no assumed pad or origin.
+                points = body_vertices[z <= z.min() + .45 * np.ptp(z)]
+            body = int(model.geom_bodyid[g])
+            world = points @ scratch.xmat[body].reshape(3, 3).T + scratch.xpos[body]
             for direction in (np.array([1., 0., 0.]), np.array([-1., 0., 0.]),
                               np.array([0., 1., 0.]), np.array([0., -1., 0.])):
-                surface = world[np.argmax(world @ direction)]
-                center = surface + direction*0.024
-                if center[2]-0.025 <= table_top+0.005:
-                    continue
-                penetration = distances(center, tip_geoms[selected])
-                if penetration >= -0.0001:
-                    continue
-                candidates.append((center.copy(), alpha))
+                for surface in world:
+                    center = surface + direction * .024
+                    if center[2] - .025 <= table_top + .005:
+                        continue
+                    if distances(center, tip_geoms[selected]) < -.0001:
+                        candidates.append((center.copy(), float(alpha)))
+
+    def first_touch_inside_patch(center, alpha):
+        """Locate the first *predicted* collision on scratch kinematics."""
+        previous = 0.
+        for fraction in np.linspace(alpha / 12, alpha, 12):
+            pose(fraction)
+            if distances(center, tip_geoms[selected]) > 0:
+                previous = fraction
+                continue
+            low, high = previous, fraction
+            for _ in range(8):
+                mid = (low + high) / 2
+                pose(mid)
+                if distances(center, tip_geoms[selected]) > 0:
+                    low = mid
+                else:
+                    high = mid
+            pose(high)
+            nearest_geom = min(
+                tip_geoms[selected],
+                key=lambda g: mujoco.mj_geomDistance(model, scratch, cube_geom, g, 1., None),
+            )
+            fromto = np.empty(6)
+            distances(center, [nearest_geom])
+            mujoco.mj_geomDistance(model, scratch, cube_geom, nearest_geom, 1., fromto)
+            body = int(model.geom_bodyid[nearest_geom])
+            local = (fromto[3:] - scratch.xpos[body]) @ scratch.xmat[body].reshape(3, 3)
+            return patch.contains_local(local), local
+        return False, None
+
     feasible = []
+    rejected_first_touch = 0
     pose(0)
     for center, alpha in candidates:
         clearance = distances(center, robot_geoms)
-        if clearance > 0.003:
-            # Prefer small closure and proximity to the original cube location.
-            feasible.append((alpha + np.linalg.norm(center-np.array([0.475, 0., 0.370])), center, clearance, alpha))
+        if clearance <= .003:
+            continue
+        if placement_region == "tip":
+            inside, _ = first_touch_inside_patch(center, alpha)
+            if not inside:
+                rejected_first_touch += 1
+                continue
+        feasible.append((alpha + np.linalg.norm(center - np.array([0.475, 0., 0.370])), center, clearance, alpha))
     if not feasible:
-        raise RuntimeError(f"HAND_CUBE_ALIGNMENT FAIL: no separated {selected} swept-mesh placement above table; candidates={len(candidates)}")
+        raise RuntimeError(
+            f"HAND_CUBE_ALIGNMENT FAIL: no separated {selected} {placement_region} placement; "
+            f"candidates={len(candidates)} rejected_first_touch_outside_patch={rejected_first_touch}. "
+            "Do not change collider geometry or widen the patch merely to force a pass."
+        )
     ranked = sorted(feasible, key=lambda item: item[0])
     if not 0 <= placement_rank < len(ranked):
         raise ValueError(f"placement-rank must be in [0, {len(ranked)-1}]")
     _, center, clearance, alpha = ranked[placement_rank]
+    pose(0)
     _tensor(env.scene["object"].data.default_root_pose)[0, :3] = torch.tensor(center, device=env.device)
-    print(f"HAND_CUBE_ALIGNMENT PASS finger={selected} cube_world={center.tolist()} open_mesh_clearance_m={clearance:.6f} predicted_contact_closure={alpha:.3f}", flush=True)
+    print(f"HAND_CUBE_ALIGNMENT PASS finger={selected} placement_region={placement_region} cube_world={center.tolist()} open_mesh_clearance_m={clearance:.6f} predicted_contact_closure={alpha:.3f} candidates={len(candidates)} rejected_first_touch_outside_patch={rejected_first_touch}", flush=True)
     for name, geoms in tip_geoms.items():
         print(f"GEOMETRY_DISTANCE {name} cube_to_distal_m={distances(center, geoms):.6f}", flush=True)
     print("OPPOSITION_UNVERIFIED: isolated surface reach does not establish thumb opposition or a grasp", flush=True)
@@ -769,11 +819,13 @@ def _interpret(finger: str, baseline: PhaseResult, closing: PhaseResult, release
     selected = FINGERTIP_NAMES if finger == "grasp" else (finger,)
     detected = [name for name in selected if closing.confirmed_steps[name] > 0]
     if not detected:
+        if any(closing.pad_outside_events[name] for name in selected):
+            return False, "Newton registered real distal contact, but all contact points fell outside the geometric fingertip patch; inspect cube placement."
         if not any(closing.raw_steps[name] for name in selected):
             return False, "No selected fingertip physically contacted the cube in this pose; adjust geometry/trajectory before judging sensors."
         if any(closing.label_steps[name] for name in selected):
             return False, "Contact labels and Newton collision pairs did not overlap in the sampled physics steps; inspect timing and filters."
-        return False, f"Newton registered physical contact but the {CONTACT_FORCE_THRESHOLD_N:g} N binary threshold was never exceeded; inspect filtered sensor forces."
+        return False, "Newton registered distal contact without a positive observation; inspect active constraints, geometry filtering and sampling; the force readout is independent."
 
     if finger == "grasp":
         return True, f"Physical closing contact and binary labels observed for: {', '.join(detected)}."
@@ -820,8 +872,7 @@ def run(argv: list[str]) -> int:
             _solve_fingers_down_pose(env)
             probe = NewtonContactProbe()
             probe.pad_diagnostic = None
-            if args_cli.measure_patches or args_cli.show_patches:
-                patch_cfg = PatchSelection(
+            patch_cfg = PatchSelection(
                     inclusion_tolerance_m=args_cli.patch_tolerance_mm / 1000,
                     max_signed_distance_m=args_cli.contact_distance_mm / 1000,
                     ordinary_x_tail=args_cli.ordinary_x_tail,
@@ -831,6 +882,8 @@ def run(argv: list[str]) -> int:
                     thumb_x_central=args_cli.thumb_x_central,
                     thumb_z_central=args_cli.thumb_z_central,
                 )
+            probe.placement_patch_cfg = patch_cfg
+            if args_cli.measure_patches or args_cli.show_patches:
                 probe.pad_diagnostic = NewtonPatchDiagnostic(
                     probe, env, cfg=patch_cfg, show_patches=args_cli.show_patches)
             for finger in trials:

@@ -130,6 +130,39 @@ def patch_from_bounds(finger: str, xyz_min: np.ndarray, xyz_max: np.ndarray,
     )
 
 
+
+def patch_surface_samples(vertices_body: np.ndarray, faces: np.ndarray, patch: CandidatePatch, *, max_points: int = 12) -> np.ndarray:
+    """Mesh-surface points inside a fingertip patch, not arbitrary distal vertices.
+
+    Interpolate triangle interiors: a narrow patch may contain no mesh vertices.
+    Coordinates must be expressed in the distal body's local frame.
+    """
+    vertices = np.asarray(vertices_body, dtype=float)
+    triangles = np.asarray(faces, dtype=int)
+    if vertices.ndim != 2 or vertices.shape[1] != 3 or triangles.ndim != 2 or triangles.shape[1] != 3:
+        raise ValueError("Expected mesh vertices [N, 3] and faces [M, 3]")
+    if max_points < 1 or not len(vertices) or not len(triangles) or np.any(triangles < 0) or np.any(triangles >= len(vertices)):
+        raise ValueError("Invalid triangle mesh or max_points")
+    tri = vertices[triangles]
+    weights = np.array([
+        [1., 0., 0.], [0., 1., 0.], [0., 0., 1.],
+        [.5, .5, 0.], [.5, 0., .5], [0., .5, .5],
+        [1/3, 1/3, 1/3], [.5, .25, .25], [.25, .5, .25], [.25, .25, .5],
+    ])
+    samples = np.einsum("tvc,sv->tsc", tri, weights).reshape(-1, 3)
+    inside = np.array([p for p in samples if patch.contains_local(p)])
+    if not len(inside):
+        return np.empty((0, 3))
+    ordered = inside[np.argsort(np.linalg.norm(inside - patch.center_local_m, axis=1), kind="stable")]
+    selected = []
+    for point in ordered:
+        if all(np.linalg.norm(point - old) > .0015 for old in selected):
+            selected.append(point)
+        if len(selected) == max_points:
+            break
+    return np.asarray(selected)
+
+
 def wxyz_to_rotation(q: np.ndarray) -> np.ndarray:
     """Column-vector rotation matrix for a unit [w,x,y,z] quaternion."""
     q = np.asarray(q, dtype=float)

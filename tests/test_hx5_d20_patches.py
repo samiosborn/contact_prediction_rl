@@ -257,3 +257,32 @@ def test_visual_markers_follow_live_xyzw_pose_and_clear():
     diagnostic._render(env, poses, [])
     np.testing.assert_allclose(green.values['translations'][0], expected + 1, atol=1e-7)
     assert not inside.visible and not outside.visible
+
+
+def test_patch_surface_samples_only_use_true_fingertip_surface():
+    from contact_prediction_rl.robots.hx5_d20_patches import patch_surface_samples
+
+    patch = make("middle")
+    # Four real vertices cover an ordinary finger's +X surface. The proximal
+    # vertices must be rejected, even when closest to the cube.
+    vertices = np.array([
+        [.0125, -.0115, -.00625], [.0125, .0115, -.00625],
+        [.0125, -.0115, .038], [.0125, .0115, .038],
+    ])
+    faces = np.array([[0, 1, 2], [1, 2, 3]])
+    points = patch_surface_samples(vertices, faces, patch)
+    assert 0 < len(points) <= 12
+    assert all(patch.contains_local(p) for p in points)
+    assert all(p[2] > .020 for p in points)
+    assert any(.020 < p[2] < .038 for p in points)
+    assert not patch.contains_local([.007637, .011167, .006595])
+
+
+def test_patch_surface_samples_do_not_invent_a_contact():
+    from contact_prediction_rl.robots.hx5_d20_patches import patch_surface_samples
+
+    patch = make("middle")
+    proximal = np.array([[0, 0, -.006], [.012, 0, .005], [0, .010, .005]])
+    assert patch_surface_samples(proximal, np.array([[0, 1, 2]]), patch).shape == (0, 3)
+    with pytest.raises(ValueError):
+        patch_surface_samples(proximal, np.array([[0, 1, 5]]), patch)
