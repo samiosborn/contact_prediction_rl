@@ -2,9 +2,10 @@
 """Search for an unsupported free-cube grasp, then test finger-only rotation.
 
 Standalone Newton MJWarp feasibility experiment, NOT an RL task or training
-reset. The free 5-cm cube is supported during finger closure by a temporary
-narrow kinematic pedestal. The pedestal is moved away before the hold and
-rotation tests. The cube itself is never moved after the trial is initialised.
+reset. A one-time IK solve configures the Franka with a flat, palm-up hand.
+The free 5-cm cube starts in the palm. Optional --use-pedestal can temporarily
+support the dynamic cube during closure; without that flag no support is used.
+Only fingers move during grasp/rotation; the cube is never moved after setup.
 
 Run:
     uv run python scripts/reorientation/validate_scripted_rotation.py --visualizer newton_gl
@@ -34,7 +35,9 @@ from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 
 import contact_prediction_rl.tasks  # noqa: E402, F401
 from contact_prediction_rl.tasks.reorientation.feasibility import (  # noqa: E402
-    FINGERS_DOWN_ARM,
+    ARM_IK_SEED,
+    FINGERS_FORWARD_WORLD,
+    PALM_NORMAL_WORLD,
     GRASP_CENTRES,
     ROLL_PATTERNS,
     GraspCandidate,
@@ -62,6 +65,157 @@ def _tensor(value):
 
 def _xyz(values):
     return tuple(float(x) for x in values)
+
+
+def _solve_palm_up_pose(env):
+    """Find a reachable flat-hand arm pose using compiled Newton MuJoCo FK.
+
+    Optimisation is offline in scratch MjData. No stepping a simulated object,
+    and no robot-arm actions during grasp or rotation. Update the arm's reset
+    targets once; subsequent env.reset() restores the same fixed posture.
+    """
+    import mujoco
+    import numpy as np
+    from scipy.optimize import least_squares
+
+    from isaaclab_newton.physics import NewtonManager
+
+    robot = env.scene["robot"]
+    solver = NewtonManager._solver
+    if solver is None or not hasattr(solver, "mj_model"):
+        raise RuntimeError("Palm-up IK requires the Newton MJWarp solver")
+
+    model = solver.mj_model
+    labels = NewtonManager.get_model().body_label
+    mj_to_newton = solver.mjc_body_to_newton.numpy().reshape(-1)
+    hand_matches = [i for i, label in enumerate(labels) if label.endswith("/hx5_d20_right_base")]
+    if len(hand_matches) != 1:
+        raise RuntimeError(f"Could not identify the single HX5-D20 palm body: {hand_matches}")
+    mujoco_hands = np.flatnonzero(mj_to_newton == hand_matches[0])
+    if len(mujoco_hands) != 1:
+        raise RuntimeError(f"Ambiguous compiled palm geometry: {mujoco_hands.tolist()}")
+    hand_id = int(mujoco_hands[0])
+
+    names = [f"panda_joint{i}" for i in range(1, 8)]
+    mj_joints = []
+    art_joints = []
+    for i, name in enumerate(names, start=1):
+        matching = [j for j, label in enumerate(labels) if label.endswith(f"/panda_link{i}")]
+        if len(matching) != 1:
+            raise RuntimeError(f"Cannot map arm link panda_link{i}: {matching}")
+        bodies = np.flatnonzero(mj_to_newton == matching[0])
+        candidates = [
+            j for b in bodies
+            for j in range(int(model.body_jntadr[b]), int(model.body_jntadr[b] + model.body_jntnum[b]))
+            if int(model.jnt_type[j]) == int(mujoco.mjtJoint.mjJNT_HINGE)
+        ]
+        if len(candidates) != 1 or name not in robot.joint_names:
+            raise RuntimeError(f"Cannot identify single arm joint {name}: {candidates}")
+        mj_joints.append(candidates[0])
+        art_joints.append(robot.joint_names.index(name))
+
+    q_start = _tensor(robot.data.default_joint_pos)[0, art_joints].detach().cpu().numpy().astype(float)
+    limits = _tensor(robot.data.joint_pos_limits)[0, art_joints].detach().cpu().numpy()
+    lower, upper = limits[:, 0] + 0.005, limits[:, 1] - 0.005
+    qadr = np.array([model.jnt_qposadr[j] for j in mj_joints], dtype=int)
+    scratch = mujoco.MjData(model)
+    # Initialise finger joints from the reset pose; avoid solving a different
+    # kinematic chain than the actual open-hand simulation.
+    for j in range(model.njnt):
+        joint_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, j)
+        if joint_name is None:
+            continue
+        short = joint_name.split("/")[-1]
+        if short.startswith("finger_r_joint") and short in robot.joint_names:
+            scratch.qpos[int(model.jnt_qposadr[j])] = float(
+                _tensor(robot.data.default_joint_pos)[0, robot.joint_names.index(short)]
+            )
+
+    def fk(q):
+        scratch.qpos[qadr] = q
+        mujoco.mj_forward(model, scratch)
+        rotation = np.asarray(scratch.xmat[hand_id]).reshape(3, 3)
+        return np.asarray(scratch.xpos[hand_id]).copy(), rotation[:, 0].copy(), rotation[:, 2].copy()
+
+    # Verify that scratch kinematics and live Isaac Lab use the same frame.
+    _, initial_normal, initial_forward = fk(q_start)
+    link_indices = [i for i, name in enumerate(robot.body_names) if name.split("/")[-1] == "hx5_d20_right_base"]
+    if len(link_indices) != 1:
+        raise RuntimeError("Cannot resolve HX5-D20 palm link in live articulation")
+    live = _tensor(robot.data.body_link_pose_w)[0, link_indices[0]]
+    live_rotation = torch.stack((
+        quat_apply(live[3:7][None, :], torch.tensor([[1., 0., 0.]], device=env.device))[0],
+        quat_apply(live[3:7][None, :], torch.tensor([[0., 0., 1.]], device=env.device))[0],
+    )).detach().cpu().numpy()
+    fk_error = max(float(np.linalg.norm(initial_normal - live_rotation[0])),
+                   float(np.linalg.norm(initial_forward - live_rotation[1])))
+    print(f"PALM_UP_FK_CHECK initial_frame_error={fk_error:.5f}", flush=True)
+    if fk_error > 0.15:
+        raise RuntimeError("Compiled Newton FK disagrees with live palm frame; refusing unverified IK")
+
+    palm_up = np.array(PALM_NORMAL_WORLD, dtype=float)
+    fingers_forward = np.array(FINGERS_FORWARD_WORLD, dtype=float)
+    # Target the same reachable working volume as the original experiment,
+    # keeping the palm away from the table and the fingers pointing horizontally.
+    positions = (np.array((0.475, 0.0, 0.50)),
+                 np.array((0.475, 0.0, 0.55)),
+                 np.array((0.425, 0.0, 0.55)))
+    seeds = [q_start, np.array((0.660, 0.802, -0.197, -1.950, -0.488, 1.280, 2.048))]
+    for delta in (-0.6, 0.6):
+        seed = q_start.copy()
+        seed[6] = np.clip(seed[6] + delta, lower[6], upper[6])
+        seeds.append(seed)
+
+    def robot_penetration():
+        for contact in scratch.contact[:scratch.ncon]:
+            bodies = mj_to_newton[model.geom_bodyid[contact.geom]]
+            if all("/Robot/" in labels[int(b)] for b in bodies) and contact.dist < -0.001:
+                return True
+        return False
+
+    best = None
+    for position_goal in positions:
+        def residual(q):
+            pos, normal, forward = fk(q)
+            return np.concatenate((
+                12.0 * (pos - position_goal),
+                5.0 * (normal - palm_up),
+                5.0 * (forward - fingers_forward),
+                0.04 * (q - q_start),
+            ))
+        for seed in seeds:
+            result = least_squares(residual, np.clip(seed, lower, upper), bounds=(lower, upper),
+                                   max_nfev=250, ftol=1e-9, xtol=1e-9)
+            pos, normal, forward = fk(result.x)
+            normal_alignment = float(normal @ palm_up)
+            finger_alignment = float(forward @ fingers_forward)
+            position_error = float(np.linalg.norm(pos - position_goal))
+            penetrates = robot_penetration()
+            valid = (normal_alignment > 0.98 and finger_alignment > 0.95
+                     and position_error < 0.035 and not penetrates)
+            score = min(normal_alignment, finger_alignment) - 3 * position_error
+            print(f"PALM_UP_IK_CANDIDATE palm_dot={normal_alignment:.4f} "
+                  f"fingers_dot={finger_alignment:.4f} pos_error_m={position_error:.4f} "
+                  f"self_collision={penetrates} accepted={valid}", flush=True)
+            if best is None or (valid, score) > best[0]:
+                best = ((valid, score), result.x.copy(), (normal_alignment, finger_alignment, position_error))
+            if valid:
+                break
+        if best is not None and best[0][0]:
+            break
+
+    if best is None or not best[0][0]:
+        raise RuntimeError("No collision-free palm-up Franka pose found; do not substitute a fingers-down pose")
+
+    q = best[1]
+    normal_alignment, finger_alignment, position_error = best[2]
+    _tensor(robot.data.default_joint_pos)[0, art_joints] = torch.tensor(
+        q, device=env.device, dtype=_tensor(robot.data.default_joint_pos).dtype,
+    )
+    print(f"PALM_UP_IK_SELECTED arm_joints={[round(float(x), 4) for x in q]} "
+          f"palm_dot={normal_alignment:.5f} fingers_dot={finger_alignment:.5f} "
+          f"position_error_m={position_error:.5f}", flush=True)
+    return tuple(float(x) for x in q)
 
 
 @dataclass
@@ -99,7 +253,7 @@ class FeasibilityExperiment:
         self.open = torch.zeros((1, 20), device=env.device)
         self.arm_ids = [self.robot.joint_names.index(f"panda_joint{i}") for i in range(1, 8)]
         self.hand_id = next(i for i, name in enumerate(self.robot.body_names) if name.split("/")[-1] == "panda_hand")
-        self.arm_reference = torch.tensor(FINGERS_DOWN_ARM, device=env.device)
+        self.arm_reference = _tensor(self.robot.data.default_joint_pos)[0, self.arm_ids].detach().clone()
 
     def step(self, action):
         with torch.inference_mode():
@@ -126,25 +280,42 @@ class FeasibilityExperiment:
         positions = _tensor(self.robot.data.joint_pos)[0, self.arm_ids]
         return float(torch.max(torch.abs(positions - self.arm_reference)).item())
 
+    def check_arm_orientation(self, stage):
+        robot = self.robot
+        ids = [i for i, name in enumerate(robot.body_names) if name.split("/")[-1] == "hx5_d20_right_base"]
+        if len(ids) != 1:
+            raise RuntimeError("Cannot identify exactly one live palm link")
+        pose = _tensor(robot.data.body_link_pose_w)[0, ids[0]]
+        axes = torch.tensor([[1., 0., 0.], [0., 0., 1.]], device=self.env.device)
+        actual = [quat_apply(pose[3:7][None, :], axis[None, :])[0] for axis in axes]
+        palm_dot = float(torch.dot(actual[0], torch.tensor(PALM_NORMAL_WORLD, device=self.env.device)))
+        forward_dot = float(torch.dot(actual[1], torch.tensor(FINGERS_FORWARD_WORLD, device=self.env.device)))
+        print(f"PALM_UP_ALIGNMENT stage={stage} palm_dot={palm_dot:.4f} "
+              f"fingers_dot={forward_dot:.4f} arm_drift_rad={self.arm_drift():.4f}", flush=True)
+        if palm_dot < 0.95 or forward_dot < 0.90:
+            raise RuntimeError("Live palm is not facing up with fingers horizontal")
+
     def clip(self, targets):
         return torch.maximum(torch.minimum(targets, self.upper[None, :]), self.lower[None, :])
 
     def initialise(self, candidate: GraspCandidate):
         """Reset and place the cube/pedestal once; no cube pose writes afterwards."""
         self.env.reset()
+        self.check_arm_orientation("initial")
         palm_pos, palm_quat = self.hand_pose()
         local = torch.tensor([candidate.centre_hand_m], device=self.env.device)
         rotation = torch.tensor([palm_quat], device=self.env.device)
         world_centre = torch.tensor([palm_pos], device=self.env.device) + quat_apply(rotation, local)
-        centre_z = float(world_centre[0, 2])
-        table = self.env.cfg.scene.table
-        table_top = float(table.init_state.pos[2]) + float(table.spawn.size[2]) / 2
-        pedestal_bottom = centre_z - CUBE_SIDE_M / 2 - SUPPORT_CLEARANCE_M - SUPPORT_HEIGHT_M
-        if pedestal_bottom <= max(table_top, 0.0) + 0.005:
-            raise ValueError(
-                f"Candidate pedestal would hit table/ground: bottom={pedestal_bottom:.3f} m; "
-                f"table_top={table_top:.3f} m"
-            )
+        if self.args.use_pedestal:
+            centre_z = float(world_centre[0, 2])
+            table = self.env.cfg.scene.table
+            table_top = float(table.init_state.pos[2]) + float(table.spawn.size[2]) / 2
+            pedestal_bottom = centre_z - CUBE_SIDE_M / 2 - SUPPORT_CLEARANCE_M - SUPPORT_HEIGHT_M
+            if pedestal_bottom <= max(table_top, 0.0) + 0.005:
+                raise ValueError(
+                    f"Candidate pedestal would hit table/ground: bottom={pedestal_bottom:.3f} m; "
+                    f"table_top={table_top:.3f} m"
+                )
 
         cube_pose = _tensor(self.cube.data.default_root_pose).clone()
         cube_pose[:, :3] = world_centre
@@ -152,11 +323,14 @@ class FeasibilityExperiment:
         self.cube.write_root_velocity_to_sim(torch.zeros((1, 6), device=self.env.device))
 
         support_pose = _tensor(self.support.data.default_root_pose).clone()
-        support_pose[:, :3] = world_centre
-        support_pose[:, 2] -= CUBE_SIDE_M / 2 + SUPPORT_CLEARANCE_M + SUPPORT_HEIGHT_M / 2
+        if self.args.use_pedestal:
+            support_pose[:, :3] = world_centre
+            support_pose[:, 2] -= CUBE_SIDE_M / 2 + SUPPORT_CLEARANCE_M + SUPPORT_HEIGHT_M / 2
+        else:
+            support_pose[:, :3] = torch.tensor([[1.4, 1.4, 1.4]], device=self.env.device)
         self.support.write_root_pose_to_sim(support_pose)
         self.support_pose = support_pose
-        self.support_removed = False
+        self.support_removed = not self.args.use_pedestal
 
         return _xyz(world_centre[0].cpu().tolist())
 
@@ -175,7 +349,9 @@ class FeasibilityExperiment:
         for t in range(self.args.close_steps):
             fraction = min((t + 1) / self.args.close_ramp_steps, 1.0)
             self.step(torch.lerp(self.open, close, fraction))
-        self.remove_support()
+        if not self.support_removed:
+            self.remove_support()
+        self.check_arm_orientation("after_closure")
 
         initial_pos, initial_quat = self.cube_state()
         palm_pos, palm_quat = self.hand_pose()
@@ -283,6 +459,8 @@ class FeasibilityExperiment:
 def _parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--use-pedestal", action="store_true",
+                        help="Optional temporary cube support during closure; default is cube resting in palm")
     parser.add_argument("--max-grasps", type=int, default=12, help="Number of candidate cube-centre/posture trials")
     parser.add_argument("--max-rotation-trials", type=int, default=12, help="Number of finger-only trajectory trials after a grasp works")
     parser.add_argument("--settle-steps", type=int, default=30)
@@ -312,7 +490,7 @@ def main() -> int:
     # This only changes the standalone experiment. The production task is
     # still a free-cube contact-validation scaffold.
     cfg.scene.robot.init_state.joint_pos = {
-        **{f"panda_joint{i + 1}": q for i, q in enumerate(FINGERS_DOWN_ARM)},
+        **{f"panda_joint{i + 1}": q for i, q in enumerate(ARM_IK_SEED)},
         "finger_r_joint.*": 0.0,
     }
     for actuator in ("panda_shoulder", "panda_forearm"):
@@ -331,15 +509,20 @@ def main() -> int:
         ),
         init_state=RigidObjectCfg.InitialStateCfg(pos=(1.4, 1.4, 1.4)),
     )
-    print("FIXTURE physics=newton_mjwarp cube=dynamic gravity=on pedestal=temporary arm=fixed fingers=20",
-          flush=True)
+    print(f"FIXTURE physics=newton_mjwarp cube=dynamic gravity=on "
+          f"pedestal={'temporary' if args.use_pedestal else 'parked'} "
+          f"palm=up arm=fixed fingers=20", flush=True)
 
     with launch_simulation(cfg, args):
         from isaaclab.envs import ManagerBasedRLEnv
 
         env = ManagerBasedRLEnv(cfg=cfg)
         try:
+            env.reset()
+            _solve_palm_up_pose(env)
+            env.reset()  # apply solved arm pose to both joints and PD reset targets
             exp = FeasibilityExperiment(env, args)
+            exp.check_arm_orientation("solved")
             candidates = [
                 GraspCandidate(point, posture)
                 for point in GRASP_CENTRES
