@@ -12,6 +12,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 import numpy as np
+import torch
+
+from contact_prediction_rl.robots.config import hx5_d20_patches as PATCH_CFG
 
 FINGERS = ("thumb", "index", "middle", "ring", "little")
 DISTAL_LINKS = dict(zip(FINGERS, ("finger_r_link4", "finger_r_link8", "finger_r_link12", "finger_r_link16", "finger_r_link20"), strict=True))
@@ -27,14 +30,14 @@ class PatchSelection:
     80% of each transverse X and Z dimension. The thumb normal is a distal-
     cap proxy and MUST NOT be claimed to coincide with its actual tactile pad.
     """
-    ordinary_x_tail: float = 0.38
-    ordinary_z_tail: float = 0.38
-    ordinary_y_central: float = 0.84
-    thumb_y_tail: float = 0.35
-    thumb_x_central: float = 0.80
-    thumb_z_central: float = 0.80
-    inclusion_tolerance_m: float = 0.0015
-    max_signed_distance_m: float = 0.002
+    ordinary_x_tail: float = PATCH_CFG.ORDINARY_X_TAIL
+    ordinary_z_tail: float = PATCH_CFG.ORDINARY_Z_TAIL
+    ordinary_y_central: float = PATCH_CFG.ORDINARY_Y_CENTRAL
+    thumb_y_tail: float = PATCH_CFG.THUMB_Y_TAIL
+    thumb_x_central: float = PATCH_CFG.THUMB_X_CENTRAL
+    thumb_z_central: float = PATCH_CFG.THUMB_Z_CENTRAL
+    inclusion_tolerance_m: float = PATCH_CFG.INCLUSION_TOLERANCE_M
+    max_signed_distance_m: float = PATCH_CFG.MAX_SIGNED_DISTANCE_M
 
     def __post_init__(self) -> None:
         for name in ("ordinary_x_tail", "ordinary_z_tail", "ordinary_y_central", "thumb_y_tail", "thumb_x_central", "thumb_z_central"):
@@ -125,6 +128,39 @@ def patch_from_bounds(finger: str, xyz_min: np.ndarray, xyz_max: np.ndarray,
         collision_bounds_m=(tuple(float(x) for x in lo), tuple(float(x) for x in hi)),
         rationale=rationale,
     )
+
+
+
+def patch_surface_samples(vertices_body: np.ndarray, faces: np.ndarray, patch: CandidatePatch, *, max_points: int = 12) -> np.ndarray:
+    """Mesh-surface points inside a fingertip patch, not arbitrary distal vertices.
+
+    Interpolate triangle interiors: a narrow patch may contain no mesh vertices.
+    Coordinates must be expressed in the distal body's local frame.
+    """
+    vertices = np.asarray(vertices_body, dtype=float)
+    triangles = np.asarray(faces, dtype=int)
+    if vertices.ndim != 2 or vertices.shape[1] != 3 or triangles.ndim != 2 or triangles.shape[1] != 3:
+        raise ValueError("Expected mesh vertices [N, 3] and faces [M, 3]")
+    if max_points < 1 or not len(vertices) or not len(triangles) or np.any(triangles < 0) or np.any(triangles >= len(vertices)):
+        raise ValueError("Invalid triangle mesh or max_points")
+    tri = vertices[triangles]
+    weights = np.array([
+        [1., 0., 0.], [0., 1., 0.], [0., 0., 1.],
+        [.5, .5, 0.], [.5, 0., .5], [0., .5, .5],
+        [1/3, 1/3, 1/3], [.5, .25, .25], [.25, .5, .25], [.25, .25, .5],
+    ])
+    samples = np.einsum("tvc,sv->tsc", tri, weights).reshape(-1, 3)
+    inside = np.array([p for p in samples if patch.contains_local(p)])
+    if not len(inside):
+        return np.empty((0, 3))
+    ordered = inside[np.argsort(np.linalg.norm(inside - patch.center_local_m, axis=1), kind="stable")]
+    selected = []
+    for point in ordered:
+        if all(np.linalg.norm(point - old) > .0015 for old in selected):
+            selected.append(point)
+        if len(selected) == max_points:
+            break
+    return np.asarray(selected)
 
 
 def wxyz_to_rotation(q: np.ndarray) -> np.ndarray:
@@ -439,3 +475,186 @@ class NewtonPatchDiagnostic:
         if self._markers is not None:
             self._render(env, poses, events)
         return bits.copy(), events
+
+
+# ---------------------------------------------------------------------------
+# Production privileged labels. Same patch geometry and event criteria as
+# NewtonPatchDiagnostic, but classified in batches on the simulation device.
+# ---------------------------------------------------------------------------
+
+
+def classify_patch_contacts(
+    *,
+    num_envs: int,
+    contact_geom: torch.Tensor,
+    contact_addresses: torch.Tensor,
+    contact_pos_w: torch.Tensor,
+    contact_dist: torch.Tensor,
+    contact_world: torch.Tensor,
+    num_active: torch.Tensor,
+    geom_tags: torch.Tensor,
+    body_poses_w: torch.Tensor,
+    finger_link_ids: torch.Tensor,
+    lower_local: torch.Tensor,
+    upper_local: torch.Tensor,
+    tolerance_m: torch.Tensor,
+    max_signed_distance_m: float,
+) -> torch.Tensor:
+    """One current-step binary cube/patch contact per (environment, finger).
+
+    The compiled geom map assigns each collision geom a tag: finger 0..4,
+    cube 5, or another body -1. A label requires an active cube-to-distal
+    constraint, distance <= configured limit, and its contact point inside the
+    corresponding candidate patch in the *live* distal link frame.
+    """
+
+    if contact_geom.ndim != 2 or contact_geom.shape[-1] != 2:
+        raise ValueError("Expected contact.geom with shape [capacity, 2]")
+    capacity = contact_geom.shape[0]
+    if contact_addresses.ndim != 2 or contact_addresses.shape[0] != capacity:
+        raise ValueError("Expected one constraint-address row per contact")
+    if contact_pos_w.shape != (capacity, 3) or contact_dist.shape != (capacity,):
+        raise ValueError("Invalid contact position or distance shape")
+    if contact_world.shape != (capacity,) or num_active.numel() != 1:
+        raise ValueError("Invalid contact world IDs or active count")
+    if body_poses_w.ndim != 3 or body_poses_w.shape[0] != num_envs or body_poses_w.shape[-1] != 7:
+        raise ValueError("Expected live body poses [envs, links, xyz+xyzw]")
+    if geom_tags.ndim != 1 or geom_tags.numel() == 0 or finger_link_ids.shape != (5,):
+        raise ValueError("Invalid compiled geom mapping or fingertip link IDs")
+    if lower_local.shape != (5, 3) or upper_local.shape != (5, 3) or tolerance_m.shape != (5,):
+        raise ValueError("Expected five patch boxes and tolerances")
+
+    # Avoid contact.nacon.cpu(), .item() and NumPy copies at each physics step.
+    # The capacity is fixed, while a GPU mask excludes unused solver entries.
+    valid_pairs = ((contact_geom >= 0) & (contact_geom < geom_tags.numel())).all(dim=-1)
+    pairs = contact_geom.long().clamp(0, geom_tags.numel() - 1)
+    a, b = geom_tags[pairs[:, 0]], geom_tags[pairs[:, 1]]
+    a_is_tip = (a >= 0) & (a < 5) & (b == 5)
+    b_is_tip = (b >= 0) & (b < 5) & (a == 5)
+    finger = torch.where(a_is_tip, a, torch.where(b_is_tip, b, -1))
+    finger_id = finger.clamp(0, 4)
+    world_id = contact_world.long().clamp(0, num_envs - 1)
+
+    # Body poses are Isaac Lab XYZW quaternions; inverse-rotate each world
+    # contact point into the matching distal body frame in one GPU operation.
+    poses = body_poses_w[world_id, finger_link_ids[finger_id]]
+    displacement = contact_pos_w - poses[:, :3]
+    q_vec, q_w = poses[:, 3:6], poses[:, 6:7]
+    cross = torch.linalg.cross(q_vec, displacement, dim=-1)
+    local = displacement - 2 * q_w * cross + 2 * torch.linalg.cross(q_vec, cross, dim=-1)
+    inside = (
+        (local >= lower_local[finger_id] - tolerance_m[finger_id, None])
+        & (local <= upper_local[finger_id] + tolerance_m[finger_id, None])
+    ).all(dim=-1)
+
+    accepted = (
+        (torch.arange(capacity, device=contact_geom.device) < num_active.reshape(-1)[0])
+        & valid_pairs
+        & (finger >= 0)
+        & (contact_world >= 0)
+        & (contact_world < num_envs)
+        & (contact_addresses >= 0).any(dim=-1)
+        & torch.isfinite(contact_pos_w).all(dim=-1)
+        & torch.isfinite(contact_dist)
+        & (contact_dist <= max_signed_distance_m)
+        & inside
+    )
+    # OR over any current active constraints in each environment/finger pair.
+    bits = torch.zeros(num_envs * 5, device=contact_geom.device, dtype=torch.float32)
+    bits.scatter_reduce_(0, world_id * 5 + finger_id, accepted.float(), reduce="amax", include_self=True)
+    return bits.reshape(num_envs, 5)
+
+
+def _to_torch(value) -> torch.Tensor:
+    """Read Isaac Lab proxy arrays or native Warp buffers without CPU copies."""
+    if isinstance(value, torch.Tensor):
+        return value
+    if hasattr(value, "torch"):
+        return value.torch
+    if hasattr(value, "warp"):
+        value = value.warp
+    import warp as wp
+
+    return wp.to_torch(value)
+
+
+class NewtonPatchLabels:
+    """Cache compiled fingertip geometry once; read current Newton contacts."""
+
+    def __init__(self, env, cfg: PatchSelection = _DEFAULT_SELECTION):
+        from isaaclab_newton.physics import NewtonManager
+
+        solver = NewtonManager._solver
+        if solver is None or not hasattr(solver, "mjw_data"):
+            raise RuntimeError("Geometric patch contact labels require Newton MJWarp")
+        self.solver = solver
+        self.num_envs = env.num_envs
+        model = NewtonManager.get_model()
+        labels = model.body_label
+        mj_model = solver.mj_model
+
+        # geom -> compiled MuJoCo body -> global Newton body; all environments
+        # use the same fingertip collision-mesh bounds in their *local* frames.
+        geom_bodies = solver.mjc_body_to_newton.numpy().reshape(-1)[mj_model.geom_bodyid]
+        object_bodies = {i for i, name in enumerate(labels) if name.endswith("/Object")}
+        finger_bodies = {
+            finger: {i for i, name in enumerate(labels) if name.endswith("/" + DISTAL_LINKS[finger])}
+            for finger in FINGERS
+        }
+        if not object_bodies or any(not bodies for bodies in finger_bodies.values()):
+            raise RuntimeError("Missing Object or distal links in the compiled Newton model")
+
+        # Derive each patch from one representative body's compiled collision
+        # meshes; replicas have the same body-local mesh and need not all be read.
+        representative = {finger: {min(ids)} for finger, ids in finger_bodies.items()}
+        patches = candidate_patches_from_compiled_mjcf(mj_model, geom_bodies, representative, cfg)
+        self.lower_local = torch.tensor([patches[f].lower_local_m for f in FINGERS], device=env.device, dtype=torch.float32)
+        self.upper_local = torch.tensor([patches[f].upper_local_m for f in FINGERS], device=env.device, dtype=torch.float32)
+        self.tolerance_m = torch.tensor([patches[f].inclusion_tolerance_m for f in FINGERS], device=env.device, dtype=torch.float32)
+        self.max_signed_distance_m = cfg.max_signed_distance_m
+
+        tags = np.full(mj_model.ngeom, -1, dtype=np.int64)
+        for g, body in enumerate(geom_bodies):
+            if int(body) in object_bodies:
+                tags[g] = 5
+            else:
+                for index, finger in enumerate(FINGERS):
+                    if int(body) in finger_bodies[finger]:
+                        tags[g] = index
+                        break
+        self.geom_tags = torch.tensor(tags, device=env.device, dtype=torch.int64)
+        indices = []
+        for finger in FINGERS:
+            matches = [i for i, name in enumerate(env.scene["robot"].body_names) if name.split("/")[-1] == DISTAL_LINKS[finger]]
+            if len(matches) != 1:
+                raise RuntimeError(f"Expected exactly one {finger} distal link; found {matches}")
+            indices.append(matches[0])
+        self.finger_link_ids = torch.tensor(indices, device=env.device, dtype=torch.int64)
+
+    def sample(self, env) -> torch.Tensor:
+        contacts = self.solver.mjw_data.contact
+        return classify_patch_contacts(
+            num_envs=self.num_envs,
+            contact_geom=_to_torch(contacts.geom),
+            contact_addresses=_to_torch(contacts.efc_address),
+            contact_pos_w=_to_torch(contacts.pos),
+            contact_dist=_to_torch(contacts.dist),
+            contact_world=_to_torch(contacts.worldid),
+            num_active=_to_torch(self.solver.mjw_data.nacon),
+            geom_tags=self.geom_tags,
+            body_poses_w=_to_torch(env.scene["robot"].data.body_link_pose_w),
+            finger_link_ids=self.finger_link_ids,
+            lower_local=self.lower_local,
+            upper_local=self.upper_local,
+            tolerance_m=self.tolerance_m,
+            max_signed_distance_m=self.max_signed_distance_m,
+        )
+
+
+def fingertip_patch_contact(env) -> torch.Tensor:
+    """Privileged binary labels, shape (num_envs, 5); never policy inputs."""
+    labeler = getattr(env, "_hx5_patch_labels", None)
+    if labeler is None:
+        labeler = NewtonPatchLabels(env)
+        env._hx5_patch_labels = labeler
+    return labeler.sample(env)

@@ -118,7 +118,7 @@ OMNI_KIT_ACCEPT_EULA=YES uv run pytest
 
 An experimental environment for dexterous manipulation and fingertip-contact research. A meaningful object-reorientation objective has not yet been implemented.
 
-Five binary fingertip-object contact labels are available. The existing labels use force-thresholded distal-link contact, while a separate diagnostic classifies Newton contact points against candidate fingertip patches.
+Five binary privileged fingertip-object contact labels now come from active Newton cube contacts inside the *candidate geometric patches* in `robots/hx5_d20_patches.py`. The existing whole-link force detector in `robots/hx5_d20_contacts.py` is retained for diagnostics, but not used as Reorientation's contact supervision. These are geometry proxies, not tactile-sensor measurements.
 
 Validate all five fingers:
 
@@ -140,6 +140,23 @@ uv run python scripts/validate_fingertip_contacts.py \
 ```
 
 The five isolated contact trials and a proximal outside-patch negative control have been validated using Newton MJWarp. The patches are geometric proxies, not calibrated tactile sensors.
+
+#### Auxiliary BCE: PPO baseline versus contact prediction
+
+The policy and value function consume only `obs["policy"]`; the five privileged patch-contact labels live in `obs["contact"]` and are used **only as BCE training targets**. The same contact prediction head is instantiated in both ablation conditions, with a loss coefficient of zero or greater than zero.
+
+Patch geometry fractions, tolerances and maximum signed distance are configured in `src/contact_prediction_rl/robots/config/hx5_d20_patches.py`. Contact-head architecture, positive class weighting and the default auxiliary loss weight are in `src/contact_prediction_rl/learning/configs/contact_prediction.py` and are linked from the Reorientation agent configuration.
+
+```bash
+# Contact-label smoke check across multiple Newton environments
+uv run python scripts/smoke_envs.py --task ContactPredictionRl-Reorientation-HX5-D20-Right --num_envs 16 --steps 100
+
+# Short PPO wiring checks with identical actor/critic/head architecture
+uv run python scripts/train.py --task ContactPredictionRl-Reorientation-HX5-D20-Right --num_envs 16 --max_iterations 2 --seed 42 --run_name baseline agent.contact_prediction.loss_weight=0.0
+uv run python scripts/train.py --task ContactPredictionRl-Reorientation-HX5-D20-Right --num_envs 16 --max_iterations 2 --seed 42 --run_name contact_bce agent.contact_prediction.loss_weight=0.1
+```
+
+These are **integration checks only**: the current Reorientation task still has a placeholder alive reward. GPU Newton contact labeling and training must be smoke-tested on the installed simulator before making performance claims. BCE loss and contact prediction metrics are logged to TensorBoard when the auxiliary loss is active.
 
 ### Franka + HX5-D20 Reach
 

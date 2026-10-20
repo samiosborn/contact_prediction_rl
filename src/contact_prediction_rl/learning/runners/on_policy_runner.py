@@ -523,6 +523,11 @@ class OnPolicyRunner:
         print(f"{'Mean surrogate loss:':>35} {loss_dict['surrogate']:.4f}")
 
         print(f"{'Mean entropy loss:':>35} {loss_dict['entropy']:.4f}")
+        if "contact_bce" in loss_dict:
+            print(f"{'Mean contact BCE:':>35} {loss_dict['contact_bce']:.4f}")
+            for name in ("contact_positive_rate", "contact_predicted_rate", "contact_f1"):
+                if name in loss_dict:
+                    print(f"{name:>35} {loss_dict[name]:.4f}")
 
         print(f"{'Learning rate:':>35} {self.alg.learning_rate:.6g}")
 
@@ -562,6 +567,10 @@ class OnPolicyRunner:
             loss_dict["entropy"],
             iteration,
         )
+
+        for name in ("contact_bce", "contact_positive_rate", "contact_predicted_rate", "contact_f1"):
+            if name in loss_dict:
+                self.writer.add_scalar(f"Auxiliary/{name}", loss_dict[name], iteration)
 
         self.writer.add_scalar(
             "Policy/learning_rate",

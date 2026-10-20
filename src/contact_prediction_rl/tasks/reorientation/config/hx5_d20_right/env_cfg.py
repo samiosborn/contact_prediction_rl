@@ -19,7 +19,8 @@ from isaaclab_physx.physics import PhysxCfg
 from isaaclab_tasks.utils import PresetCfg
 
 from contact_prediction_rl.robots.franka_hx5d20 import FRANKA_HX5D20_CFG
-from contact_prediction_rl.robots.hx5_d20_contacts import fingertip_contact_sensor_cfg, fingertip_object_contact
+from contact_prediction_rl.robots.hx5_d20_contacts import fingertip_contact_sensor_cfg
+from contact_prediction_rl.robots.hx5_d20_patches import fingertip_patch_contact
 
 from ... import mdp
 
@@ -159,7 +160,7 @@ class ObservationsCfg:
 
     @configclass
     class ContactCfg(ObsGroup):
-        fingertip_object = ObsTerm(func=fingertip_object_contact)
+        fingertip_object = ObsTerm(func=fingertip_patch_contact)
 
         def __post_init__(self) -> None:
             self.enable_corruption = False

@@ -11,8 +11,8 @@ from contact_prediction_rl.robots.franka_hx5d20 import FRANKA_HX5D20_CFG, FRANKA
 from contact_prediction_rl.robots.hx5_d20_contacts import (
     FINGERTIP_NAMES,
     fingertip_contact_sensor_cfg,
-    fingertip_object_contact,
 )
+from contact_prediction_rl.robots.hx5_d20_patches import fingertip_patch_contact
 from contact_prediction_rl.tasks.reorientation.config.hx5_d20_right.agents.ppo_cfg import PPORunnerCfg
 from contact_prediction_rl.tasks.reorientation.config.hx5_d20_right.env_cfg import ReorientationEnvCfg
 
@@ -42,7 +42,7 @@ def test_hand_only_control_and_sensor_paths():
             assert sensor.prim_path == fingertip_contact_sensor_cfg(name).prim_path
             assert sensor.filter_prim_paths_expr == ["{ENV_REGEX_NS}/Object"]
 
-    assert cfg.observations.contact.fingertip_object.func is fingertip_object_contact
+    assert cfg.observations.contact.fingertip_object.func is fingertip_patch_contact
     assert cfg.observations.contact.concatenate_terms is True
     assert cfg.observations.policy.concatenate_terms is True
 
@@ -59,5 +59,8 @@ def test_local_ppo_registration_and_preserved_settings():
     assert cfg.actor["observation_normalisation"] is True
     assert cfg.critic["hidden_dims"] == [128, 128, 32]
     assert cfg.critic["observation_normalisation"] is True
+    assert cfg.contact_prediction["loss_weight"] == 0.0
+    assert cfg.contact_prediction["hidden_dims"] == [64]
+    assert cfg.contact_prediction["pos_weight"] == 1.0
     assert cfg.algorithm["learning_rate"] == 1.0e-3
     assert cfg.algorithm["entropy_coef"] == 0.005
