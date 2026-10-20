@@ -38,11 +38,14 @@ uv run python scripts/reorientation/validate_scripted_rotation.py \
 3. **Unsupported hold:** Checks two seconds of cube retention, arm-pose
    stability, and simultaneous thumb plus other fingertip patch contacts.
    When enabled, the temporary support is retracted before this check.
-4. **Scripted rotation:** Reinitialises the selected grasp and tests several
-   small finger-only joint-position trajectories. Reports measured signed
-   rotation around the stationary palm's local +X axis (world vertical),
-   translation drift, contact persistence, and orientation error against 15°
-   and 45° goals. No cube pose is written during the hold/rotation phases.
+4. **Scripted rotation:** Reinitialises the selected grasp and tests a staged
+   finger gait: unload an index/middle finger while retaining thumb opposition,
+   apply a tangential joint-position sweep, regrasp, then recover. Continuous
+   interpolation connects each phase. The old static-offset trajectory can
+   still be selected for comparison. Measured cube rotation is reported about
+   the stationary palm's local +X axis (world vertical), with retention,
+   contact persistence and errors against 15° / 45° goals. No cube pose is
+   written during hold or rotation.
 
 Success requires a free, retained cube and orientation error within 5°.
 These goal quaternions are **diagnostic only**, not policy observations.
@@ -69,3 +72,41 @@ to fingers-down is permitted. The palm orientation is rechecked after every
 reset and after closure. Robot-arm drift is checked independently of object
 rotation. The 20D finger action and 40D/5D observation contracts remain
 unchanged. This is still a physics experiment, not a finished RL task.
+
+## Revised grasp placement and scripted finger gait
+
+The candidate list now searches more central palm positions first (less
+longitudinal +Z extension, lateral Y close to zero). It retains the previously
+successful `diagnostic@0.050,0.025,0.100` candidate among the first six
+posture trials as a fallback. For each grasp the log includes the **measured**
+`cube_palm_local_m` after physics settling, so we can distinguish initial
+placement from the actual stable contact configuration. Central placement is
+a hypothesis and may not succeed.
+
+The palm-up inverse-kinematics solve constrains all seven Franka joints to
+remain at least **0.15 rad** from their joint limits by default. It prints
+`joint_limit_margin_rad` and refuses to use an infeasible pose. If necessary,
+change this independently of the hand controller:
+
+```bash
+uv run python scripts/reorientation/validate_scripted_rotation.py \
+  --arm-limit-margin-rad 0.10 --visualizer newton_gl
+```
+
+Run a complete staged finger gait with live Newton physics:
+
+```bash
+uv run python scripts/reorientation/validate_scripted_rotation.py \
+  --controller gait --gait-cycles 1 --visualizer newton_gl
+```
+
+Use `--controller offset` to repeat the earlier one-way offset baseline, or
+`--controller both --max-rotation-trials 36` to evaluate both sets.
+The `GAIT_PHASE` lines show actual rotation after unload, sweep, regrasp and
+recovery. A simulated joint motion is **not** counted as object rotation;
+success still requires retaining the free cube and reaching the target
+orientation.
+
+**This change does not establish a successful rotation in advance.** Only
+the user's GPU Newton run can validate the safer arm pose, new cube placement
+and whether the finger gait produces more rotation.
