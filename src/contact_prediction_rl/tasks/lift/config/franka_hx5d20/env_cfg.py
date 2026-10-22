@@ -4,6 +4,8 @@
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import AssetBaseCfg, RigidObjectCfg
+from isaaclab.managers import ObservationGroupCfg as ObsGroup
+from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import FrameTransformerCfg
@@ -22,6 +24,13 @@ from contact_prediction_rl.robots.franka_hx5d20 import (  # isort: skip
     FRANKA_HX5D20_HAND_CLOSED_THUMB_OPEN,
     FRANKA_HX5D20_HAND_OPEN,
     FRANKA_HX5D20_HAND_SYNERGIES,
+)
+
+from contact_prediction_rl.robots.hx5_d20_contacts import (  # isort: skip
+    FINGERTIP_NAMES,
+    FINGERTIP_SENSOR_NAMES,
+    fingertip_contact_sensor_cfg,
+    fingertip_object_contact,
 )
 
 from ...mdp import rewards
@@ -405,3 +414,67 @@ class FrankaHX5D20BlockLiftPriorResidualEnvCfg(FrankaHX5D20BlockLiftEnvCfg):
         )
 
         self.rewards.hand_residual = RewTerm(func=rewards.hand_residual_penalty, weight=-RESIDUAL_PENALTY_WEIGHT)
+
+
+OBSERVATION_HISTORY = 4
+"""Number of steps (the current one and the previous ones) stacked in the policy observation.
+
+The tactile-RL paper stacks the last ``k`` readings of every sensor: ``k = 4`` for its two dexterous-hand tasks and
+``k = 16`` for the arm task. The history is what lets a policy without a velocity or contact sensor infer motion."""
+
+
+@configclass
+class FrankaHX5D20BlockLiftPriorResidualHistoryEnvCfg(FrankaHX5D20BlockLiftPriorResidualEnvCfg):
+    """The prior-residual lift task whose policy observation stacks the last ``OBSERVATION_HISTORY`` steps.
+
+    This is the proprioception-only baseline of the tactile-RL paper, PPO(prop). The observation terms are the ones of
+    the lift task (joint positions and velocities, block position, goal, last action), each repeated for the last k
+    steps, so the policy input is k times larger. Isaac Lab fills the history of a freshly reset environment with
+    copies of its first observation. Nothing else changes: same robot, actions, rewards and episode.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.observations.policy.history_length = OBSERVATION_HISTORY
+        self.observations.policy.flatten_history_dim = True
+
+
+@configclass
+class FingertipContactLabelsCfg(ObsGroup):
+    """Current fingertip-object contact labels (thumb, index, middle, ring, little), without history.
+
+    Kept apart from the policy group: the policy does not read it. It holds the target of the auxiliary contact losses
+    (the ``obs["contact"]`` group that the PPO implementation expects).
+    """
+
+    fingertip_contacts = ObsTerm(func=fingertip_object_contact)
+
+    def __post_init__(self):
+        self.enable_corruption = False
+        self.concatenate_terms = True
+
+
+@configclass
+class FrankaHX5D20BlockLiftPriorResidualTactileEnvCfg(FrankaHX5D20BlockLiftPriorResidualHistoryEnvCfg):
+    """The history task with the five binary fingertip contacts added to the policy input.
+
+    This is PPO(prop + tactile) of the tactile-RL paper and the base of its auxiliary losses. Compared with the history
+    task:
+
+    * five contact sensors (one per fingertip, filtered to the block) are added to the scene, and PhysX is told to report
+      contacts on the robot's bodies (``activate_contact_sensors``);
+    * the contacts, thresholded at 0.1 N, are one more term of the policy observation, so they are stacked over the last
+      k steps like everything else (5 more numbers per step);
+    * a separate ``contact`` group holds the current labels, for the auxiliary loss.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        for finger, sensor_name in zip(FINGERTIP_NAMES, FINGERTIP_SENSOR_NAMES):
+            setattr(self.scene, sensor_name, fingertip_contact_sensor_cfg(finger))
+        self.scene.robot.spawn.activate_contact_sensors = True
+
+        self.observations.policy.fingertip_contacts = ObsTerm(func=fingertip_object_contact)
+        self.observations.contact = FingertipContactLabelsCfg()
