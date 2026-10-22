@@ -43,6 +43,42 @@ from contact_prediction_rl.learning.inference import load_policy
 from contact_prediction_rl.learning.isaaclab_env import IsaacLabPPOEnvWrapper
 
 
+# Camera presets for the recorded video, in world coordinates (the robot base is at the origin facing +x, the table top
+# is at z = 0 and the block stands at x = 0.45). Each is (eye, lookat).
+VIEWS = {
+    "front": ((1.5, 0.0, 0.55), (0.45, 0.0, 0.2)),  # in front of the block, looking back toward the robot
+    "side": ((0.45, -1.2, 0.5), (0.45, 0.0, 0.2)),  # from the side of the block
+    "top": ((0.2, 0.0, 1.3), (0.45, 0.0, 0.0)),  # looking down at the block
+}
+
+
+def _set_camera(env_cfg, args_cli: argparse.Namespace) -> str | None:
+    """Point the recording camera at the requested view. Returns a name for the video folder, or None."""
+
+    eye = tuple(args_cli.camera_eye) if args_cli.camera_eye else None
+    lookat = tuple(args_cli.camera_lookat) if args_cli.camera_lookat else None
+    name = None
+
+    if args_cli.view is not None:
+        eye, lookat = VIEWS[args_cli.view]
+        name = args_cli.view
+
+    if eye is None and lookat is None:
+        return None
+
+    for visualizer_cfg in getattr(env_cfg.sim, "visualizer_cfgs", None) or []:
+        if getattr(visualizer_cfg, "visualizer_type", None) == "kit":
+            visualizer_cfg.origin_type = "world"
+            if eye is not None:
+                visualizer_cfg.eye = eye
+            if lookat is not None:
+                visualizer_cfg.lookat = lookat
+            return name or "custom_view"
+
+    print("[WARN] No Kit visualizer is configured, so the camera view was not applied.")
+    return None
+
+
 def _parse_args(
     argv: list[str],
 ) -> tuple[argparse.Namespace, list[str]]:
@@ -71,6 +107,15 @@ def _parse_args(
         help="Slow the loop down to the environment step time, for watching in a viewer.",
     )
     parser.add_argument("--video", action="store_true", help="Record a video of the rollout.")
+    parser.add_argument(
+        "--view",
+        choices=sorted(VIEWS),
+        default=None,
+        help="Camera view of the video: 'front' (in front of the block), 'side' or 'top'. The video goes to "
+        "<run directory>/videos/play_<view>/. Default: the visualizer's default camera.",
+    )
+    parser.add_argument("--camera_eye", type=float, nargs=3, default=None, help="Camera position [m], world frame.")
+    parser.add_argument("--camera_lookat", type=float, nargs=3, default=None, help="Camera target [m], world frame.")
     parser.add_argument("--video_length", type=int, default=None, help="Length of the video in environment steps (default 200).")
     parser.add_argument("--video_interval", type=int, default=None, help="Start a new video clip every this many environment steps.")
 
@@ -113,14 +158,15 @@ def run(
 
     # the recorder needs a Kit visualizer, which must be requested before the simulation launches
     pre_launch_video_config(env_cfg, args_cli=args_cli)
+    view_name = _set_camera(env_cfg, args_cli) if args_cli.video else None
 
     with launch_simulation(env_cfg, args_cli):
-        # videos go to <run directory>/videos/play
+        # videos go to <run directory>/videos/play, or play_<view> for a chosen camera view
         apply_video_recording(
             env_cfg,
             str(Path(checkpoint).parent),
             args_cli,
-            subdir="play",
+            subdir="play" if view_name is None else f"play_{view_name}",
             checkpoint_path=str(checkpoint),
         )
 
