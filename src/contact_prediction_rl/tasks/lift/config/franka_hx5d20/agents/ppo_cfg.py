@@ -250,3 +250,25 @@ class FrankaHX5D20BlockLiftTactileTRPaperPPOCfg(FrankaHX5D20BlockLiftTactilePape
         "loss_weight": TACTILE_RL.AUX_LOSS_WEIGHT,
         "learning_rate": TACTILE_RL.AUX_LEARNING_RATE,
     }
+
+
+@configclass
+class FrankaHX5D20BlockLiftTactileFRPaperPPOCfg(FrankaHX5D20BlockLiftTactilePaperPPOCfg):
+    """Paper agent for the tactile task with the full reconstruction (FR) auxiliary loss: PPO(prop + tactile) + FR.
+
+    The decoder ``z -> 512 -> 512 -> observation size`` has to rebuild the whole observation: the stacked contacts (binary
+    cross-entropy, positive weight 10) and the normalised proprioception (squared error). It has its own optimiser. Select
+    it with ``--agent ppo_fr_cfg_entry_point``. Everything else is the same as the tactile baseline.
+    """
+
+    experiment_name = "lift_block_franka_hx5d20_prior_residual_tactile_fr"
+
+    auxiliary = {
+        "objective": "full_reconstruction",
+        "tactile_dim": TACTILE_DIM,
+        "hidden_dims": TACTILE_RL.DECODER_HIDDEN_DIMS,
+        "activation": TACTILE_RL.DECODER_ACTIVATION,
+        "pos_weight": TACTILE_RL.TR_POS_WEIGHT,
+        "loss_weight": TACTILE_RL.FR_AUX_LOSS_WEIGHT,
+        "learning_rate": TACTILE_RL.FR_AUX_LEARNING_RATE,
+    }

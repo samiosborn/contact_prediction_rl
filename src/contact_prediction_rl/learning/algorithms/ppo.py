@@ -9,7 +9,7 @@ import torch.nn as nn
 from tensordict import TensorDict
 
 from contact_prediction_rl.learning.models.actor import Actor
-from contact_prediction_rl.learning.models.auxiliary import TactileReconstruction
+from contact_prediction_rl.learning.models.auxiliary import FullReconstruction, TactileReconstruction
 from contact_prediction_rl.learning.models.contact_prediction import ContactPredictionHead
 from contact_prediction_rl.learning.models.critic import Critic
 from contact_prediction_rl.learning.models.shared import SharedActor, SharedCritic, SharedEncoder
@@ -358,7 +358,15 @@ class PPO:
 
             # Auxiliary step on the same mini-batch, with the encoder as just updated by PPO
             if self.auxiliary is not None:
-                aux_loss, batch_aux_metrics = self.auxiliary.loss(observations, self.actor.encode(observations))
+                # The normalised observation (what the encoder reads) is the target of reconstruction losses
+                with torch.no_grad():
+                    normalised = self.actor.encoder.normaliser(observations)
+
+                aux_loss, batch_aux_metrics = self.auxiliary.loss(
+                    observations,
+                    self.actor.encode(observations),
+                    normalised,
+                )
 
                 self.aux_optimizer.zero_grad()
 
@@ -583,6 +591,15 @@ class PPO:
             if aux_cfg["objective"] == "tactile_reconstruction":
                 auxiliary = TactileReconstruction(
                     latent_dim=latent_dim,
+                    tactile_dim=aux_cfg["tactile_dim"],
+                    hidden_dims=aux_cfg["hidden_dims"],
+                    activation=aux_cfg["activation"],
+                    pos_weight=float(aux_cfg["pos_weight"]),
+                ).to(device)
+            elif aux_cfg["objective"] == "full_reconstruction":
+                auxiliary = FullReconstruction(
+                    latent_dim=latent_dim,
+                    observation_dim=observation_dim,
                     tactile_dim=aux_cfg["tactile_dim"],
                     hidden_dims=aux_cfg["hidden_dims"],
                     activation=aux_cfg["activation"],

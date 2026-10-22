@@ -19,3 +19,7 @@ AUX_LEARNING_RATE = 5.13e-5
 # Weight of the auxiliary loss (c_aux in Table A4). The auxiliary optimiser is Adam, whose step size does not depend on
 # the scale of the loss, so this weight matters little for the auxiliary parameters
 AUX_LOSS_WEIGHT = 0.00384
+
+# Full reconstruction (FR): the paper's tuned values for Bounce (Table A4, "+FR")
+FR_AUX_LEARNING_RATE = 2.77e-5
+FR_AUX_LOSS_WEIGHT = 0.05669

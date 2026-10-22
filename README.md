@@ -316,6 +316,17 @@ uv run python scripts/train.py \
   --agent ppo_tr_cfg_entry_point --num_envs 1024 --max_iterations 600 --seed 42
 ```
 
+Full reconstruction (FR) uses the same machinery with a larger decoder, `z -> 512 -> 512 -> observation size`, that must
+rebuild the whole observation: the contacts (binary cross-entropy, positive weight 10) and the proprioception (squared
+error against the *normalised* observation, so that quantities of different sizes count about equally). Its loss is the
+sum of the two parts, logged as `aux_tactile_bce` and `aux_proprio_mse`.
+
+```bash
+uv run python scripts/train.py \
+  --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right \
+  --agent ppo_fr_cfg_entry_point --num_envs 1024 --max_iterations 600 --seed 42
+```
+
 The combined Franka + HX5-D20 asset is documented in:
 
 ```text
