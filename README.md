@@ -282,6 +282,28 @@ uv run python scripts/train.py \
   --agent ppo_low_entropy_cfg_entry_point --num_envs 1024 --max_iterations 600 --seed 42
 ```
 
+### Tactile-RL paper set-up (history, shared encoder, contacts as input)
+
+Following *Enhancing Tactile-based Reinforcement Learning for Robotic Control* (Miller et al., NeurIPS 2025), two
+variants of the prior-residual lift task:
+
+| Task | Policy input | Role |
+|---|---|---|
+| `ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualHistory-Right` | the usual observation, stacked over the last 4 steps | PPO(prop): proprioception-only baseline |
+| `ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right` | the same, plus the 5 binary fingertip contacts, stacked too | PPO(prop + tactile), and the base of the auxiliary losses |
+
+Both use the paper's agent: one encoder (`o -> 1024 -> 512 -> 256 = z`, layer normalisation, ELU) shared by the policy
+(`z -> 128 -> 64 -> actions`, tanh output) and the value function (`z -> 128 -> 64 -> 1`), selected with
+`architecture = "shared"` in the agent config. The tactile task also exposes the current contact labels as a separate
+`contact` observation group, the target of the auxiliary losses. The contacts come from five fingertip sensors, checked
+against real grasps with `scripts/franka_hx5d20/validate_lift_contacts.py`.
+
+```bash
+uv run python scripts/train.py \
+  --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right \
+  --num_envs 1024 --max_iterations 600 --seed 42
+```
+
 The combined Franka + HX5-D20 asset is documented in:
 
 ```text
