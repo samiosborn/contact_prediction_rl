@@ -264,6 +264,24 @@ uv run --extra isaacsim python scripts/train.py \
   --num_envs 1024 --max_iterations 600 --seed 42
 ```
 
+### Franka + HX5-D20 Lift with a prior and per-joint corrections
+
+`ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right`
+
+The policy controls every finger joint, but around a designed posture (7 arm + 1 closure + 20 joint actions):
+
+- the closure action blends in the thumb-open curl posture, as in the curl control;
+- each joint action adds a correction of up to +-50 % of that joint's range to the prior, and an action of 0 returns
+  the joint to the prior (corrections are not integrated, so unused joints cannot drift);
+- thumb joint 1 is restricted to the side the designed grasp uses;
+- a small penalty on the size of the corrections pulls unneeded joints back.
+
+```bash
+uv run python scripts/train.py \
+  --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right \
+  --agent ppo_low_entropy_cfg_entry_point --num_envs 1024 --max_iterations 600 --seed 42
+```
+
 The combined Franka + HX5-D20 asset is documented in:
 
 ```text

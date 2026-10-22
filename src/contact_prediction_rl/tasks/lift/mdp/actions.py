@@ -13,7 +13,14 @@ import isaaclab.utils.string as string_utils
 from isaaclab.envs.mdp.actions.binary_joint_actions import BinaryJointPositionAction
 from isaaclab.managers.action_manager import ActionTerm
 
-from .joint_targets import closure_along_shape, max_target_change, step_joint_targets
+from .joint_targets import (
+    closure_along_shape,
+    max_target_change,
+    prior_residual_targets,
+    residual_bounds,
+    step_joint_targets,
+    step_residuals,
+)
 from .synergies import step_closures, synergy_posture
 
 if TYPE_CHECKING:
@@ -21,6 +28,7 @@ if TYPE_CHECKING:
 
     from .actions_cfg import (
         PerJointPositionActionCfg,
+        PriorResidualPositionActionCfg,
         RateLimitedBinaryJointPositionActionCfg,
         SynergyJointPositionActionCfg,
     )
@@ -226,3 +234,121 @@ class PerJointPositionAction(ActionTerm):
             env_ids = slice(None)
         self._raw_actions[env_ids] = 0.0
         self._joint_targets[env_ids] = self._open_command
+
+
+class PriorResidualPositionAction(ActionTerm):
+    """Hand action that blends in a designed posture and lets the policy correct every joint around it.
+
+    The action has ``1 + num_joints`` dimensions:
+
+    * The first value is a closure of the prior posture, as in the single-closure hand: a negative value closes it
+      (``clamp(-a, 0, 1)``), moving at most ``step_dt / closing_time`` per step.
+    * The other values correct each joint: ``a_j`` in [-1, 1] asks for a correction of ``a_j`` times
+      ``residual_authority`` times the joint's range, reached at a limited rate. They are not integrated, so an action
+      of 0 returns every joint to the prior.
+
+    The joint targets are ``open + closure * prior + residual``, kept inside the joint limits (and inside the
+    optional ``joint_ranges``). With zero corrections the hand does what the single-closure hand does, and a joint
+    cannot wander further from the prior than its authority allows.
+    """
+
+    cfg: PriorResidualPositionActionCfg
+
+    def __init__(self, cfg: PriorResidualPositionActionCfg, env: ManagerBasedEnv) -> None:
+        super().__init__(cfg, env)
+
+        joint_ids, self._joint_names = self._asset.find_joints(self.cfg.joint_names, as_proxy=True)
+        self._num_joints = len(joint_ids)
+        self._joint_ids = joint_ids.warp
+
+        self._open_command = self._resolve_posture(self.cfg.open_command_expr)
+        self._prior_shape = self._resolve_posture(self.cfg.prior_shape)
+
+        limits = self._asset.data.joint_pos_limits.torch[0, joint_ids.torch].to(self.device)
+        self._lower, self._upper = limits[:, 0].clone(), limits[:, 1].clone()
+        # an optional narrower range for some joints, for example the thumb on its natural side
+        if self.cfg.joint_ranges:
+            index_list, _, value_list = string_utils.resolve_matching_names_values(
+                self.cfg.joint_ranges, self._joint_names, strict=False
+            )
+            for j, (low, high) in zip(index_list, value_list):
+                self._lower[j] = max(self._lower[j].item(), low)
+                self._upper[j] = min(self._upper[j].item(), high)
+
+        self._bounds = residual_bounds(limits[:, 0], limits[:, 1], self.cfg.residual_authority)
+        self._max_residual_change = max_target_change(limits[:, 0], limits[:, 1], env.step_dt, self.cfg.closing_time)
+        self._max_closure_change = env.step_dt / self.cfg.closing_time
+
+        self._raw_actions = torch.zeros(self.num_envs, self.action_dim, device=self.device)
+        self._closure = torch.zeros(self.num_envs, 1, device=self.device)
+        self._residuals = torch.zeros(self.num_envs, self._num_joints, device=self.device)
+        self._joint_targets = prior_residual_targets(
+            self._open_command, self._prior_shape, self._closure, self._residuals, self._lower, self._upper
+        )
+        self._processed_actions = self._joint_targets
+
+    def _resolve_posture(self, posture: dict[str, float]) -> torch.Tensor:
+        """Joint values of a posture given by regular expressions, with 0 for the joints it does not name."""
+        values = torch.zeros(self._num_joints, device=self.device)
+        index_list, _, value_list = string_utils.resolve_matching_names_values(posture, self._joint_names)
+        values[index_list] = torch.tensor(value_list, device=self.device)
+        return values
+
+    @property
+    def action_dim(self) -> int:
+        return 1 + self._num_joints
+
+    @property
+    def raw_actions(self) -> torch.Tensor:
+        return self._raw_actions
+
+    @property
+    def processed_actions(self) -> torch.Tensor:
+        return self._processed_actions
+
+    @property
+    def joint_names(self) -> list[str]:
+        """Names of the controlled joints, in the order of the correction actions."""
+        return self._joint_names
+
+    @property
+    def joint_targets(self) -> torch.Tensor:
+        """Current joint position targets [rad], shape (num_envs, num_joints)."""
+        return self._joint_targets
+
+    @property
+    def closure(self) -> torch.Tensor:
+        """Closure of the prior posture in [0, 1], shape (num_envs, 1)."""
+        return self._closure
+
+    @property
+    def residuals(self) -> torch.Tensor:
+        """Current per-joint corrections [rad], shape (num_envs, num_joints)."""
+        return self._residuals
+
+    @property
+    def normalised_residual(self) -> torch.Tensor:
+        """Corrections as a fraction of the largest allowed one, in [-1, 1], shape (num_envs, num_joints)."""
+        return self._residuals / self._bounds
+
+    def process_actions(self, actions: torch.Tensor):
+        self._raw_actions[:] = actions
+        self._closure = step_closures(self._closure, actions[:, :1], self._max_closure_change)
+        self._residuals = step_residuals(self._residuals, actions[:, 1:], self._bounds, self._max_residual_change)
+        self._joint_targets = prior_residual_targets(
+            self._open_command, self._prior_shape, self._closure, self._residuals, self._lower, self._upper
+        )
+        self._processed_actions = self._joint_targets
+
+    def apply_actions(self):
+        self._asset.set_joint_position_target_index(target=self._processed_actions, joint_ids=self._joint_ids)
+
+    def reset(self, env_ids: Sequence[int] | None = None) -> None:
+        if env_ids is None:
+            env_ids = slice(None)
+        self._raw_actions[env_ids] = 0.0
+        self._closure[env_ids] = 0.0
+        self._residuals[env_ids] = 0.0
+        self._joint_targets[env_ids] = prior_residual_targets(
+            self._open_command, self._prior_shape, self._closure[env_ids], self._residuals[env_ids], self._lower, self._upper
+        )

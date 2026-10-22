@@ -1,0 +1,275 @@
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-25-22_prior_seed42 model_200
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end   99.0 %  (+/- 0.4)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 1.40 s, 90th pct 1.42 s  (512 envs)
+time to first goal     never
+closest to goal while held: median 14.5 cm, 90th pct 14.9 cm, worst 21.1 cm
+distance to goal at end: median 34.6 cm, 90th pct 36.1 cm, worst 38.7 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +5.4, std 0.9
+  y: mean -32.9, std 1.6
+  z: mean +7.7, std 2.1
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 16 deg, 90th pct 18 deg; upright (<10 deg) 1 %
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-25-22_prior_seed42 model_300
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 17.7 cm, 90th pct 17.9 cm, worst 18.7 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +8.4, std 0.1
+  y: mean -12.5, std 0.3
+  z: mean -9.3, std 0.1
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+grasp centre to held part when the hand finished closing: median 83 mm, 90th pct 85 mm  (512 envs)
+hand joint targets at end [rad], episodes that all (512):
+  finger_r_joint1: mean +0.00, std 0.00
+  finger_r_joint2: mean -0.58, std 0.00
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.00, std 0.00
+  finger_r_joint5: mean -0.60, std 0.00
+  finger_r_joint6: mean +1.85, std 0.00
+  finger_r_joint7: mean +1.57, std 0.00
+  finger_r_joint8: mean +1.33, std 0.01
+  finger_r_joint9: mean +0.60, std 0.00
+  finger_r_joint10: mean +2.00, std 0.00
+  finger_r_joint11: mean +1.28, std 0.00
+  finger_r_joint12: mean +1.36, std 0.00
+  finger_r_joint13: mean +0.42, std 0.00
+  finger_r_joint14: mean +1.49, std 0.01
+  finger_r_joint15: mean +1.57, std 0.00
+  finger_r_joint16: mean +1.57, std 0.00
+  finger_r_joint17: mean +0.60, std 0.00
+  finger_r_joint18: mean +1.54, std 0.00
+  finger_r_joint19: mean +0.50, std 0.00
+  finger_r_joint20: mean +1.37, std 0.01
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-15T14:07:41Z [6,115ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-25-22_prior_seed42 model_400
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    1.8 %  (+/- 0.6)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 1.34 s, 90th pct 1.38 s  (19 envs)
+time to first goal     never
+closest to goal while held: median 10.2 cm, 90th pct 15.6 cm, worst 17.5 cm
+distance to goal at end: median 34.5 cm, 90th pct 35.4 cm, worst 41.6 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +30.9, std 6.3
+  y: mean -0.1, std 4.8
+  z: mean -12.8, std 1.6
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 10 deg, 90th pct 12 deg; upright (<10 deg) 56 %
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-25-22_prior_seed42 model_500
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      9.6 %  (+/- 1.3)
+lifted in hand at end   93.2 %  (+/- 1.1)
+reached goal ever       22.7 %  (+/- 1.8)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 1.28 s, 90th pct 1.36 s  (509 envs)
+time to first goal     median 2.18 s, 90th pct 2.32 s  (116 envs)
+closest to goal while held: median 5.7 cm, 90th pct 6.4 cm, worst 8.3 cm
+distance to goal at end: median 6.5 cm, 90th pct 7.4 cm, worst 44.5 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -4.9, std 3.9
+  y: mean +1.2, std 1.9
+  z: mean +1.4, std 4.0
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 11 deg, 90th pct 25 deg; upright (<10 deg) 43 %
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-25-22_prior_seed42 model_599
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end     18.6 %  (+/- 1.7)
+lifted in hand at end   66.0 %  (+/- 2.1)
+reached goal ever       65.2 %  (+/- 2.1)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 1.44 s, 90th pct 1.50 s  (371 envs)
+time to first goal     median 1.66 s, 90th pct 1.82 s  (334 envs)
+closest to goal while held: median 3.8 cm, 90th pct 5.0 cm, worst 13.0 cm
+distance to goal at end: median 5.8 cm, 90th pct 17.6 cm, worst 49.2 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +1.9, std 7.2
+  y: mean +0.5, std 2.8
+  z: mean -0.5, std 7.9
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 10 deg, 90th pct 26 deg; upright (<10 deg) 43 %
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-40-00_prior_seed1 model_200
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end   88.5 %  (+/- 1.4)
+reached goal ever       78.7 %  (+/- 1.8)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 1.84 s, 90th pct 1.98 s  (502 envs)
+time to first goal     median 1.92 s, 90th pct 2.14 s  (403 envs)
+closest to goal while held: median 3.5 cm, 90th pct 6.0 cm, worst 8.6 cm
+distance to goal at end: median 7.9 cm, 90th pct 18.2 cm, worst 22.0 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -0.5, std 5.3
+  y: mean +4.2, std 3.4
+  z: mean +2.6, std 5.7
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 9 deg, 90th pct 10 deg; upright (<10 deg) 90 %
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-40-00_prior_seed1 model_300
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end     37.9 %  (+/- 2.1)
+lifted in hand at end   51.6 %  (+/- 2.2)
+reached goal ever       39.3 %  (+/- 2.2)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 1.16 s, 90th pct 2.14 s  (267 envs)
+time to first goal     median 1.82 s, 90th pct 2.02 s  (201 envs)
+closest to goal while held: median 3.1 cm, 90th pct 9.0 cm, worst 9.3 cm
+distance to goal at end: median 9.5 cm, 90th pct 10.8 cm, worst 16.6 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -1.0, std 3.6
+  y: mean -1.4, std 1.2
+  z: mean -6.0, std 3.9
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 4 deg, 90th pct 9 deg; upright (<10 deg) 94 %
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-40-00_prior_seed1 model_400
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      3.5 %  (+/- 0.8)
+lifted in hand at end   10.4 %  (+/- 1.3)
+reached goal ever       12.7 %  (+/- 1.5)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 1.26 s, 90th pct 1.60 s  (74 envs)
+time to first goal     median 1.94 s, 90th pct 2.06 s  (65 envs)
+closest to goal while held: median 3.8 cm, 90th pct 5.2 cm, worst 8.8 cm
+distance to goal at end: median 10.4 cm, 90th pct 15.3 cm, worst 18.4 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +1.7, std 3.3
+  y: mean +2.7, std 1.3
+  z: mean -8.9, std 4.0
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 6 deg, 90th pct 11 deg; upright (<10 deg) 87 %
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-40-00_prior_seed1 model_500
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end    100.0 %  (+/- 0.0)
+lifted in hand at end  100.0 %  (+/- 0.0)
+reached goal ever      100.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 0.94 s, 90th pct 0.98 s  (512 envs)
+time to first goal     median 1.40 s, 90th pct 1.42 s  (512 envs)
+closest to goal while held: median 0.4 cm, 90th pct 0.6 cm, worst 0.8 cm
+distance to goal at end: median 0.8 cm, 90th pct 1.1 cm, worst 1.2 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -0.6, std 0.3
+  y: mean -0.3, std 0.1
+  z: mean +0.2, std 0.2
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 12 deg, 90th pct 13 deg; upright (<10 deg) 1 %
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-40-00_prior_seed1 model_599
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end    100.0 %  (+/- 0.0)
+lifted in hand at end  100.0 %  (+/- 0.0)
+reached goal ever      100.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 0.82 s, 90th pct 0.84 s  (512 envs)
+time to first goal     median 0.98 s, 90th pct 1.00 s  (512 envs)
+closest to goal while held: median 0.1 cm, 90th pct 0.2 cm, worst 0.3 cm
+distance to goal at end: median 0.4 cm, 90th pct 1.7 cm, worst 2.3 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -0.1, std 0.1
+  y: mean +0.2, std 0.2
+  z: mean +0.4, std 0.5
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 13 deg, 90th pct 15 deg; upright (<10 deg) 0 %
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-56-19_prior_seed2 model_200
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end  100.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 0.98 s, 90th pct 1.06 s  (512 envs)
+time to first goal     never
+closest to goal while held: median 8.9 cm, 90th pct 9.4 cm, worst 10.1 cm
+distance to goal at end: median 11.1 cm, 90th pct 11.7 cm, worst 17.0 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +6.1, std 0.5
+  y: mean -9.4, std 0.8
+  z: mean -1.1, std 0.6
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 21 deg, 90th pct 23 deg; upright (<10 deg) 0 %
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-56-19_prior_seed2 model_300
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end    100.0 %  (+/- 0.0)
+lifted in hand at end  100.0 %  (+/- 0.0)
+reached goal ever      100.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 0.96 s, 90th pct 0.98 s  (512 envs)
+time to first goal     median 1.16 s, 90th pct 1.20 s  (512 envs)
+closest to goal while held: median 1.4 cm, 90th pct 1.6 cm, worst 2.2 cm
+distance to goal at end: median 2.4 cm, 90th pct 2.8 cm, worst 3.2 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -1.7, std 0.3
+  y: mean +1.0, std 0.2
+  z: mean +1.3, std 0.3
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 33 deg, 90th pct 36 deg; upright (<10 deg) 0 %
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-56-19_prior_seed2 model_400
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-56-19_prior_seed2 model_500
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end    100.0 %  (+/- 0.0)
+lifted in hand at end  100.0 %  (+/- 0.0)
+reached goal ever      100.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 0.94 s, 90th pct 0.98 s  (512 envs)
+time to first goal     median 1.06 s, 90th pct 1.10 s  (512 envs)
+closest to goal while held: median 0.1 cm, 90th pct 0.3 cm, worst 0.5 cm
+distance to goal at end: median 0.4 cm, 90th pct 1.0 cm, worst 1.9 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -0.2, std 0.5
+  y: mean +0.2, std 0.2
+  z: mean -0.1, std 0.2
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 25 deg, 90th pct 27 deg; upright (<10 deg) 0 %
+################ logs/ppo/lift_block_franka_hx5d20_prior_residual_low_entropy/2026-10-15_14-56-19_prior_seed2 model_599

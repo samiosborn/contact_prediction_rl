@@ -22,6 +22,11 @@ The ``-AllJoints-`` variant lets the policy control every finger joint, with no 
 
 It also has a PPO configuration with a lower entropy bonus and a near-zero initial action, selected with
 ``--agent ppo_low_entropy_cfg_entry_point``.
+
+The ``-PriorResidual-`` variant keeps the thumb-open curl posture as a prior and lets the policy correct every finger
+joint around it within a bounded range (7 + 1 + 20 actions)::
+
+    uv run python scripts/train.py --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right
 """
 
 import gymnasium as gym
@@ -81,6 +86,27 @@ gym.register(
         "ppo_low_entropy_cfg_entry_point": (
             f"{agents.__name__}.ppo_cfg:"
             "FrankaHX5D20BlockLiftAllJointsLowEntropyPPOCfg"
+        ),
+        "default_agent": "ppo",
+    },
+)
+
+gym.register(
+    id="ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.env_cfg:"
+            "FrankaHX5D20BlockLiftPriorResidualEnvCfg"
+        ),
+        "ppo_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20BlockLiftPriorResidualPPOCfg"
+        ),
+        "ppo_low_entropy_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20BlockLiftPriorResidualLowEntropyPPOCfg"
         ),
         "default_agent": "ppo",
     },

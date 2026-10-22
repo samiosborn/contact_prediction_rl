@@ -27,6 +27,7 @@ from contact_prediction_rl.robots.franka_hx5d20 import (  # isort: skip
 from ...mdp import rewards
 from ...mdp.actions_cfg import (
     PerJointPositionActionCfg,
+    PriorResidualPositionActionCfg,
     RateLimitedBinaryJointPositionActionCfg,
     SynergyJointPositionActionCfg,
 )
@@ -365,3 +366,42 @@ class FrankaHX5D20BlockLiftAllJointsEnvCfg(FrankaHX5D20BlockLiftEnvCfg):
             closure_shape=FRANKA_HX5D20_HAND_SYNERGIES["curl"],
             closing_time=HAND_CLOSING_TIME,
         )
+
+
+RESIDUAL_AUTHORITY = 0.5
+"""Largest per-joint correction of the prior-residual hand, as a fraction of each joint's range."""
+
+RESIDUAL_PENALTY_WEIGHT = 0.01
+"""Weight of the penalty on the size of the per-joint corrections (the mean squared correction is at most 1 per step)."""
+
+NATURAL_JOINT_RANGES = {"finger_r_joint1": (0.0, 1.571)}
+"""Allowed range [rad] of joints that have a natural side. Thumb joint 1 (opposition) goes from -1.57 to 1.57, and the
+designed grasp uses +1.57. Free-joint policies drove it to -1.57, with the thumb behind the hand, so it is restricted
+to the designed side."""
+
+
+@configclass
+class FrankaHX5D20BlockLiftPriorResidualEnvCfg(FrankaHX5D20BlockLiftEnvCfg):
+    """The block-lift task where the hand follows a designed posture and the policy corrects every joint around it.
+
+    The policy commands the seven arm joints, one closure of the thumb-open curl posture (as in the curl control, which
+    held the block at the goal in some seeds) and a bounded correction for each of the 20 finger joints (7 + 1 + 20
+    actions). A correction cannot take a joint further than ``RESIDUAL_AUTHORITY`` of its range from the prior, an action
+    of 0 returns the joint to the prior, and a small penalty pulls unneeded joints back. Everything else is as in the
+    single-closure task.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.actions.gripper_action = PriorResidualPositionActionCfg(
+            asset_name="robot",
+            joint_names=["finger_r_joint.*"],
+            open_command_expr=FRANKA_HX5D20_HAND_OPEN,
+            prior_shape=FRANKA_HX5D20_HAND_SYNERGIES["curl"],
+            residual_authority=RESIDUAL_AUTHORITY,
+            joint_ranges=NATURAL_JOINT_RANGES,
+            closing_time=HAND_CLOSING_TIME,
+        )
+
+        self.rewards.hand_residual = RewTerm(func=rewards.hand_residual_penalty, weight=-RESIDUAL_PENALTY_WEIGHT)
