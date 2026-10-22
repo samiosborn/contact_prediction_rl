@@ -1,0 +1,98 @@
+Step 1: do the fingertip contact sensors respond to real grasps on Lift? (PhysX, sensors added in memory only)
+Script: scripts/franka_hx5d20/validate_lift_contacts.py   Branch: feat/tactile-lift
+
+################ prior-residual hand, seed 2, model_599 (holds the block, thumb open), 16 episodes
+=== Fingertip contacts: 16 episodes of 400 steps (8 s), model_599.pt ===
+valid steps: 6384   lifted steps (block > 2 cm up): 5719
+label vs force-threshold (0.1 N) mismatches: 0  (expected 0)
+
+--- Contact rate by situation (share of steps with the fingertip in contact) ---
+                                thumb    index   middle     ring   little      any   mean #
+block lifted                    11.6%    92.1%    86.9%    99.7%    78.5%    99.9%     3.69
+block on the table              17.9%     0.0%     0.0%    19.5%     0.0%    30.4%     0.37
+hand open (closure < 0.05)       0.0%     0.0%     0.0%     0.0%     0.0%     0.0%     0.00
+hand closed (closure > 0.5)     10.6%    95.7%    90.3%    99.8%    81.6%   100.0%     3.78
+all valid steps                 12.3%    82.5%    77.8%    91.3%    70.3%    92.7%     3.34
+
+--- Timeline (mean over episodes) ---
+time            closure   lifted    thumb    index   middle     ring   little   mean #
+ 0.0- 1.0 s       0.21     0.17      20%       0%       0%      32%       0%     0.52
+ 1.0- 2.0 s       0.70     1.00      27%      61%      23%     100%      38%     2.49
+ 2.0- 3.0 s       0.95     1.00       0%     100%     100%     100%      88%     3.88
+ 3.0- 4.0 s       0.95     1.00       2%      99%     100%      98%      88%     3.87
+ 4.0- 5.0 s       0.94     1.00      12%     100%     100%     100%      88%     4.00
+ 5.0- 6.0 s       0.94     1.00      12%     100%     100%     100%      88%     4.00
+ 6.0- 7.0 s       0.94     1.00      12%     100%     100%     100%      88%     4.00
+ 7.0- 8.0 s       0.94     1.00      12%     100%     100%     100%      88%     4.00
+
+--- Timing of events (median over episodes) ---
+hand closes (closure > 0.5)   1.10 s  (16/16 envs)
+first fingertip contact       0.54 s  (16/16 envs)
+block lifted                  0.82 s  (16/16 envs)
+
+lifted steps with NO fingertip contact: 0.1%  (the block may be held by the palm or the finger bases instead)
+force on the fingertips while lifted [N]: median 6.71, 90th percentile 19.38
+
+################ one-value hand, seed 3, model_299 (holds the block, thumb closed), 32 episodes
+=== Fingertip contacts: 32 episodes of 400 steps (8 s), model_299.pt ===
+valid steps: 12768   lifted steps (block > 2 cm up): 10510
+label vs force-threshold (0.1 N) mismatches: 0  (expected 0)
+
+--- Contact rate by situation (share of steps with the fingertip in contact) ---
+                                thumb    index   middle     ring   little      any   mean #
+block lifted                    99.8%    99.6%    99.8%    99.6%   100.0%   100.0%     4.99
+block on the table              56.4%     5.9%     2.4%     1.3%     3.5%    57.0%     0.70
+hand open (closure < 0.05)       0.0%     0.0%     0.0%     0.0%     0.0%     0.0%     0.00
+hand closed (closure > 0.5)     99.7%    95.0%    94.4%    94.0%    94.7%    99.9%     4.78
+all valid steps                 92.1%    83.1%    82.6%    82.2%    82.9%    92.4%     4.23
+
+--- Timeline (mean over episodes) ---
+time            closure   lifted    thumb    index   middle     ring   little   mean #
+ 0.0- 1.0 s       0.25     0.00      39%       0%       0%       0%       0%     0.40
+ 1.0- 2.0 s       0.75     0.59      98%      65%      61%      58%      63%     3.45
+ 2.0- 3.0 s       1.00     1.00     100%     100%     100%     100%     100%     5.00
+ 3.0- 4.0 s       1.00     1.00     100%     100%     100%     100%     100%     5.00
+ 4.0- 5.0 s       1.00     1.00     100%     100%     100%     100%     100%     5.00
+ 5.0- 6.0 s       1.00     1.00     100%     100%     100%     100%     100%     5.00
+ 6.0- 7.0 s       1.00     1.00     100%     100%     100%     100%     100%     5.00
+ 7.0- 8.0 s       1.00     1.00     100%     100%     100%     100%     100%     5.00
+
+--- Timing of events (median over episodes) ---
+hand closes (closure > 0.5)   1.00 s  (32/32 envs)
+first fingertip contact       0.58 s  (32/32 envs)
+block lifted                  1.38 s  (32/32 envs)
+
+lifted steps with NO fingertip contact: 0.0%  (the block may be held by the palm or the finger bases instead)
+force on the fingertips while lifted [N]: median 11.34, 90th percentile 23.26
+
+################ one-value hand, seed 4, model_299 (almost never lifts: negative control), 32 episodes
+=== Fingertip contacts: 32 episodes of 400 steps (8 s), model_299.pt ===
+valid steps: 12768   lifted steps (block > 2 cm up): 23
+label vs force-threshold (0.1 N) mismatches: 0  (expected 0)
+
+--- Contact rate by situation (share of steps with the fingertip in contact) ---
+                                thumb    index   middle     ring   little      any   mean #
+block lifted                     4.3%     0.0%    47.8%    43.5%    52.2%    52.2%     1.48
+block on the table               2.2%    19.6%     7.3%     3.1%    12.5%    23.6%     0.45
+hand open (closure < 0.05)       0.0%     0.0%     0.0%     0.0%     0.0%     0.0%     0.00
+hand closed (closure > 0.5)      2.5%    32.1%    12.1%     5.3%    20.6%    37.7%     0.73
+all valid steps                  2.2%    19.6%     7.4%     3.2%    12.5%    23.7%     0.45
+
+--- Timeline (mean over episodes) ---
+time            closure   lifted    thumb    index   middle     ring   little   mean #
+ 0.0- 1.0 s       0.25     0.00       0%       0%       0%       0%       0%     0.00
+ 1.0- 2.0 s       0.60     0.00       1%      32%       7%       1%      15%     0.56
+ 2.0- 3.0 s       0.62     0.00       3%      50%      25%      11%      33%     1.21
+ 3.0- 4.0 s       0.59     0.00       2%      29%      13%       6%      22%     0.72
+ 4.0- 5.0 s       0.53     0.00       3%      14%       5%       2%      10%     0.34
+ 5.0- 6.0 s       0.51     0.00       2%      12%       3%       1%       7%     0.26
+ 6.0- 7.0 s       0.51     0.01       2%      11%       3%       2%       7%     0.24
+ 7.0- 8.0 s       0.49     0.01       4%       9%       3%       2%       7%     0.25
+
+--- Timing of events (median over episodes) ---
+hand closes (closure > 0.5)   1.00 s  (32/32 envs)
+first fingertip contact       1.28 s  (32/32 envs)
+block lifted                  6.18 s  (2/32 envs)
+
+lifted steps with NO fingertip contact: 47.8%  (the block may be held by the palm or the finger bases instead)
+force on the fingertips while lifted [N]: median 1.34, 90th percentile 2.78
