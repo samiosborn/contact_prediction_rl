@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from itertools import chain
 from typing import Any
 
 import torch
@@ -12,7 +11,27 @@ from tensordict import TensorDict
 from contact_prediction_rl.learning.models.actor import Actor
 from contact_prediction_rl.learning.models.contact_prediction import ContactPredictionHead
 from contact_prediction_rl.learning.models.critic import Critic
+from contact_prediction_rl.learning.models.shared import SharedActor, SharedCritic, SharedEncoder
 from contact_prediction_rl.learning.storage.rollout_storage import RolloutStorage
+
+
+def _unique_parameters(*groups) -> list[nn.Parameter]:
+    """Parameters of several groups, each listed once and in order.
+
+    An actor and a critic that share an encoder both report the encoder's parameters, which an optimiser must not list
+    twice.
+    """
+
+    seen: set[int] = set()
+    unique: list[nn.Parameter] = []
+
+    for group in groups:
+        for parameter in group:
+            if id(parameter) not in seen:
+                seen.add(id(parameter))
+                unique.append(parameter)
+
+    return unique
 
 
 class PPO:
@@ -61,14 +80,27 @@ class PPO:
         if optimizer != "adam":
             raise ValueError(f"Unsupported optimizer: {optimizer}")
 
+        head_parameters = list(self.contact_head.parameters()) if self.contact_head is not None else []
+
         self.optimizer = torch.optim.Adam(
-            chain(
+            _unique_parameters(
                 self.actor.parameters(),
                 self.critic.parameters(),
-                self.contact_head.parameters() if self.contact_head is not None else (),
+                head_parameters,
             ),
             lr=learning_rate,
         )
+
+        # Gradients are clipped per group. Separate actor and critic: the actor (with the contact head) and the critic
+        # are clipped independently. Shared encoder: everything is clipped together, once, so that the shared
+        # parameters are not clipped twice.
+        actor_group = _unique_parameters(self.actor.parameters(), head_parameters)
+        critic_group = _unique_parameters(self.critic.parameters())
+
+        if {id(p) for p in actor_group} & {id(p) for p in critic_group}:
+            self._clip_groups = [_unique_parameters(actor_group, critic_group)]
+        else:
+            self._clip_groups = [actor_group, critic_group]
 
         self.storage = storage
         self.transition = RolloutStorage.Transition()
@@ -289,16 +321,12 @@ class PPO:
 
             loss.backward()
 
-            # Clip actor and critic gradients independently
-            nn.utils.clip_grad_norm_(
-                chain(self.actor.parameters(), self.contact_head.parameters() if self.contact_head is not None else ()),
-                self.max_grad_norm,
-            )
-
-            nn.utils.clip_grad_norm_(
-                self.critic.parameters(),
-                self.max_grad_norm,
-            )
+            # Clip the gradients of each group (see the groups defined in __init__)
+            for group in self._clip_groups:
+                nn.utils.clip_grad_norm_(
+                    group,
+                    self.max_grad_norm,
+                )
 
             self.optimizer.step()
 
@@ -427,18 +455,46 @@ class PPO:
 
         action_dim = env.num_actions
 
-        actor = Actor(
-            observation_dim=observation_dim,
-            action_dim=action_dim,
-            **cfg["actor"],
-        ).to(device)
+        # "separate": an actor and a critic with an encoder each (default). "shared": one encoder read by both heads
+        architecture = cfg.get("architecture", "separate")
+
+        if architecture == "shared":
+            encoder = SharedEncoder(
+                observation_dim=observation_dim,
+                **cfg["encoder"],
+            ).to(device)
+
+            actor = SharedActor(
+                encoder=encoder,
+                action_dim=action_dim,
+                **cfg["actor"],
+            ).to(device)
+
+            critic = SharedCritic(
+                encoder=encoder,
+                **cfg["critic"],
+            ).to(device)
+
+            latent_dim = cfg["encoder"]["latent_dim"]
+
+        elif architecture == "separate":
+            actor = Actor(
+                observation_dim=observation_dim,
+                action_dim=action_dim,
+                **cfg["actor"],
+            ).to(device)
+
+            critic = Critic(
+                observation_dim=observation_dim,
+                **cfg["critic"],
+            ).to(device)
+
+            latent_dim = cfg["actor"]["latent_dim"]
+
+        else:
+            raise ValueError(f"Unknown architecture: {architecture!r} (expected 'separate' or 'shared')")
 
         print(f"Actor Model: {actor}")
-
-        critic = Critic(
-            observation_dim=observation_dim,
-            **cfg["critic"],
-        ).to(device)
 
         print(f"Critic Model: {critic}")
 
@@ -450,7 +506,7 @@ class PPO:
                 raise ValueError("Contact BCE requires a privileged 'contact' observation group")
             contact_loss_weight = float(contact_cfg["loss_weight"])
             contact_head = ContactPredictionHead(
-                latent_dim=cfg["actor"]["latent_dim"],
+                latent_dim=latent_dim,
                 num_contacts=obs["contact"].shape[-1],
                 hidden_dims=contact_cfg["hidden_dims"],
                 activation=contact_cfg["activation"],
