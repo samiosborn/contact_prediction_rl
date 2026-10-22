@@ -1,0 +1,433 @@
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-13_18-09-33_lowent_seed42 model_300
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 21.0 cm, 90th pct 23.5 cm, worst 29.3 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +14.9, std 2.5
+  y: mean +7.8, std 5.0
+  z: mean -10.8, std 1.6
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (512):
+  finger_r_joint1: mean -1.57, std 0.00
+  finger_r_joint2: mean +0.00, std 0.00
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.00, std 0.00
+  finger_r_joint5: mean -0.50, std 0.12
+  finger_r_joint6: mean +2.00, std 0.00
+  finger_r_joint7: mean +0.00, std 0.00
+  finger_r_joint8: mean +1.57, std 0.00
+  finger_r_joint9: mean -0.60, std 0.00
+  finger_r_joint10: mean +1.82, std 0.18
+  finger_r_joint11: mean +0.00, std 0.00
+  finger_r_joint12: mean +1.57, std 0.00
+  finger_r_joint13: mean -0.46, std 0.06
+  finger_r_joint14: mean +2.00, std 0.00
+  finger_r_joint15: mean +0.00, std 0.00
+  finger_r_joint16: mean +1.57, std 0.00
+  finger_r_joint17: mean +0.60, std 0.00
+  finger_r_joint18: mean +0.00, std 0.01
+  finger_r_joint19: mean +0.59, std 0.09
+  finger_r_joint20: mean +0.39, std 0.07
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-15T12:35:20Z [5,797ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-13_18-09-33_lowent_seed42 model_400
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end   68.0 %  (+/- 2.1)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 2.66 s, 90th pct 2.78 s  (354 envs)
+time to first goal     never
+closest to goal while held: median 9.7 cm, 90th pct 10.4 cm, worst 11.0 cm
+distance to goal at end: median 10.2 cm, 90th pct 22.4 cm, worst 24.4 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +3.6, std 4.1
+  y: mean +11.5, std 2.6
+  z: mean -3.8, std 6.4
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 19 deg, 90th pct 23 deg; upright (<10 deg) 9 %
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-13_18-09-33_lowent_seed42 model_500
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end     74.2 %  (+/- 1.9)
+lifted in hand at end   80.7 %  (+/- 1.7)
+reached goal ever       81.8 %  (+/- 1.7)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 3.22 s, 90th pct 3.34 s  (420 envs)
+time to first goal     median 5.42 s, 90th pct 6.08 s  (419 envs)
+closest to goal while held: median 4.2 cm, 90th pct 4.4 cm, worst 5.3 cm
+distance to goal at end: median 4.4 cm, 90th pct 14.5 cm, worst 24.4 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -1.7, std 4.5
+  y: mean +1.4, std 2.3
+  z: mean -3.8, std 4.5
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 10 deg, 90th pct 16 deg; upright (<10 deg) 48 %
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-13_18-09-33_lowent_seed42 model_599
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      6.2 %  (+/- 1.1)
+lifted in hand at end   45.1 %  (+/- 2.2)
+reached goal ever       67.4 %  (+/- 2.1)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 2.00 s, 90th pct 2.06 s  (410 envs)
+time to first goal     median 3.28 s, 90th pct 3.68 s  (345 envs)
+closest to goal while held: median 2.0 cm, 90th pct 15.1 cm, worst 20.4 cm
+distance to goal at end: median 14.0 cm, 90th pct 25.4 cm, worst 32.6 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +6.1, std 5.3
+  y: mean +4.0, std 6.6
+  z: mean -4.9, std 8.9
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 12 deg, 90th pct 15 deg; upright (<10 deg) 23 %
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-13_18-18-17_lowent_seed1 model_300
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-13_18-18-17_lowent_seed1 model_400
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-13_18-18-17_lowent_seed1 model_500
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-13_18-18-17_lowent_seed1 model_599
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-15_12-29-34_lowent_seed42 model_300
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 21.0 cm, 90th pct 23.5 cm, worst 29.3 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +14.9, std 2.5
+  y: mean +7.8, std 5.0
+  z: mean -10.8, std 1.6
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (512):
+  finger_r_joint1: mean -1.57, std 0.00
+  finger_r_joint2: mean +0.00, std 0.00
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.00, std 0.00
+  finger_r_joint5: mean -0.50, std 0.12
+  finger_r_joint6: mean +2.00, std 0.00
+  finger_r_joint7: mean +0.00, std 0.00
+  finger_r_joint8: mean +1.57, std 0.00
+  finger_r_joint9: mean -0.60, std 0.00
+  finger_r_joint10: mean +1.82, std 0.18
+  finger_r_joint11: mean +0.00, std 0.00
+  finger_r_joint12: mean +1.57, std 0.00
+  finger_r_joint13: mean -0.46, std 0.06
+  finger_r_joint14: mean +2.00, std 0.00
+  finger_r_joint15: mean +0.00, std 0.00
+  finger_r_joint16: mean +1.57, std 0.00
+  finger_r_joint17: mean +0.60, std 0.00
+  finger_r_joint18: mean +0.00, std 0.01
+  finger_r_joint19: mean +0.59, std 0.09
+  finger_r_joint20: mean +0.39, std 0.07
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-15T12:36:51Z [5,814ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-15_12-29-34_lowent_seed42 model_400
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end   68.0 %  (+/- 2.1)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 2.66 s, 90th pct 2.78 s  (354 envs)
+time to first goal     never
+closest to goal while held: median 9.7 cm, 90th pct 10.4 cm, worst 11.0 cm
+distance to goal at end: median 10.2 cm, 90th pct 22.4 cm, worst 24.4 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +3.6, std 4.1
+  y: mean +11.5, std 2.6
+  z: mean -3.8, std 6.4
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 19 deg, 90th pct 23 deg; upright (<10 deg) 9 %
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-15_12-29-34_lowent_seed42 model_500
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end     74.2 %  (+/- 1.9)
+lifted in hand at end   80.7 %  (+/- 1.7)
+reached goal ever       81.8 %  (+/- 1.7)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 3.22 s, 90th pct 3.34 s  (420 envs)
+time to first goal     median 5.42 s, 90th pct 6.08 s  (419 envs)
+closest to goal while held: median 4.2 cm, 90th pct 4.4 cm, worst 5.3 cm
+distance to goal at end: median 4.4 cm, 90th pct 14.5 cm, worst 24.4 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -1.7, std 4.5
+  y: mean +1.4, std 2.3
+  z: mean -3.8, std 4.5
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 10 deg, 90th pct 16 deg; upright (<10 deg) 48 %
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-15_12-29-34_lowent_seed42 model_599
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      6.2 %  (+/- 1.1)
+lifted in hand at end   45.1 %  (+/- 2.2)
+reached goal ever       67.4 %  (+/- 2.1)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 2.00 s, 90th pct 2.06 s  (410 envs)
+time to first goal     median 3.28 s, 90th pct 3.68 s  (345 envs)
+closest to goal while held: median 2.0 cm, 90th pct 15.1 cm, worst 20.4 cm
+distance to goal at end: median 14.0 cm, 90th pct 25.4 cm, worst 32.6 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +6.1, std 5.3
+  y: mean +4.0, std 6.6
+  z: mean -4.9, std 8.9
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 12 deg, 90th pct 15 deg; upright (<10 deg) 23 %
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-15_12-42-00_lowent_seed1 model_300
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 17.0 cm, 90th pct 17.6 cm, worst 19.1 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +10.7, std 0.5
+  y: mean -9.0, std 1.7
+  z: mean -9.4, std 0.2
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (512):
+  finger_r_joint1: mean +1.57, std 0.00
+  finger_r_joint2: mean -1.57, std 0.00
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.00, std 0.00
+  finger_r_joint5: mean -0.60, std 0.00
+  finger_r_joint6: mean +0.00, std 0.00
+  finger_r_joint7: mean +0.00, std 0.00
+  finger_r_joint8: mean +0.00, std 0.00
+  finger_r_joint9: mean +0.60, std 0.00
+  finger_r_joint10: mean +0.18, std 0.10
+  finger_r_joint11: mean +0.00, std 0.00
+  finger_r_joint12: mean +1.57, std 0.00
+  finger_r_joint13: mean +0.60, std 0.00
+  finger_r_joint14: mean +0.00, std 0.00
+  finger_r_joint15: mean +0.00, std 0.00
+  finger_r_joint16: mean +1.57, std 0.00
+  finger_r_joint17: mean -0.60, std 0.00
+  finger_r_joint18: mean +0.00, std 0.00
+  finger_r_joint19: mean +0.00, std 0.00
+  finger_r_joint20: mean +1.57, std 0.00
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-15T12:38:11Z [5,748ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-15_12-42-00_lowent_seed1 model_400
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 4.64 s, 90th pct 4.64 s  (1 envs)
+time to first goal     never
+closest to goal while held: median 14.2 cm, 90th pct 14.2 cm, worst 14.2 cm
+distance to goal at end: median 17.2 cm, 90th pct 17.5 cm, worst 25.5 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +9.7, std 0.6
+  y: mean -10.5, std 1.2
+  z: mean -9.3, std 0.4
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (512):
+  finger_r_joint1: mean +1.57, std 0.00
+  finger_r_joint2: mean -1.57, std 0.00
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.00, std 0.00
+  finger_r_joint5: mean -0.60, std 0.00
+  finger_r_joint6: mean +0.00, std 0.00
+  finger_r_joint7: mean +0.00, std 0.00
+  finger_r_joint8: mean +0.00, std 0.00
+  finger_r_joint9: mean +0.60, std 0.00
+  finger_r_joint10: mean +0.00, std 0.00
+  finger_r_joint11: mean +0.00, std 0.00
+  finger_r_joint12: mean +1.57, std 0.00
+  finger_r_joint13: mean +0.60, std 0.00
+  finger_r_joint14: mean +0.00, std 0.00
+  finger_r_joint15: mean +0.00, std 0.00
+  finger_r_joint16: mean +1.57, std 0.00
+  finger_r_joint17: mean -0.60, std 0.00
+  finger_r_joint18: mean +0.00, std 0.00
+  finger_r_joint19: mean +0.00, std 0.00
+  finger_r_joint20: mean +1.57, std 0.00
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-15T12:38:30Z [5,715ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-15_12-42-00_lowent_seed1 model_500
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 17.1 cm, 90th pct 18.5 cm, worst 25.4 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +10.6, std 2.0
+  y: mean -5.7, std 5.5
+  z: mean -9.1, std 0.4
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (512):
+  finger_r_joint1: mean +1.57, std 0.00
+  finger_r_joint2: mean -1.57, std 0.00
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.00, std 0.00
+  finger_r_joint5: mean -0.60, std 0.00
+  finger_r_joint6: mean +0.00, std 0.00
+  finger_r_joint7: mean +0.00, std 0.00
+  finger_r_joint8: mean +0.00, std 0.00
+  finger_r_joint9: mean +0.60, std 0.00
+  finger_r_joint10: mean +0.60, std 0.09
+  finger_r_joint11: mean +0.00, std 0.00
+  finger_r_joint12: mean +1.57, std 0.00
+  finger_r_joint13: mean +0.60, std 0.00
+  finger_r_joint14: mean +0.00, std 0.00
+  finger_r_joint15: mean +0.00, std 0.00
+  finger_r_joint16: mean +1.57, std 0.00
+  finger_r_joint17: mean -0.60, std 0.00
+  finger_r_joint18: mean +0.00, std 0.00
+  finger_r_joint19: mean +0.00, std 0.00
+  finger_r_joint20: mean +1.57, std 0.00
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-15T12:38:50Z [5,808ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-15_12-42-00_lowent_seed1 model_599
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.2 %  (+/- 0.2)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 7.52 s, 90th pct 7.79 s  (4 envs)
+time to first goal     never
+closest to goal while held: median 17.4 cm, 90th pct 19.2 cm, worst 19.3 cm
+distance to goal at end: median 17.4 cm, 90th pct 25.0 cm, worst 39.4 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +13.7, std 4.3
+  y: mean -4.8, std 3.9
+  z: mean -10.0, std 1.6
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 15 deg, 90th pct 15 deg; upright (<10 deg) 0 %
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-15_12-57-33_lowent_seed2 model_300
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end   48.0 %  (+/- 2.2)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 5.96 s, 90th pct 6.06 s  (247 envs)
+time to first goal     never
+closest to goal while held: median 10.7 cm, 90th pct 11.0 cm, worst 12.8 cm
+distance to goal at end: median 26.5 cm, 90th pct 28.7 cm, worst 29.3 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +7.4, std 12.4
+  y: mean +0.9, std 17.4
+  z: mean +0.3, std 13.5
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 47 deg, 90th pct 53 deg; upright (<10 deg) 0 %
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-15_12-57-33_lowent_seed2 model_400
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end   14.5 %  (+/- 1.6)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 2.70 s, 90th pct 3.33 s  (268 envs)
+time to first goal     never
+closest to goal while held: median 10.6 cm, 90th pct 12.6 cm, worst 14.4 cm
+distance to goal at end: median 24.3 cm, 90th pct 31.2 cm, worst 40.9 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +13.9, std 8.3
+  y: mean -7.8, std 12.7
+  z: mean -8.5, std 9.6
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 43 deg, 90th pct 55 deg; upright (<10 deg) 0 %
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-15_12-57-33_lowent_seed2 model_500
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.8 %  (+/- 0.4)
+lifted in hand at end   95.1 %  (+/- 1.0)
+reached goal ever       95.3 %  (+/- 0.9)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 2.32 s, 90th pct 2.44 s  (488 envs)
+time to first goal     median 2.42 s, 90th pct 2.58 s  (488 envs)
+closest to goal while held: median 2.9 cm, 90th pct 3.8 cm, worst 4.4 cm
+distance to goal at end: median 28.6 cm, 90th pct 31.6 cm, worst 38.0 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -5.2, std 8.6
+  y: mean +16.9, std 15.4
+  z: mean +7.9, std 7.0
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 26 deg, 90th pct 35 deg; upright (<10 deg) 6 %
+################ logs/ppo/lift_block_franka_hx5d20_all_joints_low_entropy/2026-10-15_12-57-33_lowent_seed2 model_599
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-AllJoints-Right: 512 deterministic episodes, seed 42 ===
+held at goal at end      0.2 %  (+/- 0.2)
+lifted in hand at end   99.2 %  (+/- 0.4)
+reached goal ever       94.1 %  (+/- 1.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 1.96 s, 90th pct 2.14 s  (511 envs)
+time to first goal     median 2.04 s, 90th pct 2.24 s  (482 envs)
+closest to goal while held: median 2.2 cm, 90th pct 4.5 cm, worst 7.1 cm
+distance to goal at end: median 20.0 cm, 90th pct 26.3 cm, worst 37.8 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +3.0, std 3.8
+  y: mean +1.7, std 17.3
+  z: mean +8.8, std 5.7
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 27 deg, 90th pct 37 deg; upright (<10 deg) 21 %
