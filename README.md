@@ -304,6 +304,18 @@ uv run python scripts/train.py \
   --num_envs 1024 --max_iterations 600 --seed 42
 ```
 
+Tactile reconstruction (TR) is selected with the second agent configuration of the tactile task. A decoder
+`z -> 512 -> 512 -> 20` must reproduce the stacked contact readings (the last 20 entries of the policy observation) with a
+binary cross-entropy of positive weight 10. It has its own optimiser (own learning rate, no gradient clipping) that is
+stepped after each PPO step on the same mini-batch, and it is discarded after training. Its loss and detection metrics
+(`aux_loss`, `aux_f1`, ...) appear under `Auxiliary/` in TensorBoard.
+
+```bash
+uv run python scripts/train.py \
+  --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right \
+  --agent ppo_tr_cfg_entry_point --num_envs 1024 --max_iterations 600 --seed 42
+```
+
 The combined Franka + HX5-D20 asset is documented in:
 
 ```text

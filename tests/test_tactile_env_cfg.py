@@ -60,3 +60,19 @@ def test_the_tactile_task_has_five_sensors_and_enables_contact_reporting():
 
     for name in FINGERTIP_SENSOR_NAMES:
         assert cfg.scene.__dict__[name].filter_prim_paths_expr == ["{ENV_REGEX_NS}/Object"]
+
+
+def test_the_tr_agent_decodes_exactly_the_tactile_part_of_the_observation():
+    from contact_prediction_rl.tasks.lift.config.franka_hx5d20.agents.ppo_cfg import (
+        TACTILE_DIM,
+        FrankaHX5D20BlockLiftTactileTRPaperPPOCfg,
+    )
+
+    cfg = FrankaHX5D20BlockLiftTactileTRPaperPPOCfg().to_dict()
+
+    # 5 fingertips over the stacked history: the last entries of the policy observation
+    assert TACTILE_DIM == OBSERVATION_HISTORY * len(FINGERTIP_SENSOR_NAMES)
+    assert cfg["auxiliary"]["tactile_dim"] == TACTILE_DIM
+    assert cfg["auxiliary"]["pos_weight"] == 10.0
+    assert cfg["auxiliary"]["hidden_dims"] == [512, 512]
+    assert cfg["architecture"] == "shared"

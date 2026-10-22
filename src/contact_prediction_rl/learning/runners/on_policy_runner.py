@@ -529,6 +529,10 @@ class OnPolicyRunner:
                 if name in loss_dict:
                     print(f"{name:>35} {loss_dict[name]:.4f}")
 
+        for name, value in loss_dict.items():
+            if name.startswith("aux_"):
+                print(f"{name:>35} {value:.4f}")
+
         print(f"{'Learning rate:':>35} {self.alg.learning_rate:.6g}")
 
         print(f"{'Mean action std:':>35} {action_std:.4f}")
@@ -571,6 +575,10 @@ class OnPolicyRunner:
         for name in ("contact_bce", "contact_positive_rate", "contact_predicted_rate", "contact_f1"):
             if name in loss_dict:
                 self.writer.add_scalar(f"Auxiliary/{name}", loss_dict[name], iteration)
+
+        for name, value in loss_dict.items():
+            if name.startswith("aux_"):
+                self.writer.add_scalar(f"Auxiliary/{name}", value, iteration)
 
         self.writer.add_scalar(
             "Policy/learning_rate",

@@ -9,6 +9,7 @@ import torch.nn as nn
 from tensordict import TensorDict
 
 from contact_prediction_rl.learning.models.actor import Actor
+from contact_prediction_rl.learning.models.auxiliary import TactileReconstruction
 from contact_prediction_rl.learning.models.contact_prediction import ContactPredictionHead
 from contact_prediction_rl.learning.models.critic import Critic
 from contact_prediction_rl.learning.models.shared import SharedActor, SharedCritic, SharedEncoder
@@ -38,6 +39,11 @@ class PPO:
     """Proximal Policy Optimisation.
 
     Only ``obs["policy"]`` enters the actor and critic.
+
+    An optional auxiliary objective (see ``models/auxiliary.py``) trains the shared encoder through the latent, as in the
+    tactile-RL paper: it has its own optimiser (its own learning rate, no gradient clipping) that is stepped right after
+    the PPO step on the same mini-batch.
+
     Other TensorDict groups, including privileged contact labels, are preserved in rollout storage but never used as policy inputs.
     """
 
@@ -63,6 +69,9 @@ class PPO:
         device: str = "cpu",
         contact_head: ContactPredictionHead | None = None,
         contact_loss_weight: float = 0.0,
+        auxiliary: nn.Module | None = None,
+        auxiliary_weight: float = 1.0,
+        auxiliary_learning_rate: float = 1e-4,
     ) -> None:
         self.device = device
 
@@ -101,6 +110,21 @@ class PPO:
             self._clip_groups = [_unique_parameters(actor_group, critic_group)]
         else:
             self._clip_groups = [actor_group, critic_group]
+
+        # Auxiliary objective: its networks and the shared encoder (which it trains through the latent) are updated by
+        # a second optimiser with its own learning rate. Its gradients are not clipped.
+        self.auxiliary = auxiliary.to(self.device) if auxiliary is not None else None
+        self.auxiliary_weight = float(auxiliary_weight)
+        self.aux_optimizer = None
+
+        if self.auxiliary is not None:
+            if not hasattr(self.actor, "encoder"):
+                raise ValueError("An auxiliary objective needs the shared-encoder architecture")
+
+            self.aux_optimizer = torch.optim.Adam(
+                _unique_parameters(self.actor.encoder.parameters(), self.auxiliary.parameters()),
+                lr=auxiliary_learning_rate,
+            )
 
         self.storage = storage
         self.transition = RolloutStorage.Transition()
@@ -220,6 +244,8 @@ class PPO:
         mean_entropy = 0.0
         mean_contact_loss = 0.0
         contact_metrics: dict[str, float] = {}
+        mean_aux_loss = 0.0
+        aux_metrics: dict[str, float] = {}
 
         generator = self.storage.mini_batch_generator(
             self.num_mini_batches,
@@ -330,6 +356,20 @@ class PPO:
 
             self.optimizer.step()
 
+            # Auxiliary step on the same mini-batch, with the encoder as just updated by PPO
+            if self.auxiliary is not None:
+                aux_loss, batch_aux_metrics = self.auxiliary.loss(observations, self.actor.encode(observations))
+
+                self.aux_optimizer.zero_grad()
+
+                (self.auxiliary_weight * aux_loss).backward()
+
+                self.aux_optimizer.step()
+
+                mean_aux_loss += aux_loss.item()
+                for name, value in batch_aux_metrics.items():
+                    aux_metrics[name] = aux_metrics.get(name, 0.0) + value
+
             mean_value_loss += value_loss.item()
 
             mean_surrogate_loss += surrogate_loss.item()
@@ -353,6 +393,9 @@ class PPO:
         if self.contact_head is not None:
             result["contact_bce"] = mean_contact_loss
             result.update({name: value / num_updates for name, value in contact_metrics.items()})
+        if self.auxiliary is not None:
+            result["aux_loss"] = mean_aux_loss / num_updates
+            result.update({name: value / num_updates for name, value in aux_metrics.items()})
         return result
 
     def train_mode(
@@ -364,6 +407,8 @@ class PPO:
         self.critic.train()
         if self.contact_head is not None:
             self.contact_head.train()
+        if self.auxiliary is not None:
+            self.auxiliary.train()
 
     def eval_mode(
         self,
@@ -374,6 +419,8 @@ class PPO:
         self.critic.eval()
         if self.contact_head is not None:
             self.contact_head.eval()
+        if self.auxiliary is not None:
+            self.auxiliary.eval()
 
     def save(
         self,
@@ -385,6 +432,8 @@ class PPO:
             "critic_state_dict": (self._raw_critic.state_dict()),
             "optimizer_state_dict": (self.optimizer.state_dict()),
             "contact_head_state_dict": self.contact_head.state_dict() if self.contact_head is not None else None,
+            "auxiliary_state_dict": self.auxiliary.state_dict() if self.auxiliary is not None else None,
+            "aux_optimizer_state_dict": self.aux_optimizer.state_dict() if self.aux_optimizer is not None else None,
         }
 
     def load(
@@ -424,8 +473,19 @@ class PPO:
             else:
                 self.contact_head.load_state_dict(state, strict=strict)
 
+        if load_cfg.get("auxiliary", True) and self.auxiliary is not None:
+            state = loaded_dict.get("auxiliary_state_dict")
+            if state is None:
+                if strict:
+                    raise RuntimeError("Checkpoint has no auxiliary objective. Load actor/critic only or use a new run.")
+            else:
+                self.auxiliary.load_state_dict(state, strict=strict)
+
         if load_cfg.get("optimizer"):
             self.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
+
+            if self.aux_optimizer is not None and loaded_dict.get("aux_optimizer_state_dict") is not None:
+                self.aux_optimizer.load_state_dict(loaded_dict["aux_optimizer_state_dict"])
 
             # Synchronise PPO learning rate with the loaded optimiser
             self.learning_rate = self.optimizer.param_groups[0]["lr"]
@@ -513,6 +573,32 @@ class PPO:
                 pos_weight=float(contact_cfg["pos_weight"]),
             ).to(device)
 
+        # Optional auxiliary objective of the tactile-RL paper (needs the shared encoder)
+        aux_cfg = cfg.get("auxiliary")
+        auxiliary_kwargs: dict[str, Any] = {}
+        if aux_cfg is not None:
+            if architecture != "shared":
+                raise ValueError("An auxiliary objective needs architecture='shared'")
+
+            if aux_cfg["objective"] == "tactile_reconstruction":
+                auxiliary = TactileReconstruction(
+                    latent_dim=latent_dim,
+                    tactile_dim=aux_cfg["tactile_dim"],
+                    hidden_dims=aux_cfg["hidden_dims"],
+                    activation=aux_cfg["activation"],
+                    pos_weight=float(aux_cfg["pos_weight"]),
+                ).to(device)
+            else:
+                raise ValueError(f"Unknown auxiliary objective: {aux_cfg['objective']!r}")
+
+            print(f"Auxiliary objective: {auxiliary}")
+
+            auxiliary_kwargs = {
+                "auxiliary": auxiliary,
+                "auxiliary_weight": float(aux_cfg["loss_weight"]),
+                "auxiliary_learning_rate": float(aux_cfg["learning_rate"]),
+            }
+
         storage = RolloutStorage(
             num_envs=env.num_envs,
             num_transitions_per_env=cfg["num_steps_per_env"],
@@ -528,6 +614,7 @@ class PPO:
             device=device,
             contact_head=contact_head,
             contact_loss_weight=contact_loss_weight,
+            **auxiliary_kwargs,
             **cfg["algorithm"],
         )
 

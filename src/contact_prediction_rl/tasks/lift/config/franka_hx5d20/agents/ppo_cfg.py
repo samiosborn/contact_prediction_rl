@@ -3,6 +3,7 @@
 from isaaclab.utils import configclass
 
 import contact_prediction_rl.learning.configs.ppo as CONFIG
+import contact_prediction_rl.learning.configs.tactile_rl as TACTILE_RL
 
 
 @configclass
@@ -222,3 +223,30 @@ class FrankaHX5D20BlockLiftTactilePaperPPOCfg(FrankaHX5D20BlockLiftPaperPPOCfg):
     """Paper agent for the tactile task: PPO(prop + tactile), the base of the auxiliary losses"""
 
     experiment_name = "lift_block_franka_hx5d20_prior_residual_tactile"
+
+
+TACTILE_DIM = 20
+"""Size of the tactile part at the end of the policy observation of the tactile task: 5 fingertips over the last 4 steps
+(``OBSERVATION_HISTORY`` x number of fingertips in ``env_cfg.py``, checked by a test)."""
+
+
+@configclass
+class FrankaHX5D20BlockLiftTactileTRPaperPPOCfg(FrankaHX5D20BlockLiftTactilePaperPPOCfg):
+    """Paper agent for the tactile task with the tactile reconstruction (TR) auxiliary loss: PPO(prop + tactile) + TR.
+
+    The decoder ``z -> 512 -> 512 -> 20`` has to reproduce the stacked tactile readings of the observation, with a
+    binary cross-entropy of positive weight 10. It has its own optimiser. Select it with
+    ``--agent ppo_tr_cfg_entry_point``. Everything else is the same as the tactile baseline.
+    """
+
+    experiment_name = "lift_block_franka_hx5d20_prior_residual_tactile_tr"
+
+    auxiliary = {
+        "objective": "tactile_reconstruction",
+        "tactile_dim": TACTILE_DIM,
+        "hidden_dims": TACTILE_RL.DECODER_HIDDEN_DIMS,
+        "activation": TACTILE_RL.DECODER_ACTIVATION,
+        "pos_weight": TACTILE_RL.TR_POS_WEIGHT,
+        "loss_weight": TACTILE_RL.AUX_LOSS_WEIGHT,
+        "learning_rate": TACTILE_RL.AUX_LEARNING_RATE,
+    }

@@ -148,6 +148,10 @@ gym.register(
             f"{agents.__name__}.ppo_cfg:"
             "FrankaHX5D20BlockLiftTactilePaperPPOCfg"
         ),
+        "ppo_tr_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20BlockLiftTactileTRPaperPPOCfg"
+        ),
         "default_agent": "ppo",
     },
 )
