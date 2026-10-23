@@ -301,3 +301,43 @@ class FrankaHX5D20GraspStartTactileFRPaperPPOCfg(FrankaHX5D20BlockLiftTactileFRP
     """PPO(prop + tactile) + FR on the grasp-start task"""
 
     experiment_name = "lift_block_franka_hx5d20_grasp_start_tactile_fr"
+
+
+# Raw contacts: the contact bits skip the running normalisation. With the normaliser, a bit that is on in 0.1 % of the
+# readings becomes a value of 24 when it is on (50 at 0.01 %), and every run that received the contacts failed on the
+# grasp-start task while all runs without them solved it.
+RAW_TACTILE_ENCODER = {
+    "hidden_dims": [1024, 512],
+    "latent_dim": 256,
+    "activation": "elu",
+    "layer_norm": True,
+    "observation_normalisation": True,
+    "raw_tail_dim": TACTILE_DIM,
+}
+
+
+@configclass
+class FrankaHX5D20GraspStartTactileRawPaperPPOCfg(FrankaHX5D20GraspStartTactilePaperPPOCfg):
+    """PPO(prop + tactile) on the grasp-start task, with the contacts fed to the encoder raw (not normalised)"""
+
+    experiment_name = "lift_block_franka_hx5d20_grasp_start_tactile_raw"
+
+    encoder = RAW_TACTILE_ENCODER
+
+
+@configclass
+class FrankaHX5D20GraspStartTactileRawTRPaperPPOCfg(FrankaHX5D20GraspStartTactileTRPaperPPOCfg):
+    """+ TR on the grasp-start task, with raw contacts"""
+
+    experiment_name = "lift_block_franka_hx5d20_grasp_start_tactile_raw_tr"
+
+    encoder = RAW_TACTILE_ENCODER
+
+
+@configclass
+class FrankaHX5D20GraspStartTactileRawFRPaperPPOCfg(FrankaHX5D20GraspStartTactileFRPaperPPOCfg):
+    """+ FR on the grasp-start task, with raw contacts"""
+
+    experiment_name = "lift_block_franka_hx5d20_grasp_start_tactile_raw_fr"
+
+    encoder = RAW_TACTILE_ENCODER

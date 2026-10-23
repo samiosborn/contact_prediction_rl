@@ -132,3 +132,19 @@ def test_the_grasp_start_agents_have_their_own_experiment_names():
     assert len(names) == 4 and all("grasp_start" in n for n in names)
     assert ppo_cfg.FrankaHX5D20GraspStartTactileTRPaperPPOCfg().to_dict()["auxiliary"]["objective"] == "tactile_reconstruction"
     assert ppo_cfg.FrankaHX5D20GraspStartTactileFRPaperPPOCfg().to_dict()["auxiliary"]["objective"] == "full_reconstruction"
+
+
+def test_the_raw_contact_agents_feed_exactly_the_tactile_part_unnormalised():
+    from contact_prediction_rl.tasks.lift.config.franka_hx5d20.agents import ppo_cfg
+
+    for cls in (
+        ppo_cfg.FrankaHX5D20GraspStartTactileRawPaperPPOCfg,
+        ppo_cfg.FrankaHX5D20GraspStartTactileRawTRPaperPPOCfg,
+        ppo_cfg.FrankaHX5D20GraspStartTactileRawFRPaperPPOCfg,
+    ):
+        cfg = cls().to_dict()
+        assert cfg["encoder"]["raw_tail_dim"] == ppo_cfg.TACTILE_DIM
+        assert "raw" in cfg["experiment_name"]
+
+    # the other agents keep the normalised contacts
+    assert "raw_tail_dim" not in ppo_cfg.FrankaHX5D20GraspStartTactilePaperPPOCfg().to_dict()["encoder"]

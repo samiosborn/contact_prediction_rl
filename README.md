@@ -347,6 +347,11 @@ uv run python scripts/train.py \
   --agent ppo_tr_cfg_entry_point --num_envs 1024 --max_iterations 300 --seed 42
 ```
 
+On this task all nine runs that received the contacts as normalised inputs failed (0 of 9), while the three runs without
+them solved it. A contact bit that is on in 0.1 % of the readings becomes a value of 24 after the running normalisation,
+and 50 at 0.01 %. The `ppo_raw_cfg_entry_point`, `ppo_raw_tr_cfg_entry_point` and `ppo_raw_fr_cfg_entry_point` agents feed
+the last 20 observation entries (the contacts) to the encoder raw, as 0 or 1, outside the normaliser, as the paper does.
+
 The combined Franka + HX5-D20 asset is documented in:
 
 ```text

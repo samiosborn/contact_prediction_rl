@@ -202,3 +202,66 @@ def test_an_unknown_architecture_is_rejected():
 
     with pytest.raises(ValueError, match="Unknown architecture"):
         PPO.construct_algorithm(obs, env, cfg, "cpu")
+
+
+# --- raw tail: the contacts skip the running normalisation ---
+
+
+def make_raw_encoder(tail: int = 4) -> SharedEncoder:
+    return SharedEncoder(OBSERVATION_DIM, hidden_dims=[32], latent_dim=16, raw_tail_dim=tail)
+
+
+def test_the_raw_tail_is_passed_unchanged_and_the_head_is_normalised():
+    encoder = make_raw_encoder()
+    encoder.normaliser.mean.fill_(5.0)
+    encoder.normaliser.variance.fill_(4.0)
+    observations = torch.cat([torch.full((3, OBSERVATION_DIM - 4), 7.0), torch.ones(3, 4)], dim=1)
+
+    seen = encoder.normalise(observations)
+
+    assert torch.allclose(seen[:, -4:], torch.ones(3, 4))                       # contacts untouched
+    assert torch.allclose(seen[:, :-4], torch.full((3, OBSERVATION_DIM - 4), 2.0 / (2.0 + 1e-2)))  # (7-5)/(2+eps)
+    assert encoder.normaliser.mean.shape == (OBSERVATION_DIM - 4,)
+
+
+def test_a_rare_contact_is_not_amplified_by_the_raw_tail():
+    raw, normal = make_raw_encoder(4), SharedEncoder(OBSERVATION_DIM, hidden_dims=[32], latent_dim=16)
+    quiet = torch.randn(512, OBSERVATION_DIM)
+    quiet[:, -4:] = 0.0                                   # contacts that have never been on
+
+    raw.update_normalisation(quiet)
+    normal.update_normalisation(quiet)
+
+    touching = quiet[:1].clone()
+    touching[:, -1] = 1.0                                 # the first contact
+
+    assert raw.normalise(touching)[0, -1] == 1.0
+    assert normal.normalise(touching)[0, -1] > 50.0       # a "1" becomes about 100 after normalisation
+
+
+def test_the_normaliser_statistics_come_from_the_head_only():
+    encoder = make_raw_encoder()
+    batch = torch.randn(64, OBSERVATION_DIM)
+
+    encoder.update_normalisation(batch)
+
+    assert torch.allclose(encoder.normaliser.mean, batch[:, :-4].mean(dim=0), atol=1e-5)
+
+
+def test_default_encoder_has_no_raw_tail_and_validation():
+    assert SharedEncoder(OBSERVATION_DIM, hidden_dims=[8], latent_dim=4).raw_tail_dim == 0
+    with pytest.raises(ValueError):
+        SharedEncoder(OBSERVATION_DIM, hidden_dims=[8], latent_dim=4, raw_tail_dim=OBSERVATION_DIM)
+
+
+def test_a_ppo_iteration_with_a_raw_tail_and_an_auxiliary_loss_runs():
+    from test_tactile_reconstruction import TACTILE_DIM, build, make_cfg, observe, run_iteration
+
+    cfg = make_cfg()
+    cfg["encoder"] = {**cfg["encoder"], "raw_tail_dim": TACTILE_DIM}
+    alg = build(cfg)
+
+    result, _ = run_iteration(alg, observe())
+
+    assert all(torch.isfinite(torch.tensor(v)) for v in result.values())
+    assert alg.actor.encoder.raw_tail_dim == TACTILE_DIM

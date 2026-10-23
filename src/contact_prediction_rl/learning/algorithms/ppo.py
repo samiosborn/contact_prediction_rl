@@ -360,7 +360,7 @@ class PPO:
             if self.auxiliary is not None:
                 # The normalised observation (what the encoder reads) is the target of reconstruction losses
                 with torch.no_grad():
-                    normalised = self.actor.encoder.normaliser(observations)
+                    normalised = self.actor.encoder.normalise(observations)
 
                 aux_loss, batch_aux_metrics = self.auxiliary.loss(
                     observations,

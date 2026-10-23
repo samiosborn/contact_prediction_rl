@@ -200,6 +200,18 @@ gym.register(
             f"{agents.__name__}.ppo_cfg:"
             "FrankaHX5D20GraspStartTactileFRPaperPPOCfg"
         ),
+        "ppo_raw_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartTactileRawPaperPPOCfg"
+        ),
+        "ppo_raw_tr_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartTactileRawTRPaperPPOCfg"
+        ),
+        "ppo_raw_fr_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartTactileRawFRPaperPPOCfg"
+        ),
         "default_agent": "ppo",
     },
 )

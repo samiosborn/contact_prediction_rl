@@ -31,13 +31,22 @@ class SharedEncoder(nn.Module):
         activation: str = "elu",
         layer_norm: bool = True,
         observation_normalisation: bool = True,
+        raw_tail_dim: int = 0,
     ) -> None:
         super().__init__()
 
+        if not 0 <= raw_tail_dim < observation_dim:
+            raise ValueError("The raw tail must be part of the observation")
+
         self.latent_dim = latent_dim
 
+        # The last ``raw_tail_dim`` observation entries (the binary contacts) skip the running normalisation and enter
+        # the network as they are. A rarely active bit has a tiny standard deviation, so normalising it would turn a
+        # "1" into a value of 20 to 50.
+        self.raw_tail_dim = raw_tail_dim
+
         self.normaliser = (
-            ObservationNormaliser(observation_dim)
+            ObservationNormaliser(observation_dim - raw_tail_dim)
             if observation_normalisation
             else nn.Identity()
         )
@@ -56,11 +65,39 @@ class SharedEncoder(nn.Module):
 
         self.network = nn.Sequential(*layers)
 
+    def normalise(
+        self,
+        observations: torch.Tensor,
+    ) -> torch.Tensor:
+        """The observation as the network reads it: the normalised head, and the raw tail unchanged"""
+
+        if self.raw_tail_dim == 0:
+            return self.normaliser(observations)
+
+        return torch.cat(
+            (
+                self.normaliser(observations[:, : -self.raw_tail_dim]),
+                observations[:, -self.raw_tail_dim :],
+            ),
+            dim=-1,
+        )
+
+    def update_normalisation(
+        self,
+        observations: torch.Tensor,
+    ) -> None:
+        """Update the running statistics of the normalised part"""
+
+        if isinstance(self.normaliser, ObservationNormaliser):
+            self.normaliser.update(
+                observations if self.raw_tail_dim == 0 else observations[:, : -self.raw_tail_dim]
+            )
+
     def forward(
         self,
         observations: torch.Tensor,
     ) -> torch.Tensor:
-        return self.network(self.normaliser(observations))
+        return self.network(self.normalise(observations))
 
 
 def _head(
@@ -153,8 +190,7 @@ class SharedActor(Actor):
     ) -> None:
         """Update the running observation statistics, which live in the shared encoder"""
 
-        if isinstance(self.encoder.normaliser, ObservationNormaliser):
-            self.encoder.normaliser.update(observations)
+        self.encoder.update_normalisation(observations)
 
 
 class SharedCritic(nn.Module):
