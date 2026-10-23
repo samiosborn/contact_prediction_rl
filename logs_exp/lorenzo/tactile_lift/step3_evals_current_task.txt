@@ -1,0 +1,479 @@
+################ prop 2026-10-22_14-39-08_paper_seed42
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualHistory-Right: 256 deterministic episodes, seed 42 ===
+held at goal at end     99.6 %  (+/- 0.4)
+lifted in hand at end   99.6 %  (+/- 0.4)
+reached goal ever       99.6 %  (+/- 0.4)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 0.72 s, 90th pct 0.74 s  (256 envs)
+time to first goal     median 0.82 s, 90th pct 0.84 s  (255 envs)
+closest to goal while held: median 0.1 cm, 90th pct 0.2 cm, worst 11.4 cm
+distance to goal at end: median 0.2 cm, 90th pct 0.3 cm, worst 17.8 cm
+signed error at end (cube - goal) [cm]:
+  x: mean -0.1, std 0.4
+  y: mean +0.1, std 0.6
+  z: mean -0.2, std 0.8
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 10 deg, 90th pct 15 deg; upright (<10 deg) 44 %
+grasp centre to held part when the hand finished closing: median 126 mm, 90th pct 126 mm  (1 envs)
+################ prop 2026-10-22_14-49-34_paper_seed1
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualHistory-Right: 256 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end   69.5 %  (+/- 2.9)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 1.34 s, 90th pct 1.52 s  (203 envs)
+time to first goal     never
+closest to goal while held: median 9.6 cm, 90th pct 10.2 cm, worst 12.2 cm
+distance to goal at end: median 13.6 cm, 90th pct 19.2 cm, worst 19.5 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +8.9, std 0.9
+  y: mean -5.2, std 8.5
+  z: mean -4.7, std 5.4
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 13 deg, 90th pct 16 deg; upright (<10 deg) 22 %
+################ prop 2026-10-22_14-59-03_paper_seed2
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualHistory-Right: 256 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 18.5 cm, 90th pct 18.9 cm, worst 19.1 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +8.9, std 1.0
+  y: mean -11.8, std 2.5
+  z: mean -9.7, std 0.3
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (256):
+  finger_r_joint1: mean +0.00, std 0.01
+  finger_r_joint2: mean +0.00, std 0.00
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.02, std 0.02
+  finger_r_joint5: mean -0.51, std 0.04
+  finger_r_joint6: mean +0.00, std 0.00
+  finger_r_joint7: mean +1.17, std 0.06
+  finger_r_joint8: mean +0.56, std 0.14
+  finger_r_joint9: mean +0.30, std 0.03
+  finger_r_joint10: mean +0.00, std 0.00
+  finger_r_joint11: mean +0.09, std 0.07
+  finger_r_joint12: mean +0.01, std 0.02
+  finger_r_joint13: mean -0.29, std 0.04
+  finger_r_joint14: mean +0.80, std 0.06
+  finger_r_joint15: mean +0.17, std 0.04
+  finger_r_joint16: mean +1.00, std 0.07
+  finger_r_joint17: mean -0.43, std 0.10
+  finger_r_joint18: mean +0.98, std 0.10
+  finger_r_joint19: mean +0.02, std 0.02
+  finger_r_joint20: mean +0.00, std 0.00
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-23T10:09:15Z [4,195ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+################ tactile 2026-10-22_15-08-28_paper_seed42
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right: 256 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 10.5 cm, 90th pct 10.9 cm, worst 11.3 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +2.8, std 0.3
+  y: mean -1.9, std 1.1
+  z: mean -9.9, std 0.0
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (256):
+  finger_r_joint1: mean +0.00, std 0.00
+  finger_r_joint2: mean +0.00, std 0.00
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.00, std 0.00
+  finger_r_joint5: mean +0.17, std 0.02
+  finger_r_joint6: mean +0.76, std 0.03
+  finger_r_joint7: mean +0.89, std 0.02
+  finger_r_joint8: mean +0.76, std 0.03
+  finger_r_joint9: mean +0.13, std 0.02
+  finger_r_joint10: mean +0.94, std 0.03
+  finger_r_joint11: mean +0.66, std 0.03
+  finger_r_joint12: mean +1.04, std 0.02
+  finger_r_joint13: mean -0.30, std 0.01
+  finger_r_joint14: mean +0.84, std 0.03
+  finger_r_joint15: mean +0.83, std 0.02
+  finger_r_joint16: mean +1.10, std 0.02
+  finger_r_joint17: mean +0.04, std 0.01
+  finger_r_joint18: mean +0.37, std 0.02
+  finger_r_joint19: mean +0.88, std 0.02
+  finger_r_joint20: mean +1.55, std 0.02
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-23T10:09:32Z [4,256ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+2026-10-23T10:09:33Z [4,997ms] [Warning] [py.warnings] /home/lorenzo/Imperial/Repos/contact_prediction_rl/src/contact_prediction_rl/robots/hx5_d20_contacts.py:65: UserWarning: PhysX does not return a total contact force. This is a known limitation in PhysX and we are fixing it for the next release. Returning 'normal_force_matrix_w'.
+  force_matrix = env.scene[name].data.force_matrix_w
+
+################ tactile 2026-10-22_15-18-05_paper_seed1
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right: 256 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 11.9 cm, 90th pct 12.7 cm, worst 12.9 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +6.5, std 0.7
+  y: mean -1.9, std 1.0
+  z: mean -9.8, std 0.0
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (256):
+  finger_r_joint1: mean +0.00, std 0.01
+  finger_r_joint2: mean -0.00, std 0.00
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.45, std 0.02
+  finger_r_joint5: mean -0.31, std 0.03
+  finger_r_joint6: mean +0.80, std 0.03
+  finger_r_joint7: mean +0.97, std 0.03
+  finger_r_joint8: mean +1.14, std 0.03
+  finger_r_joint9: mean +0.07, std 0.01
+  finger_r_joint10: mean +0.94, std 0.07
+  finger_r_joint11: mean +0.90, std 0.12
+  finger_r_joint12: mean +0.85, std 0.06
+  finger_r_joint13: mean +0.03, std 0.06
+  finger_r_joint14: mean +1.02, std 0.05
+  finger_r_joint15: mean +0.42, std 0.02
+  finger_r_joint16: mean +0.73, std 0.06
+  finger_r_joint17: mean -0.08, std 0.02
+  finger_r_joint18: mean +0.43, std 0.03
+  finger_r_joint19: mean +0.56, std 0.02
+  finger_r_joint20: mean +1.02, std 0.08
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-23T10:09:50Z [4,402ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+2026-10-23T10:09:50Z [5,140ms] [Warning] [py.warnings] /home/lorenzo/Imperial/Repos/contact_prediction_rl/src/contact_prediction_rl/robots/hx5_d20_contacts.py:65: UserWarning: PhysX does not return a total contact force. This is a known limitation in PhysX and we are fixing it for the next release. Returning 'normal_force_matrix_w'.
+  force_matrix = env.scene[name].data.force_matrix_w
+
+################ tactile 2026-10-22_15-27-35_paper_seed2
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right: 256 deterministic episodes, seed 42 ===
+held at goal at end     84.0 %  (+/- 2.3)
+lifted in hand at end   84.0 %  (+/- 2.3)
+reached goal ever       84.0 %  (+/- 2.3)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     median 0.54 s, 90th pct 0.58 s  (215 envs)
+time to first goal     median 0.62 s, 90th pct 0.66 s  (215 envs)
+closest to goal while held: median 0.1 cm, 90th pct 0.2 cm, worst 0.2 cm
+distance to goal at end: median 0.3 cm, 90th pct 9.6 cm, worst 13.5 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +0.0, std 0.7
+  y: mean +0.2, std 0.5
+  z: mean -1.7, std 3.5
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+tilt of the held object at end: median 21 deg, 90th pct 23 deg; upright (<10 deg) 0 %
+grasp centre to held part when the hand finished closing: median 99 mm, 90th pct 101 mm  (41 envs)
+################ TR 2026-10-22_18-05-54_tr_seed42
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right: 256 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 10.3 cm, 90th pct 10.9 cm, worst 14.4 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +2.4, std 0.3
+  y: mean -2.3, std 1.3
+  z: mean -9.8, std 0.0
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (256):
+  finger_r_joint1: mean +0.06, std 0.03
+  finger_r_joint2: mean +0.00, std 0.00
+  finger_r_joint3: mean +0.00, std 0.01
+  finger_r_joint4: mean +0.00, std 0.00
+  finger_r_joint5: mean -0.04, std 0.02
+  finger_r_joint6: mean +0.79, std 0.03
+  finger_r_joint7: mean +0.70, std 0.03
+  finger_r_joint8: mean +1.13, std 0.03
+  finger_r_joint9: mean +0.01, std 0.01
+  finger_r_joint10: mean +0.56, std 0.03
+  finger_r_joint11: mean +0.69, std 0.02
+  finger_r_joint12: mean +1.10, std 0.03
+  finger_r_joint13: mean +0.12, std 0.01
+  finger_r_joint14: mean +0.74, std 0.02
+  finger_r_joint15: mean +0.78, std 0.03
+  finger_r_joint16: mean +0.88, std 0.03
+  finger_r_joint17: mean -0.17, std 0.02
+  finger_r_joint18: mean +0.23, std 0.03
+  finger_r_joint19: mean +1.05, std 0.04
+  finger_r_joint20: mean +0.54, std 0.05
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-23T10:10:26Z [4,326ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+2026-10-23T10:10:27Z [5,041ms] [Warning] [py.warnings] /home/lorenzo/Imperial/Repos/contact_prediction_rl/src/contact_prediction_rl/robots/hx5_d20_contacts.py:65: UserWarning: PhysX does not return a total contact force. This is a known limitation in PhysX and we are fixing it for the next release. Returning 'normal_force_matrix_w'.
+  force_matrix = env.scene[name].data.force_matrix_w
+
+################ TR 2026-10-22_18-27-33_tr_seed1
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right: 256 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 12.8 cm, 90th pct 13.7 cm, worst 15.8 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +7.1, std 0.5
+  y: mean -4.2, std 1.3
+  z: mean -10.0, std 0.0
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (256):
+  finger_r_joint1: mean +0.00, std 0.00
+  finger_r_joint2: mean +0.00, std 0.00
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.00, std 0.00
+  finger_r_joint5: mean +0.16, std 0.02
+  finger_r_joint6: mean +0.44, std 0.02
+  finger_r_joint7: mean +1.11, std 0.02
+  finger_r_joint8: mean +1.28, std 0.03
+  finger_r_joint9: mean -0.03, std 0.02
+  finger_r_joint10: mean +0.72, std 0.02
+  finger_r_joint11: mean +0.86, std 0.05
+  finger_r_joint12: mean +1.57, std 0.00
+  finger_r_joint13: mean +0.01, std 0.02
+  finger_r_joint14: mean +1.33, std 0.02
+  finger_r_joint15: mean +0.40, std 0.02
+  finger_r_joint16: mean +0.54, std 0.03
+  finger_r_joint17: mean -0.08, std 0.01
+  finger_r_joint18: mean +0.75, std 0.03
+  finger_r_joint19: mean +0.35, std 0.02
+  finger_r_joint20: mean +1.57, std 0.00
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-23T10:10:43Z [4,399ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+2026-10-23T10:10:44Z [5,128ms] [Warning] [py.warnings] /home/lorenzo/Imperial/Repos/contact_prediction_rl/src/contact_prediction_rl/robots/hx5_d20_contacts.py:65: UserWarning: PhysX does not return a total contact force. This is a known limitation in PhysX and we are fixing it for the next release. Returning 'normal_force_matrix_w'.
+  force_matrix = env.scene[name].data.force_matrix_w
+
+################ TR 2026-10-22_18-50-09_tr_seed2
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right: 256 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 10.7 cm, 90th pct 11.2 cm, worst 11.4 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +3.3, std 0.3
+  y: mean -2.4, std 0.8
+  z: mean -9.9, std 0.1
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (256):
+  finger_r_joint1: mean +0.00, std 0.00
+  finger_r_joint2: mean -0.01, std 0.01
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.00, std 0.00
+  finger_r_joint5: mean +0.30, std 0.01
+  finger_r_joint6: mean +0.70, std 0.01
+  finger_r_joint7: mean +0.83, std 0.01
+  finger_r_joint8: mean +0.83, std 0.02
+  finger_r_joint9: mean -0.05, std 0.01
+  finger_r_joint10: mean +0.65, std 0.02
+  finger_r_joint11: mean +0.77, std 0.02
+  finger_r_joint12: mean +1.16, std 0.02
+  finger_r_joint13: mean -0.16, std 0.01
+  finger_r_joint14: mean +1.01, std 0.02
+  finger_r_joint15: mean +0.28, std 0.01
+  finger_r_joint16: mean +1.15, std 0.02
+  finger_r_joint17: mean +0.04, std 0.01
+  finger_r_joint18: mean +0.21, std 0.01
+  finger_r_joint19: mean +1.07, std 0.01
+  finger_r_joint20: mean +0.86, std 0.01
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-23T10:11:01Z [4,414ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+2026-10-23T10:11:02Z [5,132ms] [Warning] [py.warnings] /home/lorenzo/Imperial/Repos/contact_prediction_rl/src/contact_prediction_rl/robots/hx5_d20_contacts.py:65: UserWarning: PhysX does not return a total contact force. This is a known limitation in PhysX and we are fixing it for the next release. Returning 'normal_force_matrix_w'.
+  force_matrix = env.scene[name].data.force_matrix_w
+
+################ FR 2026-10-22_18-16-40_fr_seed42
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right: 256 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 9.5 cm, 90th pct 9.7 cm, worst 9.7 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +0.7, std 0.7
+  y: mean -1.3, std 0.5
+  z: mean -9.4, std 0.1
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (256):
+  finger_r_joint1: mean +0.00, std 0.00
+  finger_r_joint2: mean +0.00, std 0.00
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.00, std 0.00
+  finger_r_joint5: mean -0.14, std 0.01
+  finger_r_joint6: mean +0.57, std 0.02
+  finger_r_joint7: mean +1.01, std 0.03
+  finger_r_joint8: mean +1.10, std 0.04
+  finger_r_joint9: mean +0.20, std 0.02
+  finger_r_joint10: mean +0.84, std 0.02
+  finger_r_joint11: mean +1.03, std 0.05
+  finger_r_joint12: mean +1.12, std 0.05
+  finger_r_joint13: mean -0.08, std 0.01
+  finger_r_joint14: mean +1.07, std 0.02
+  finger_r_joint15: mean +0.87, std 0.02
+  finger_r_joint16: mean +0.57, std 0.01
+  finger_r_joint17: mean +0.11, std 0.01
+  finger_r_joint18: mean +0.20, std 0.03
+  finger_r_joint19: mean +1.13, std 0.03
+  finger_r_joint20: mean +1.37, std 0.05
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-23T10:11:18Z [4,388ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+2026-10-23T10:11:19Z [5,114ms] [Warning] [py.warnings] /home/lorenzo/Imperial/Repos/contact_prediction_rl/src/contact_prediction_rl/robots/hx5_d20_contacts.py:65: UserWarning: PhysX does not return a total contact force. This is a known limitation in PhysX and we are fixing it for the next release. Returning 'normal_force_matrix_w'.
+  force_matrix = env.scene[name].data.force_matrix_w
+
+################ FR 2026-10-22_18-38-32_fr_seed1
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right: 256 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 15.0 cm, 90th pct 15.3 cm, worst 15.9 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +8.4, std 0.6
+  y: mean -8.0, std 0.7
+  z: mean -9.4, std 0.1
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (256):
+  finger_r_joint1: mean +0.00, std 0.00
+  finger_r_joint2: mean -0.34, std 0.02
+  finger_r_joint3: mean +0.01, std 0.00
+  finger_r_joint4: mean +0.03, std 0.01
+  finger_r_joint5: mean +0.55, std 0.01
+  finger_r_joint6: mean +1.57, std 0.02
+  finger_r_joint7: mean +0.53, std 0.01
+  finger_r_joint8: mean +0.35, std 0.02
+  finger_r_joint9: mean +0.31, std 0.01
+  finger_r_joint10: mean +0.71, std 0.02
+  finger_r_joint11: mean +0.74, std 0.01
+  finger_r_joint12: mean +1.24, std 0.02
+  finger_r_joint13: mean +0.55, std 0.01
+  finger_r_joint14: mean +1.28, std 0.01
+  finger_r_joint15: mean +0.53, std 0.02
+  finger_r_joint16: mean +0.73, std 0.01
+  finger_r_joint17: mean +0.20, std 0.01
+  finger_r_joint18: mean +0.31, std 0.01
+  finger_r_joint19: mean +1.07, std 0.01
+  finger_r_joint20: mean +1.04, std 0.01
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-23T10:11:35Z [4,481ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+2026-10-23T10:11:36Z [5,207ms] [Warning] [py.warnings] /home/lorenzo/Imperial/Repos/contact_prediction_rl/src/contact_prediction_rl/robots/hx5_d20_contacts.py:65: UserWarning: PhysX does not return a total contact force. This is a known limitation in PhysX and we are fixing it for the next release. Returning 'normal_force_matrix_w'.
+  force_matrix = env.scene[name].data.force_matrix_w
+
+################ FR 2026-10-22_19-01-05_fr_seed2
+=== ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right: 256 deterministic episodes, seed 42 ===
+held at goal at end      0.0 %  (+/- 0.0)
+lifted in hand at end    0.0 %  (+/- 0.0)
+reached goal ever        0.0 %  (+/- 0.0)   (training-style success)
+dropped (episode ended early)   0.0 %  (+/- 0.0)
+time to first lift     never
+time to first goal     never
+closest to goal while held: never
+distance to goal at end: median 12.0 cm, 90th pct 12.2 cm, worst 12.3 cm
+signed error at end (cube - goal) [cm]:
+  x: mean +5.0, std 0.6
+  y: mean -4.7, std 0.7
+  z: mean -9.7, std 0.1
+slope of final cube position on goal position (1 = tracks, 0 = ignores):
+  x: n/a (the goal does not vary along x)
+  y: n/a (the goal does not vary along y)
+  z: n/a (the goal does not vary along z)
+hand joint targets at end [rad], episodes that all (256):
+  finger_r_joint1: mean +0.09, std 0.01
+  finger_r_joint2: mean +0.00, std 0.00
+  finger_r_joint3: mean +0.00, std 0.00
+  finger_r_joint4: mean +0.00, std 0.00
+  finger_r_joint5: mean +0.55, std 0.01
+  finger_r_joint6: mean +0.57, std 0.01
+  finger_r_joint7: mean +0.89, std 0.01
+  finger_r_joint8: mean +1.28, std 0.02
+  finger_r_joint9: mean +0.24, std 0.01
+  finger_r_joint10: mean +0.90, std 0.02
+  finger_r_joint11: mean +0.71, std 0.00
+  finger_r_joint12: mean +1.03, std 0.02
+  finger_r_joint13: mean +0.04, std 0.01
+  finger_r_joint14: mean +0.63, std 0.01
+  finger_r_joint15: mean +0.95, std 0.01
+  finger_r_joint16: mean +1.25, std 0.02
+  finger_r_joint17: mean +0.08, std 0.01
+  finger_r_joint18: mean +0.34, std 0.01
+  finger_r_joint19: mean +0.89, std 0.01
+  finger_r_joint20: mean +1.49, std 0.02
+regrasps per env that lifted: mean 0.00
+share of the episode holding the cube at the goal: mean 0.0 %
+thresholds: lift above 0.080 m, in hand within 0.08 m, goal within 0.05 m
+[INFO]: SimulationContext cleared
+2026-10-23T10:11:53Z [4,350ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+2026-10-23T10:11:53Z [5,087ms] [Warning] [py.warnings] /home/lorenzo/Imperial/Repos/contact_prediction_rl/src/contact_prediction_rl/robots/hx5_d20_contacts.py:65: UserWarning: PhysX does not return a total contact force. This is a known limitation in PhysX and we are fixing it for the next release. Returning 'normal_force_matrix_w'.
+  force_matrix = env.scene[name].data.force_matrix_w
+
