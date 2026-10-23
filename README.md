@@ -327,6 +327,26 @@ uv run python scripts/train.py \
   --agent ppo_fr_cfg_entry_point --num_envs 1024 --max_iterations 600 --seed 42
 ```
 
+### Grasp-start variants (contact early in every episode)
+
+On the tasks above, most seeds never touch the block: the hand starts 6 cm away, closes in the air near the block and
+keeps collecting the closed-hand reward, so the contact signals the tactile losses need are almost absent. The
+grasp-start tasks start the open hand **2 cm** from the grasp pose and narrow the closed-hand reward kernel from 3 cm to
+2 cm. Closing then touches the block with four fingertips within 2 s in every environment, and the scripted close-and-lift
+works in 9 of 10 trials with the exploration noise of training. Starting exactly at the grasp pose is not usable, since
+the open fingers shove the block at reset. Everything else is unchanged.
+
+| Task | Agents |
+|---|---|
+| `ContactPredictionRl-Lift-Block-Franka-HX5-D20-GraspStartHistory-Right` | PPO(prop) |
+| `ContactPredictionRl-Lift-Block-Franka-HX5-D20-GraspStartTactile-Right` | PPO(prop + tactile); `--agent ppo_tr_cfg_entry_point` (TR); `--agent ppo_fr_cfg_entry_point` (FR) |
+
+```bash
+uv run python scripts/train.py \
+  --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-GraspStartTactile-Right \
+  --agent ppo_tr_cfg_entry_point --num_envs 1024 --max_iterations 300 --seed 42
+```
+
 The combined Franka + HX5-D20 asset is documented in:
 
 ```text

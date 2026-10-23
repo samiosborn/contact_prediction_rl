@@ -159,3 +159,47 @@ gym.register(
         "default_agent": "ppo",
     },
 )
+
+# The same two paper-style tasks, with the open hand starting 2 cm from the grasp pose and a narrower closed-hand reward, so
+# that contacts appear early in every episode that closes the hand.
+gym.register(
+    id="ContactPredictionRl-Lift-Block-Franka-HX5-D20-GraspStartHistory-Right",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.env_cfg:"
+            "FrankaHX5D20BlockLiftGraspStartHistoryEnvCfg"
+        ),
+        "ppo_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartHistoryPaperPPOCfg"
+        ),
+        "default_agent": "ppo",
+    },
+)
+
+gym.register(
+    id="ContactPredictionRl-Lift-Block-Franka-HX5-D20-GraspStartTactile-Right",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.env_cfg:"
+            "FrankaHX5D20BlockLiftGraspStartTactileEnvCfg"
+        ),
+        "ppo_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartTactilePaperPPOCfg"
+        ),
+        "ppo_tr_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartTactileTRPaperPPOCfg"
+        ),
+        "ppo_fr_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartTactileFRPaperPPOCfg"
+        ),
+        "default_agent": "ppo",
+    },
+)

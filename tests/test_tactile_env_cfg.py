@@ -76,3 +76,59 @@ def test_the_tr_agent_decodes_exactly_the_tactile_part_of_the_observation():
     assert cfg["auxiliary"]["pos_weight"] == 10.0
     assert cfg["auxiliary"]["hidden_dims"] == [512, 512]
     assert cfg["architecture"] == "shared"
+
+
+# --- grasp-start variants: the open hand starts at the grasp pose and the closed-hand reward is narrower ---
+
+
+def arm_start(cfg) -> list[float]:
+    return [cfg.scene.robot.init_state.joint_pos[f"panda_joint{i}"] for i in range(1, 8)]
+
+
+def test_the_grasp_start_tasks_change_only_the_start_pose_and_the_closing_kernel():
+    from contact_prediction_rl.tasks.lift.config.franka_hx5d20.env_cfg import (
+        GRASP_START_ARM_POS,
+        GRASP_START_CLOSED_NEAR_STD,
+        START_ARM_POS,
+        CLOSED_NEAR_STD,
+        FrankaHX5D20BlockLiftGraspStartHistoryEnvCfg,
+        FrankaHX5D20BlockLiftGraspStartTactileEnvCfg,
+    )
+
+    pairs = [
+        (FrankaHX5D20BlockLiftPriorResidualHistoryEnvCfg, FrankaHX5D20BlockLiftGraspStartHistoryEnvCfg),
+        (FrankaHX5D20BlockLiftPriorResidualTactileEnvCfg, FrankaHX5D20BlockLiftGraspStartTactileEnvCfg),
+    ]
+
+    for before_cls, after_cls in pairs:
+        before, after = before_cls(), after_cls()
+
+        # the existing tasks keep the 6 cm approach and the wide kernel
+        assert arm_start(before) == START_ARM_POS
+        assert before.rewards.hand_closed_near_object.params["std"] == CLOSED_NEAR_STD
+
+        # the variants start at the grasp pose and narrow the kernel
+        assert arm_start(after) == GRASP_START_ARM_POS
+        assert after.rewards.hand_closed_near_object.params["std"] == GRASP_START_CLOSED_NEAR_STD < CLOSED_NEAR_STD
+
+        # everything else is the same: observations, sensors, actions, other rewards
+        assert policy_terms(after) == policy_terms(before)
+        assert after.observations.policy.history_length == before.observations.policy.history_length
+        assert sensor_names(after) == sensor_names(before)
+        assert type(after.actions.gripper_action) is type(before.actions.gripper_action)
+        assert after.rewards.lifting_object.weight == before.rewards.lifting_object.weight
+
+
+def test_the_grasp_start_agents_have_their_own_experiment_names():
+    from contact_prediction_rl.tasks.lift.config.franka_hx5d20.agents import ppo_cfg
+
+    names = {
+        ppo_cfg.FrankaHX5D20GraspStartHistoryPaperPPOCfg().experiment_name,
+        ppo_cfg.FrankaHX5D20GraspStartTactilePaperPPOCfg().experiment_name,
+        ppo_cfg.FrankaHX5D20GraspStartTactileTRPaperPPOCfg().experiment_name,
+        ppo_cfg.FrankaHX5D20GraspStartTactileFRPaperPPOCfg().experiment_name,
+    }
+
+    assert len(names) == 4 and all("grasp_start" in n for n in names)
+    assert ppo_cfg.FrankaHX5D20GraspStartTactileTRPaperPPOCfg().to_dict()["auxiliary"]["objective"] == "tactile_reconstruction"
+    assert ppo_cfg.FrankaHX5D20GraspStartTactileFRPaperPPOCfg().to_dict()["auxiliary"]["objective"] == "full_reconstruction"

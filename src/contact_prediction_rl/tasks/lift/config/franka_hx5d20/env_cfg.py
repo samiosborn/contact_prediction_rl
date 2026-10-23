@@ -478,3 +478,65 @@ class FrankaHX5D20BlockLiftPriorResidualTactileEnvCfg(FrankaHX5D20BlockLiftPrior
 
         self.observations.policy.fingertip_contacts = ObsTerm(func=fingertip_object_contact)
         self.observations.contact = FingertipContactLabelsCfg()
+
+
+GRASP_START_APPROACH_DISTANCE = 0.02
+"""Distance [m] the open hand starts back from the grasp pose in the grasp-start tasks (``APPROACH_DISTANCE`` is 0.06).
+
+Starting exactly at the grasp pose is not usable: the open fingers overlap the block at reset and shove it at the first
+step (median 17 mm and 3 of 128 blocks knocked over). At 1 cm the block still moves (median 9 mm); at 2 cm it stays put
+(median 1 mm, 2 of 128 moved by more than 1 cm), and closing the hand then touches the block with four fingertips in
+every environment within 2 s."""
+
+GRASP_START_ARM_POS = [0.632, 0.836, -0.226, -1.896, -0.561, 1.296, 1.992]
+"""Arm joint values [rad] for the start of the grasp-start tasks: the open hand ``GRASP_START_APPROACH_DISTANCE`` back from
+the grasp pose.
+
+Same arm branch as ``START_ARM_POS``. Found with ``scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py --approach
+0.02``, which also checks that closing and then lifting works with the exploration noise of training (0.04 rad): 9 of 10
+trials lift the block, as from 6 cm back."""
+
+GRASP_START_CLOSED_NEAR_STD = 0.02
+"""Length scale [m] of the closed-hand reward for the grasp-start tasks (``CLOSED_NEAR_STD`` is 0.03).
+
+Policies that never lifted the block kept collecting the closed-hand reward by closing the hand in the air near the
+block. A narrower kernel pays less for closing a few centimetres away.
+"""
+
+
+def _apply_grasp_start(cfg: FrankaHX5D20BlockLiftEnvCfg) -> None:
+    """Start the episode with the open hand 2 cm from the grasp pose, and narrow the closed-hand reward"""
+
+    cfg.scene.robot.init_state.joint_pos = {
+        **{f"panda_joint{i + 1}": value for i, value in enumerate(GRASP_START_ARM_POS)},
+        "finger_r_joint.*": 0.0,
+    }
+    cfg.rewards.hand_closed_near_object.params["std"] = GRASP_START_CLOSED_NEAR_STD
+
+
+@configclass
+class FrankaHX5D20BlockLiftGraspStartHistoryEnvCfg(FrankaHX5D20BlockLiftPriorResidualHistoryEnvCfg):
+    """The history task (PPO(prop)) with the open hand starting 2 cm from the grasp pose and a narrower closed-hand reward.
+
+    The first closing already touches the block, so the policy has to discover only "close, then lift" and not
+    "approach, close, lift". Everything else is as in the history task.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        _apply_grasp_start(self)
+
+
+@configclass
+class FrankaHX5D20BlockLiftGraspStartTactileEnvCfg(FrankaHX5D20BlockLiftPriorResidualTactileEnvCfg):
+    """The tactile task with the open hand starting 2 cm from the grasp pose and a narrower closed-hand reward.
+
+    Contacts now appear within the first second of every episode that closes the hand, which is the regime the
+    auxiliary tactile losses need. Everything else is as in the tactile task.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        _apply_grasp_start(self)

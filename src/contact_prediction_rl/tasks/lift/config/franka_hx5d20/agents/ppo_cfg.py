@@ -272,3 +272,32 @@ class FrankaHX5D20BlockLiftTactileFRPaperPPOCfg(FrankaHX5D20BlockLiftTactilePape
         "loss_weight": TACTILE_RL.FR_AUX_LOSS_WEIGHT,
         "learning_rate": TACTILE_RL.FR_AUX_LEARNING_RATE,
     }
+
+
+# Agents of the grasp-start tasks: the same as their counterparts, logged under their own experiment names
+@configclass
+class FrankaHX5D20GraspStartHistoryPaperPPOCfg(FrankaHX5D20BlockLiftHistoryPaperPPOCfg):
+    """PPO(prop) on the grasp-start task"""
+
+    experiment_name = "lift_block_franka_hx5d20_grasp_start_history"
+
+
+@configclass
+class FrankaHX5D20GraspStartTactilePaperPPOCfg(FrankaHX5D20BlockLiftTactilePaperPPOCfg):
+    """PPO(prop + tactile) on the grasp-start task"""
+
+    experiment_name = "lift_block_franka_hx5d20_grasp_start_tactile"
+
+
+@configclass
+class FrankaHX5D20GraspStartTactileTRPaperPPOCfg(FrankaHX5D20BlockLiftTactileTRPaperPPOCfg):
+    """PPO(prop + tactile) + TR on the grasp-start task"""
+
+    experiment_name = "lift_block_franka_hx5d20_grasp_start_tactile_tr"
+
+
+@configclass
+class FrankaHX5D20GraspStartTactileFRPaperPPOCfg(FrankaHX5D20BlockLiftTactileFRPaperPPOCfg):
+    """PPO(prop + tactile) + FR on the grasp-start task"""
+
+    experiment_name = "lift_block_franka_hx5d20_grasp_start_tactile_fr"
