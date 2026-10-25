@@ -125,9 +125,13 @@ Run before configuring PPO:
 
     uv run python scripts/reorientation/validate_scripted_rotation.py --controller both --max-grasps 12 --max-viable-grasps 3 --max-rotation-trials 12 --visualizer newton_gl
 
-After inspecting the GRASP_SNAPSHOT_SAVED file and rotation results:
+After inspecting the GRASP_SNAPSHOT_SAVED file and rotation results, promote the
+validated output to the versioned reference once:
 
-    export REORIENTATION_GRASP_SNAPSHOT="$PWD/runs/reorientation/grasp_snapshot.json"
+    uv run python scripts/reorientation/promote_grasp_snapshot.py
+    git add data/reorientation/grasps/hx5_d20_palm_up_v1.json
+    git commit -m "Add validated HX5 palm-up grasp reference"
+    git push origin feature/reorientation-feasibility
     uv run python scripts/reorientation/validate_training_reset.py --num-envs 32 --repeats 5
 
 Only after REORIENTATION_RESET_OK, smoke-test PPO:

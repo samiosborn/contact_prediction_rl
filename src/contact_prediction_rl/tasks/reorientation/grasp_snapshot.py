@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from pathlib import Path
 
-DEFAULT_SNAPSHOT_PATH = "runs/reorientation/grasp_snapshot.json"
-
 
 def load_grasp_snapshot(path: str | Path) -> dict:
     """Reject incomplete or malformed snapshots instead of training from an unverified pose."""
-    snapshot = json.loads(Path(path).read_text(encoding="utf-8"))
+    path = Path(path).expanduser()
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"Validated grasp snapshot not found: {path}. "
+            "Promote your local runs/reorientation/grasp_snapshot.json with "
+            "uv run python scripts/reorientation/promote_grasp_snapshot.py"
+        )
+    snapshot = json.loads(path.read_text(encoding="utf-8"))
     if snapshot.get("schema_version") != 1 or not snapshot.get("valid", False):
         raise ValueError("Reorientation requires a validated version-1 grasp snapshot")
     for group, expected in (
@@ -31,3 +37,24 @@ def load_grasp_snapshot(path: str | Path) -> dict:
     if abs(sum(v * v for v in snapshot["axis_world"]) - 1.0) > 0.01:
         raise ValueError("Palm rotation axis must be unit length")
     return snapshot
+
+
+
+def grasp_snapshot_sha256(path: str | Path) -> str:
+    """Hash the exact input bytes, including formatting, for experiment provenance."""
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def promote_grasp_snapshot(source: str | Path, destination: str | Path) -> str:
+    """Promote validated bytes into a versioned canonical reference without rewriting them."""
+    source, destination = Path(source), Path(destination)
+    load_grasp_snapshot(source)
+    content = source.read_bytes()
+    digest = hashlib.sha256(content).hexdigest()
+    if destination.exists():
+        if destination.read_bytes() != content:
+            raise FileExistsError(f"Refusing to overwrite a different canonical grasp: {destination}")
+        return digest
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(content)
+    return digest

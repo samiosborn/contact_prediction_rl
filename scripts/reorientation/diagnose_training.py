@@ -31,10 +31,7 @@ from contact_prediction_rl.tasks.reorientation.diagnostics import (  # noqa: E40
     ReorientationTracker,
     measure_reorientation,
 )
-from contact_prediction_rl.tasks.reorientation.grasp_snapshot import (  # noqa: E402
-    DEFAULT_SNAPSHOT_PATH,
-    load_grasp_snapshot,
-)
+from contact_prediction_rl.tasks.reorientation.grasp_snapshot import load_grasp_snapshot  # noqa: E402
 
 TASK = "ContactPredictionRl-Reorientation-Train-HX5-D20-Right"
 
@@ -62,7 +59,7 @@ def main() -> None:
     cfg.terminations.dropped = None
     if args.steps >= round(cfg.episode_length_s / (cfg.sim.dt * cfg.decimation)):
         raise ValueError("Use fewer than a full episode to avoid auto-reset in diagnostic mode")
-    snapshot = load_grasp_snapshot(os.environ.get("REORIENTATION_GRASP_SNAPSHOT", DEFAULT_SNAPSHOT_PATH))
+    snapshot = load_grasp_snapshot(cfg.grasp_snapshot_path)
     goal = cfg.rewards.orientation.params["goal_xyzw"]
 
     with launch_simulation(cfg, args):

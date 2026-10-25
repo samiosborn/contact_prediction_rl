@@ -25,8 +25,6 @@ def main():
     parser.add_argument("--hold-steps", type=int, default=60)
     add_launcher_args(parser)
     args, _ = parser.parse_known_args()
-    if not os.environ.get("REORIENTATION_GRASP_SNAPSHOT"):
-        parser.error("Set REORIENTATION_GRASP_SNAPSHOT before running this test")
     cfg = parse_env_cfg(TASK, device=args.device, num_envs=args.num_envs)
     with launch_simulation(cfg, args):
         from isaaclab.envs import ManagerBasedRLEnv

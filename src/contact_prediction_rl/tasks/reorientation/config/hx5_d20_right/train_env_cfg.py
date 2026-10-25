@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-import os
 
 import torch
 
@@ -14,9 +13,10 @@ from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.utils import configclass
 
 from contact_prediction_rl.tasks.reorientation import mdp
-from contact_prediction_rl.tasks.reorientation.grasp_snapshot import DEFAULT_SNAPSHOT_PATH, load_grasp_snapshot
+from contact_prediction_rl.tasks.reorientation.grasp_snapshot import grasp_snapshot_sha256, load_grasp_snapshot
 from contact_prediction_rl.tasks.reorientation.orientation import goal_orientation
 
+from ..paths import REFERENCE_GRASP_PATH
 from .env_cfg import ObservationsCfg, ReorientationEnvCfg
 
 
@@ -53,10 +53,13 @@ class ReorientationTrainEnvCfg(ReorientationEnvCfg):
     observations: TrainObservationsCfg = TrainObservationsCfg()
     rewards: TrainRewardsCfg = TrainRewardsCfg()
     terminations: TrainTerminationsCfg = TrainTerminationsCfg()
+    grasp_snapshot_path: str = str(REFERENCE_GRASP_PATH)
+    grasp_snapshot_sha256: str = ""
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        snapshot = load_grasp_snapshot(os.environ.get("REORIENTATION_GRASP_SNAPSHOT", DEFAULT_SNAPSHOT_PATH))
+        snapshot = load_grasp_snapshot(self.grasp_snapshot_path)
+        self.grasp_snapshot_sha256 = grasp_snapshot_sha256(self.grasp_snapshot_path)
         # Default joints are commanded grip targets; measured joints are restored in an event.
         self.scene.robot.init_state.joint_pos = {**snapshot["arm_joint_pos"], **snapshot["finger_target_pos"]}
         self.scene.object.init_state.pos = tuple(snapshot["cube_pos_w"])

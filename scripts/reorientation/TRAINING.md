@@ -1,45 +1,48 @@
 # Reorientation training gate
 
-The diagnostic task keeps its existing 40D policy inputs and 5D contact labels.
-Training is opt-in, since a grasp is not validated merely by compiling its configuration.
+The training task starts every episode from the versioned, validated physical
+grasp at `data/reorientation/grasps/hx5_d20_palm_up_v1.json`.
+This reference is selected by `tasks/reorientation/config/paths.py` and
+`ReorientationTrainEnvCfg.grasp_snapshot_path`, not by an environment variable.
 
-1. Run the revised feasibility diagnostic and inspect GRASP_SNAPSHOT_SAVED.
-2. Export REORIENTATION_GRASP_SNAPSHOT to the absolute JSON path.
-3. Validate the direct reset on your GPU:
-
-    uv run python scripts/reorientation/validate_training_reset.py --num-envs 32 --repeats 5
-
-4. Only once RESET_OK passes, smoke-test PPO:
-
-    uv run python scripts/train.py --task ContactPredictionRl-Reorientation-Train-HX5-D20-Right --num_envs 16 --max_iterations 2 --seed 42 --no_random_episode_lengths --run_name reorientation_smoke agent.contact_prediction.loss_weight=0.0
-
-The task uses a fixed +15-degree goal, 58D policy observations, 20D grasp-centred
-actions, a measured finger equilibrium, and five separate contact labels.
-
-GPU validation and task success are NOT established by these source changes.
-
-## Read-only diagnostics
-
-The following scripts leave the policy observations, rewards, contact labels,
-and action terms unchanged. They disable success/drop **terminations only in the
-diagnostic configuration** to inspect a continuous 150-step trajectory. Do not
-interpret their reported success fractions as training episode success rates.
+**One-time local migration (required before running the changed task):**
 
 ```bash
-export REORIENTATION_GRASP_SNAPSHOT="$PWD/runs/reorientation/grasp_snapshot.json"
-
-# Zero-action, Gaussian and untrained-policy trajectories:
-uv run python scripts/reorientation/diagnose_training.py --mode zero
-uv run python scripts/reorientation/diagnose_training.py --mode random --action-std 0.2
-uv run python scripts/reorientation/diagnose_training.py --mode untrained
-
-# Recreate the physically tested signed gait and one-way offset through the
-# TRAINING task's live joint-position action conversion:
-uv run python scripts/reorientation/replay_training_actions.py --controller gait --pattern spread --amplitude -0.6
-uv run python scripts/reorientation/replay_training_actions.py --controller offset --pattern thumb_index --amplitude 0.6
+uv run python scripts/reorientation/promote_grasp_snapshot.py
+git add data/reorientation/grasps/hx5_d20_palm_up_v1.json
+git commit -m "Add validated HX5 palm-up grasp reference"
+git push origin feature/reorientation-feasibility
 ```
 
-The live action term offset and scale are inverted rather than assuming that a
-policy action has the same numerical units as a joint target. Reported diagnostics
-include angle, signed twist, cube drift, opposing contact, finger-mask diversity,
-joint tracking and the fraction of physically clipped targets.
+The utility validates and copies the exact bytes from the old
+`runs/reorientation/grasp_snapshot.json`. It will not replace a different
+canonical snapshot. A missing reference fails fast with a promotion hint.
+The input's SHA-256 is included in the environment config saved to the run's
+`params/env.yaml`; baseline and auxiliary runs should have matching hashes.
+
+**Physics gate (after promotion):**
+
+```bash
+uv run python scripts/reorientation/validate_training_reset.py --num-envs 32 --repeats 5
+uv run python scripts/reorientation/diagnose_training.py --mode zero
+uv run python scripts/reorientation/replay_training_actions.py --controller gait --pattern spread --amplitude -0.6
+```
+
+These diagnostic scripts disable success and drop terminations **locally** to
+measure continuous trajectories; they do not modify PPO or training rewards.
+The feasibility experiment still exports *candidate* grasps into `runs/`.
+Never promote a new candidate over v1 without explicitly versioning it.
+
+The 58D policy observation, 20D action space, five contact labels, reward
+and termination logic are unaffected by this data migration.
+
+**Check unexpected fast PPO success (300-iteration baseline):**
+
+```bash
+uv run python scripts/reorientation/diagnose_training.py --mode trained --checkpoint latest
+```
+
+This uses deterministic policy actions and records goal error at the first two
+steps and beyond with success termination disabled. Do not interpret near-100%
+training success at two steps as proven sustained reorientation without this
+independent physics audit.

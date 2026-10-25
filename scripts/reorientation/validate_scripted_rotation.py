@@ -36,6 +36,7 @@ from isaaclab.utils.math import quat_apply  # noqa: E402
 from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 
 import contact_prediction_rl.tasks  # noqa: E402, F401
+from contact_prediction_rl.tasks.reorientation.config.paths import GENERATED_GRASP_PATH  # noqa: E402
 from contact_prediction_rl.tasks.reorientation.feasibility import (  # noqa: E402
     ARM_IK_SEED,
     FINGERS_FORWARD_WORLD,
@@ -550,7 +551,7 @@ def _parse_args():
                         help="Optional temporary cube support during closure; default is cube resting in palm")
     parser.add_argument("--max-grasps", type=int, default=12, help="Number of candidate cube-centre/posture trials")
     parser.add_argument("--max-viable-grasps", type=int, default=3, help="Compare up to this many stable grasps")
-    parser.add_argument("--grasp-snapshot", type=Path, default=Path("runs/reorientation/grasp_snapshot.json"))
+    parser.add_argument("--grasp-snapshot", type=Path, default=GENERATED_GRASP_PATH)
     parser.add_argument("--max-rotation-trials", type=int, default=12, help="Number of finger-only trajectory trials after a grasp works")
     parser.add_argument("--settle-steps", type=int, default=30)
     parser.add_argument("--close-steps", type=int, default=150)

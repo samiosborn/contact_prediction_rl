@@ -28,7 +28,7 @@ import contact_prediction_rl.tasks  # noqa: E402, F401
 from contact_prediction_rl.diagnostics.contact import ContactTracker  # noqa: E402
 from contact_prediction_rl.diagnostics.control import action_statistics, joint_tracking_statistics  # noqa: E402
 from contact_prediction_rl.tasks.reorientation.diagnostics import ReorientationTracker, measure_reorientation  # noqa: E402
-from contact_prediction_rl.tasks.reorientation.grasp_snapshot import DEFAULT_SNAPSHOT_PATH, load_grasp_snapshot  # noqa: E402
+from contact_prediction_rl.tasks.reorientation.grasp_snapshot import load_grasp_snapshot  # noqa: E402
 from contact_prediction_rl.tasks.reorientation.replay import rotation_waypoints, targets_to_actions  # noqa: E402
 
 TASK = "ContactPredictionRl-Reorientation-Train-HX5-D20-Right"
@@ -63,7 +63,7 @@ def main() -> None:
     max_steps = round(cfg.episode_length_s / (cfg.sim.dt * cfg.decimation))
     if args.rotate_steps >= max_steps:
         raise ValueError(f"Replay is limited to fewer than {max_steps} steps to avoid auto-reset")
-    snapshot = load_grasp_snapshot(os.environ.get("REORIENTATION_GRASP_SNAPSHOT", DEFAULT_SNAPSHOT_PATH))
+    snapshot = load_grasp_snapshot(cfg.grasp_snapshot_path)
     goal = cfg.rewards.orientation.params["goal_xyzw"]
 
     with launch_simulation(cfg, args):
