@@ -83,6 +83,10 @@ class ContactTracker:
             self._valid[dones.to(self.device).bool()] = False
 
     def summary(self, *, fixed_pattern: tuple[int, ...] | None = None) -> dict[str, object]:
+        if fixed_pattern is not None and (
+            len(fixed_pattern) != self.num_contacts or any(bit not in (0, 1) for bit in fixed_pattern)
+        ):
+            raise ValueError("fixed_pattern must have one binary label per contact")
         if self.samples == 0:
             return {}
         rates = self.positives.float() / self.samples
@@ -95,8 +99,6 @@ class ContactTracker:
             return _f1(true_pos, predicted, positives).item()
 
         if fixed_pattern is not None:
-            if len(fixed_pattern) != self.num_contacts or any(bit not in (0, 1) for bit in fixed_pattern):
-                raise ValueError("fixed_pattern must have one binary label per contact")
             fixed = torch.tensor(fixed_pattern, device=self.device, dtype=torch.bool)
         else:
             fixed = majority
