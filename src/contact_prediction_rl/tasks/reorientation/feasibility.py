@@ -9,6 +9,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from .orientation import angle_error_deg, axis_angle_xyzw, quat_mul_xyzw, rotate_vector_xyzw, signed_twist_deg
+
 FINGERS = ("thumb", "index", "middle", "ring", "little")
 # A known reachable posture used only as the initial guess for the
 # compiled-Newton palm-up IK solve. It is NOT the trial's reset pose.
@@ -129,42 +131,3 @@ def finger_gait_phases(closed: list[float], joint_names: list[str], pattern: str
         GaitPhase("regrasp", 0.25, tuple(reload)),
         GaitPhase("recover", 0.25, tuple(closed)),
     )
-
-
-def quat_mul_xyzw(a, b) -> tuple[float, float, float, float]:
-    ax, ay, az, aw = a
-    bx, by, bz, bw = b
-    return (aw * bx + ax * bw + ay * bz - az * by,
-            aw * by - ax * bz + ay * bw + az * bx,
-            aw * bz + ax * by - ay * bx + az * bw,
-            aw * bw - ax * bx - ay * by - az * bz)
-
-
-def axis_angle_xyzw(axis, degrees: float) -> tuple[float, float, float, float]:
-    length = math.sqrt(sum(x * x for x in axis))
-    if length < 1e-8:
-        raise ValueError("Rotation axis cannot be zero")
-    h = math.radians(degrees) / 2
-    return (*(math.sin(h) * x / length for x in axis), math.cos(h))
-
-
-def rotate_vector_xyzw(q, vec) -> tuple[float, float, float]:
-    qinv = (-q[0], -q[1], -q[2], q[3])
-    rotated = quat_mul_xyzw(quat_mul_xyzw(q, (*vec, 0.0)), qinv)
-    return rotated[:3]
-
-
-def angle_error_deg(q, goal) -> float:
-    """Shortest SO(3) quaternion distance; this diagnostic does not fold cube symmetries."""
-    inverse = (-goal[0], -goal[1], -goal[2], goal[3])
-    delta = quat_mul_xyzw(q, inverse)
-    return math.degrees(2 * math.atan2(math.sqrt(sum(v * v for v in delta[:3])), abs(delta[3])))
-
-
-def signed_twist_deg(initial, current, axis_world) -> float:
-    """Signed component of the object's relative orientation around a world axis."""
-    inverse = (-initial[0], -initial[1], -initial[2], initial[3])
-    delta = quat_mul_xyzw(current, inverse)
-    projection = sum(x * y for x, y in zip(delta[:3], axis_world, strict=True))
-    radians = 2 * math.atan2(projection, delta[3])
-    return math.degrees((radians + math.pi) % (2 * math.pi) - math.pi)

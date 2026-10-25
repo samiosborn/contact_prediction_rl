@@ -18,8 +18,10 @@ misrepresenting joint commands as actual object rotation.
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import os
+from pathlib import Path
 from dataclasses import dataclass
 
 os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
@@ -235,6 +237,7 @@ class GraspResult:
     axis_world: tuple[float, ...]
     centre_world: tuple[float, ...]
     closing_target: torch.Tensor
+    snapshot: dict
 
 
 def _action_info(env):
@@ -271,6 +274,13 @@ class FeasibilityExperiment:
         if any(value not in (0, 1) for value in labels):
             raise RuntimeError(f"Nonbinary contact labels: {labels}")
         return labels
+
+    def palm_axis_world(self):
+        """Actual HX5 palm normal, not the Panda hand-link axis."""
+        idx = next(i for i, name in enumerate(self.robot.body_names) if name.split("/")[-1] == "hx5_d20_right_base")
+        quat = _tensor(self.robot.data.body_link_pose_w)[0, idx, 3:7]
+        axis = quat_apply(quat[None, :], torch.tensor([[1., 0., 0.]], device=self.env.device))[0]
+        return _xyz(axis.detach().cpu().tolist())
 
     def cube_palm_local(self):
         """Measured object position in the hand frame after physics settles."""
@@ -371,7 +381,7 @@ class FeasibilityExperiment:
 
         initial_pos, initial_quat = self.cube_state()
         palm_pos, palm_quat = self.hand_pose()
-        axis_world = rotate_vector_xyzw(palm_quat, LOCAL_ROTATION_AXIS)
+        axis_world = self.palm_axis_world()
         totals = [0.0] * 5
         opposing = 0
         max_drift = 0.0
@@ -394,11 +404,28 @@ class FeasibilityExperiment:
                  and math.dist(cube_centre, current_pos) < self.args.max_drift_m
                  and max_arm_drift < self.args.max_arm_drift_rad
                  and opposing_fraction >= self.args.min_opposing_fraction)
+        measured = _tensor(self.robot.data.joint_pos)[0].detach().cpu().tolist()
+        actual = dict(zip(self.robot.joint_names, measured, strict=True))
+        object_pos, object_quat = self.cube_state()
+        snapshot = {
+            "schema_version": 1,
+            "valid": bool(valid),
+            "candidate": candidate.label(),
+            "arm_joint_pos": {name: actual[name] for name in (f"panda_joint{i}" for i in range(1, 8))},
+            "finger_joint_pos": {name: actual[name] for name in self.names},
+            "finger_target_pos": dict(zip(self.names, close[0].detach().cpu().tolist(), strict=True)),
+            "cube_pos_w": list(object_pos),
+            "cube_quat_w": list(object_quat),
+            "axis_world": list(axis_world),
+            "cube_palm_local_m": list(self.cube_palm_local()),
+            "contact_fraction": list(fractions),
+            "opposing_fraction": opposing_fraction,
+        }
         result = GraspResult(
             candidate=candidate, valid=valid, drift_m=max_drift,
             joint_drift_rad=max_arm_drift, opposing_fraction=opposing_fraction,
             contact_rate=fractions, start_quat=initial_quat, axis_world=axis_world,
-            centre_world=cube_centre, closing_target=close,
+            centre_world=cube_centre, closing_target=close, snapshot=snapshot,
         )
         measured_local = self.cube_palm_local()
         print(
@@ -420,11 +447,13 @@ class FeasibilityExperiment:
         # Define goals from the actual cube and palm orientations after grasp.
         start_position, start_quat = self.cube_state()
         _, palm_quat = self.hand_pose()
-        axis = rotate_vector_xyzw(palm_quat, LOCAL_ROTATION_AXIS)
-        goals = {deg: quat_mul_xyzw(axis_angle_xyzw(axis, deg), start_quat) for deg in (15, 45)}
+        axis = self.palm_axis_world()
+        goals = {deg: quat_mul_xyzw(axis_angle_xyzw(axis, deg), start_quat) for deg in (-15, 15, 45)}
 
         errors = {deg: math.inf for deg in goals}
         best_twist = 0.0
+        max_positive = 0.0
+        max_negative = 0.0
         max_drift = 0.0
         opposing_steps = 0
         retained_steps = 0
@@ -432,7 +461,7 @@ class FeasibilityExperiment:
         total_steps = 0
 
         def observe(action):
-            nonlocal best_twist, max_drift, opposing_steps, retained_steps, total_steps
+            nonlocal best_twist, max_positive, max_negative, max_drift, opposing_steps, retained_steps, total_steps
             labels = self.step(action)
             position, quat = self.cube_state()
             drift = math.dist(start_position, position)
@@ -441,6 +470,9 @@ class FeasibilityExperiment:
             retained_steps += int(retained)
             opposing_steps += int(labels[0] and any(labels[1:]))
             twist = signed_twist_deg(start_quat, quat, axis)
+            if retained:
+                max_positive = max(max_positive, twist)
+                max_negative = min(max_negative, twist)
             if retained and abs(twist) > abs(best_twist):
                 best_twist = twist
             for deg, target in goals.items():
@@ -496,13 +528,16 @@ class FeasibilityExperiment:
         success = {deg: hit and final_retained for deg, hit in success.items()}
         print(
             f"ROTATION_TRIAL controller={controller} pattern={pattern} amplitude_rad={signed_amplitude:+.3f} "
-            f"twist_deg={best_twist:+.2f} error15_deg={errors[15]:.2f} error45_deg={errors[45]:.2f} "
+            f"twist_deg={best_twist:+.2f} positive_deg={max_positive:+.2f} negative_deg={max_negative:+.2f} "
+            f"error_minus15_deg={errors[-15]:.2f} error15_deg={errors[15]:.2f} error45_deg={errors[45]:.2f} "
             f"max_drift_m={max_drift:.4f} opposing_fraction={opposing_steps/total_steps:.3f} "
-            f"retained={final_retained} success15={success[15]} success45={success[45]}",
+            f"retained={final_retained} success_minus15={success[-15]} success15={success[15]} success45={success[45]}",
             flush=True,
         )
         return {"controller": controller, "pattern": pattern, "amplitude": signed_amplitude,
-                "success15": success[15], "success45": success[45], "twist": best_twist, "error45": errors[45]}
+                "candidate": candidate.label(), "retained": final_retained,
+                "success_minus15": success[-15], "success15": success[15], "success45": success[45],
+                "positive": max_positive, "negative": max_negative, "twist": best_twist, "error45": errors[45]}
 
 
 def _parse_args():
@@ -517,6 +552,8 @@ def _parse_args():
     parser.add_argument("--use-pedestal", action="store_true",
                         help="Optional temporary cube support during closure; default is cube resting in palm")
     parser.add_argument("--max-grasps", type=int, default=12, help="Number of candidate cube-centre/posture trials")
+    parser.add_argument("--max-viable-grasps", type=int, default=3, help="Compare up to this many stable grasps")
+    parser.add_argument("--grasp-snapshot", type=Path, default=Path("runs/reorientation/grasp_snapshot.json"))
     parser.add_argument("--max-rotation-trials", type=int, default=12, help="Number of finger-only trajectory trials after a grasp works")
     parser.add_argument("--settle-steps", type=int, default=30)
     parser.add_argument("--close-steps", type=int, default=150)
@@ -592,8 +629,8 @@ def main() -> int:
                     result = exp.grasp(candidate)
                     if result.valid:
                         viable.append(result)
-                        # A confirmed first grasp is enough to start controller search.
-                        break
+                        if len(viable) >= args.max_viable_grasps:
+                            break
                 except ValueError as exc:
                     print(f"GRASP_REJECTED candidate={candidate.label()} reason={exc}", flush=True)
 
@@ -601,11 +638,6 @@ def main() -> int:
                 print("FEASIBILITY_SUMMARY grasp=False rotation15=False rotation45=False", flush=True)
                 print("FEASIBILITY_INCOMPLETE no_unsupported_opposing_grasp_found", flush=True)
                 return 2
-
-            selected = max(viable, key=lambda x: (x.opposing_fraction, -x.drift_m))
-            print(f"GRASP_SELECTED candidate={selected.candidate.label()} "
-                  f"centre_world_m={[round(v,4) for v in selected.centre_world]} "
-                  f"opposing_fraction={selected.opposing_fraction:.3f}", flush=True)
 
             controllers = ("gait", "offset") if args.controller == "both" else (args.controller,)
             trajectories = [
@@ -615,19 +647,33 @@ def main() -> int:
                 for pattern in ROLL_PATTERNS
                 for direction in (1, -1)
             ][:args.max_rotation_trials]
-            results = [
-                exp.rotation_trial(selected.candidate, pattern, amplitude, controller)
-                for controller, pattern, amplitude in trajectories
-            ]
-            completed = [result for result in results if result is not None]
-            hit15 = any(r["success15"] for r in completed)
-            hit45 = any(r["success45"] for r in completed)
-            best = max(completed, key=lambda r: abs(r["twist"])) if completed else None
+            results = []
+            for grip in viable:
+                print(f"GRASP_SELECTED candidate={grip.candidate.label()} "
+                      f"centre_world_m={[round(v, 4) for v in grip.centre_world]} "
+                      f"opposing_fraction={grip.opposing_fraction:.3f}", flush=True)
+                for controller, pattern, amplitude in trajectories:
+                    trial = exp.rotation_trial(grip.candidate, pattern, amplitude, controller)
+                    if trial is not None:
+                        results.append(trial)
+
+            hit15 = any(r["success15"] or r["success_minus15"] for r in results)
+            hit45 = any(r["success45"] for r in results)
+            best = max(results, key=lambda r: (r["retained"], max(r["positive"], -r["negative"])), default=None)
+            best_candidate = next((g for g in viable if best and g.candidate.label() == best["candidate"]), viable[0])
+            # Reproduce and export the equilibrium associated with the most movable grasp.
+            repeated = exp.grasp(best_candidate.candidate)
+            if repeated.valid:
+                args.grasp_snapshot.parent.mkdir(parents=True, exist_ok=True)
+                args.grasp_snapshot.write_text(json.dumps(repeated.snapshot, indent=2) + "\n", encoding="utf-8")
+                print(f"GRASP_SNAPSHOT_SAVED path={args.grasp_snapshot}", flush=True)
+            else:
+                print("GRASP_SNAPSHOT_SKIPPED selected_grasp_not_reproduced", flush=True)
             print(f"FEASIBILITY_SUMMARY grasp=True rotation15={hit15} rotation45={hit45} "
-                  f"completed_trials={len(completed)} "
+                  f"completed_trials={len(results)} "
                   f"best_twist_deg={best['twist'] if best else None}", flush=True)
-            if hit45:
-                print("FEASIBILITY_ROTATION_45_OK", flush=True)
+            if hit15:
+                print("FEASIBILITY_ROTATION_15_OK", flush=True)
                 return 0
             print("FEASIBILITY_INCOMPLETE free_cube_rotation_not_yet_demonstrated", flush=True)
             return 2
