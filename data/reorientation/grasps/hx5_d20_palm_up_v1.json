@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "valid": true,
+  "candidate": "diagnostic@0.050,0.025,0.100",
+  "arm_joint_pos": {
+    "panda_joint1": -1.1913336515426636,
+    "panda_joint2": -0.7498534321784973,
+    "panda_joint3": 1.0879913568496704,
+    "panda_joint4": -2.3360848426818848,
+    "panda_joint5": 2.7473504543304443,
+    "panda_joint6": 2.6073756217956543,
+    "panda_joint7": -1.35213303565979
+  },
+  "finger_joint_pos": {
+    "finger_r_joint1": 0.21893838047981262,
+    "finger_r_joint2": -0.694575309753418,
+    "finger_r_joint3": 0.8913692831993103,
+    "finger_r_joint4": 0.9331657886505127,
+    "finger_r_joint13": -0.006979420781135559,
+    "finger_r_joint14": 1.8180893659591675,
+    "finger_r_joint15": 1.4127792119979858,
+    "finger_r_joint16": 1.4001355171203613,
+    "finger_r_joint17": 9.539524398860522e-06,
+    "finger_r_joint18": 1.8190306425094604,
+    "finger_r_joint19": 1.4130401611328125,
+    "finger_r_joint20": 1.4001150131225586,
+    "finger_r_joint5": 0.0022902979981154203,
+    "finger_r_joint6": 1.363455057144165,
+    "finger_r_joint7": 0.9115571975708008,
+    "finger_r_joint8": 1.1404672861099243,
+    "finger_r_joint9": 0.0003958065062761307,
+    "finger_r_joint10": 1.3673120737075806,
+    "finger_r_joint11": 0.913796603679657,
+    "finger_r_joint12": 1.1416165828704834
+  },
+  "finger_target_pos": {
+    "finger_r_joint1": 0.4000000059604645,
+    "finger_r_joint2": -0.800000011920929,
+    "finger_r_joint3": 1.0,
+    "finger_r_joint4": 1.0,
+    "finger_r_joint13": 0.0,
+    "finger_r_joint14": 1.7999999523162842,
+    "finger_r_joint15": 1.399999976158142,
+    "finger_r_joint16": 1.399999976158142,
+    "finger_r_joint17": 0.0,
+    "finger_r_joint18": 1.7999999523162842,
+    "finger_r_joint19": 1.399999976158142,
+    "finger_r_joint20": 1.399999976158142,
+    "finger_r_joint5": 0.0,
+    "finger_r_joint6": 1.7999999523162842,
+    "finger_r_joint7": 1.399999976158142,
+    "finger_r_joint8": 1.399999976158142,
+    "finger_r_joint9": 0.0,
+    "finger_r_joint10": 1.7999999523162842,
+    "finger_r_joint11": 1.399999976158142,
+    "finger_r_joint12": 1.399999976158142
+  },
+  "cube_pos_w": [
+    0.5557839274406433,
+    -0.018131181597709656,
+    0.5367460250854492
+  ],
+  "cube_quat_w": [
+    -0.0006820751586928964,
+    0.020488495007157326,
+    0.03289076313376427,
+    0.999248743057251
+  ],
+  "axis_world": [
+    0.006822109222412109,
+    0.0011090938933193684,
+    0.9999772906303406
+  ],
+  "cube_palm_local_m": [
+    0.040241971611976624,
+    0.018474530428647995,
+    0.08128981292247772
+  ],
+  "contact_fraction": [
+    1.0,
+    1.0,
+    1.0,
+    0.0,
+    0.0
+  ],
+  "opposing_fraction": 1.0
+}
