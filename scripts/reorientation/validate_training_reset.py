@@ -43,10 +43,15 @@ def main():
                     with torch.inference_mode():
                         obs, rewards, terminated, truncated, _ = env.step(torch.zeros((args.num_envs, 20), device=env.device))
                     assert torch.isfinite(obs["policy"]).all() and torch.isfinite(rewards).all()
+                    assert obs["contact"].shape == (args.num_envs, 5)
+                    assert torch.all((obs["contact"] == 0) | (obs["contact"] == 1))
                     retained &= ~terminated & ~truncated
                     positives += obs["contact"].float().mean(dim=0)
                 retention = float(retained.float().mean().item())
                 retention_rates.append(retention)
+                rates = positives / args.hold_steps
+                if rates[0] < 0.05 or rates[1:].max() < 0.05:
+                    raise RuntimeError("No sustained thumb plus opposing fingertip contacts in reset hold")
                 print(f"RESET_HOLD trial={trial} retained={retention:.3f} "
                       f"finger_contact_rates={(positives / args.hold_steps).tolist()}", flush=True)
             print(f"RESET_SUMMARY average_retained={sum(retention_rates) / len(retention_rates):.3f} "

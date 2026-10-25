@@ -32,6 +32,6 @@ if os.environ.get("REORIENTATION_GRASP_SNAPSHOT"):
         kwargs={
             "env_cfg_entry_point": f"{__name__}.train_env_cfg:ReorientationTrainEnvCfg",
             "default_agent": "ppo",
-            "ppo_cfg_entry_point": f"{agents.__name__}.ppo_cfg:PPORunnerCfg",
+            "ppo_cfg_entry_point": f"{__name__}.train_ppo_cfg:ReorientationTrainPPORunnerCfg",
         },
     )

@@ -110,3 +110,32 @@ orientation.
 **This change does not establish a successful rotation in advance.** Only
 the user's GPU Newton run can validate the safer arm pose, new cube placement
 and whether the finger gait produces more rotation.
+
+
+## Multi-grasp task selection and snapshot-backed training
+
+The revised diagnostic evaluates up to --max-viable-grasps stable candidates (default 3).
+For each, --max-rotation-trials applies independently; the signed ±15° goals and
+the true HX5 palm normal are used to compare retained object rotation.
+The script now exits successfully on retained ±15° rotation and prints
+FEASIBILITY_ROTATION_15_OK. It can export the best reproducible stable
+grasp to runs/reorientation/grasp_snapshot.json.
+
+Run before configuring PPO:
+
+    uv run python scripts/reorientation/validate_scripted_rotation.py --controller both --max-grasps 12 --max-viable-grasps 3 --max-rotation-trials 12 --visualizer newton_gl
+
+After inspecting the GRASP_SNAPSHOT_SAVED file and rotation results:
+
+    export REORIENTATION_GRASP_SNAPSHOT="$PWD/runs/reorientation/grasp_snapshot.json"
+    uv run python scripts/reorientation/validate_training_reset.py --num-envs 32 --repeats 5
+
+Only after REORIENTATION_RESET_OK, smoke-test PPO:
+
+    uv run python scripts/train.py --task ContactPredictionRl-Reorientation-Train-HX5-D20-Right --num_envs 16 --max_iterations 2 --seed 42 --no_random_episode_lengths --run_name baseline_smoke agent.contact_prediction.loss_weight=0.0
+
+The separate opt-in training task uses 58D privileged object/goal observations,
+20D grasp-centred finger actions, and five privileged contact labels. It retains
+the diagnostic task unchanged, uses a conservative initial Gaussian action
+standard deviation and small mean actions, and logs to a separate experiment.
+The snapshot is a local GPU output, not a claimed verified reset.
