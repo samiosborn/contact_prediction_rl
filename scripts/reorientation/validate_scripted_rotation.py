@@ -639,10 +639,10 @@ def main() -> int:
             controllers = ("gait", "offset") if args.controller == "both" else (args.controller,)
             trajectories = [
                 (controller, pattern, direction * amplitude)
-                for controller in controllers
                 for amplitude in (0.2, 0.4, 0.6)
                 for pattern in ROLL_PATTERNS
                 for direction in (1, -1)
+                for controller in controllers
             ][:args.max_rotation_trials]
             results = []
             for grip in viable:
