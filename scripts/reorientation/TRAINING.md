@@ -46,3 +46,35 @@ This uses deterministic policy actions and records goal error at the first two
 steps and beyond with success termination disabled. Do not interpret near-100%
 training success at two steps as proven sustained reorientation without this
 independent physics audit.
+
+
+## Fixed-horizon task (updated)
+
+Reorientation Train terminates **only at the six-second time limit**, about
+180 control steps with the existing 120 Hz physics / four-step decimation.
+Neither briefly reaching the target nor dropping the cube ends the episode.
+
+New reward terms in `mdp/rewards.py`:
+
+- `orientation` (weight +1): bounded progress toward the +15° target,
+  gated on thumb/opposing-finger grasp retention
+- `stable_hold` (weight +4): one for each step within 5° and 20 mm,
+  with opposing contact, linear speed ≤0.10 m/s and angular speed ≤0.50 rad/s
+- `dropped` (weight −2): each step after the cube drifts beyond 40 mm
+
+Isaac Lab reward weights are scaled by the control timestep. Hold speed
+thresholds and relative weights are **initial hypotheses**, not calibrated
+against complete Newton reference trajectories. In particular, do not
+infer stable manipulation from the original 300-iteration quick-flick baseline.
+
+The `stable_hold` reward term reuses pure predicates in
+`tasks/reorientation/metrics.py`. Its independent per-env tracker in
+`diagnostics.py` reports episode summaries through the existing Isaac Lab
+`extras["log"]` path on time-limit reset. The current PPO runner already
+writes those scalar values to console and TensorBoard as `Metrics/*`:
+`sustained_success_rate`, `stable_goal_fraction`, `transient_goal_rate`,
+`grasp_retention_fraction`, `dropped_fraction`, final and minimum goal
+errors, max displacement and final stable-goal rate.
+
+W&B, changes to `scripts/train.py`, a new
+`scripts/reorientation/evaluate_training.py` and action limits are postponed.

@@ -34,8 +34,27 @@ class TrainObservationsCfg(ObservationsCfg):
 
 @configclass
 class TrainRewardsCfg:
-    orientation = RewTerm(func=mdp.orientation_reward, weight=1.0, params={"goal_xyzw": (0.0, 0.0, 0.0, 1.0)})
-    success = RewTerm(func=mdp.success_reward, weight=2.0, params={"goal_xyzw": (0.0, 0.0, 0.0, 1.0), "start_pos_w": (0.0, 0.0, 0.0)})
+    """Reward reaching, stabilising and keeping a genuine grasp for six seconds."""
+
+    orientation = RewTerm(
+        func=mdp.orientation_progress_reward,
+        weight=1.0,
+        params={"goal_xyzw": (0.0, 0.0, 0.0, 1.0), "start_pos_w": (0.0, 0.0, 0.0)},
+    )
+    stable_hold = RewTerm(
+        func=mdp.StableGoalReward,
+        weight=4.0,
+        params={
+            "goal_xyzw": (0.0, 0.0, 0.0, 1.0),
+            "start_pos_w": (0.0, 0.0, 0.0),
+            "goal_tolerance_deg": 5.0,
+            "max_hold_displacement_m": 0.02,
+            "max_grasp_displacement_m": 0.04,
+            "max_linear_speed_m_s": 0.10,
+            "max_angular_speed_rad_s": 0.50,
+            "sustained_steps": 10,
+        },
+    )
     dropped = RewTerm(func=mdp.drop_penalty, weight=-2.0, params={"start_pos_w": (0.0, 0.0, 0.0)})
 
 
@@ -77,7 +96,7 @@ class ReorientationTrainEnvCfg(ReorientationEnvCfg):
         goal = tuple(float(x) for x in goal_orientation(initial, axis, torch.tensor([math.radians(15.0)]))[0])
         start = tuple(snapshot["cube_pos_w"])
         self.observations.policy.goal_error.params["goal_xyzw"] = goal
-        for term in (self.rewards.orientation, self.rewards.success):
+        for term in (self.rewards.orientation, self.rewards.stable_hold):
             term.params["goal_xyzw"] = goal
-        for term in (self.rewards.success, self.rewards.dropped):
+        for term in (self.rewards.orientation, self.rewards.stable_hold, self.rewards.dropped):
             term.params["start_pos_w"] = start

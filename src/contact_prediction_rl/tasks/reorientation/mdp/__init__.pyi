@@ -12,6 +12,8 @@ __all__ = [
     "orientation_reward",
     "success_reward",
     "drop_penalty",
+    "orientation_progress_reward",
+    "StableGoalReward",
 ]
 
 # Forward stable MDP terms lazily, then override with environment-specific terms below.
@@ -19,4 +21,4 @@ from isaaclab.envs.mdp import *  # noqa: F401, F403
 
 from .observations import goal_error_quat, object_state_palm, remaining_time
 from .resets import restore_grasp_joint_state
-from .rewards import drop_penalty, goal_error_rad, goal_reached, joint_pos_target_l2, object_dropped, orientation_reward, success_reward
+from .rewards import StableGoalReward, drop_penalty, goal_error_rad, goal_reached, joint_pos_target_l2, object_dropped, orientation_progress_reward, orientation_reward, success_reward

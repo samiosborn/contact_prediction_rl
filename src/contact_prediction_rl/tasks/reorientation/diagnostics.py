@@ -138,6 +138,7 @@ class ReorientationEpisodeMetrics:
         self.near_goal_steps = torch.zeros(num_envs, dtype=torch.long, device=device)
         self.stable_goal_steps = torch.zeros(num_envs, dtype=torch.long, device=device)
         self.grasp_steps = torch.zeros(num_envs, dtype=torch.long, device=device)
+        self.dropped_steps = torch.zeros(num_envs, dtype=torch.long, device=device)
         self.streak = torch.zeros(num_envs, dtype=torch.long, device=device)
         self.best_streak = torch.zeros(num_envs, dtype=torch.long, device=device)
         self.minimum_goal_error_rad = torch.full((num_envs,), float("inf"), device=device)
@@ -147,7 +148,7 @@ class ReorientationEpisodeMetrics:
 
     def observe(self, state: dict[str, torch.Tensor]) -> None:
         """Consume a batch of instantaneous observations exactly once per step."""
-        for name in ("near_goal", "stable_goal", "grasp_retained", "goal_error_rad", "cube_displacement_m"):
+        for name in ("near_goal", "stable_goal", "grasp_retained", "object_dropped", "goal_error_rad", "cube_displacement_m"):
             if name not in state or state[name].shape != (self.num_envs,):
                 raise ValueError(f"Missing or incorrectly shaped metric: {name}")
         hit = state["stable_goal"].bool()
@@ -155,6 +156,7 @@ class ReorientationEpisodeMetrics:
         self.near_goal_steps += state["near_goal"].long()
         self.stable_goal_steps += hit.long()
         self.grasp_steps += state["grasp_retained"].long()
+        self.dropped_steps += state["object_dropped"].long()
         self.streak = torch.where(hit, self.streak + 1, 0)
         self.best_streak = torch.maximum(self.best_streak, self.streak)
         self.minimum_goal_error_rad = torch.minimum(self.minimum_goal_error_rad, state["goal_error_rad"])
@@ -175,6 +177,7 @@ class ReorientationEpisodeMetrics:
             "Metrics/sustained_success_rate": (self.best_streak[selected] >= self.sustained_steps).float().mean().item(),
             "Metrics/stable_goal_fraction": (self.stable_goal_steps[selected].float() / steps).mean().item(),
             "Metrics/grasp_retention_fraction": (self.grasp_steps[selected].float() / steps).mean().item(),
+            "Metrics/dropped_fraction": (self.dropped_steps[selected].float() / steps).mean().item(),
             "Metrics/final_goal_error_deg": torch.rad2deg(self.final_goal_error_rad[selected]).mean().item(),
             "Metrics/min_goal_error_deg": torch.rad2deg(self.minimum_goal_error_rad[selected]).mean().item(),
             "Metrics/max_displacement_m": self.max_displacement_m[selected].mean().item(),
@@ -187,6 +190,7 @@ class ReorientationEpisodeMetrics:
         self.near_goal_steps[env_ids] = 0
         self.stable_goal_steps[env_ids] = 0
         self.grasp_steps[env_ids] = 0
+        self.dropped_steps[env_ids] = 0
         self.streak[env_ids] = 0
         self.best_streak[env_ids] = 0
         self.minimum_goal_error_rad[env_ids] = float("inf")
