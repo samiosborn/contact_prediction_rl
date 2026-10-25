@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import torch
 
+from .metrics import grasp_status
 from .orientation import orientation_error_rad, signed_twist_rad
 
 
@@ -45,9 +46,10 @@ def measure_reorientation(
     error = torch.rad2deg(orientation_error_rad(cube_quat_w, goal))
     initial_error = torch.rad2deg(orientation_error_rad(initial, goal))
     twist = torch.rad2deg(signed_twist_rad(initial, cube_quat_w, axis))
-    displacement = torch.linalg.vector_norm(cube_pos_w - start_pos_w, dim=-1)
-    opposing = fingertip_contact[:, 0].bool() & fingertip_contact[:, 1:].bool().any(dim=1)
-    retained = opposing & (displacement <= max_drift_m)
+    grasp = grasp_status(cube_pos_w, start_pos_w, fingertip_contact, max_displacement_m=max_drift_m)
+    displacement = grasp["cube_displacement_m"]
+    opposing = grasp["opposing_contact"]
+    retained = grasp["grasp_retained"]
     return {
         "goal_error_deg": error,
         "goal_progress_deg": initial_error - error,
@@ -115,3 +117,79 @@ class ReorientationTracker:
             "held_goal_10_steps_fraction": (self.max_success_streak >= 10).float().mean().item(),
             "at_goal_at_end_fraction": (self.success_streak > 0).float().mean().item(),
         }
+
+
+
+class ReorientationEpisodeMetrics:
+    """Per-env fixed-horizon success statistics, independent of reward weights.
+
+    An observer updates this exactly once per control step and resets only
+    completed environment IDs; the simulator and training algorithm stay out
+    of the pure metric calculations.
+    """
+
+    def __init__(self, num_envs: int, *, sustained_steps: int = 10, device: str | torch.device = "cpu") -> None:
+        if num_envs < 1 or sustained_steps < 1:
+            raise ValueError("Positive environment count and sustained_steps required")
+        self.num_envs = num_envs
+        self.sustained_steps = sustained_steps
+        self.device = torch.device(device)
+        self.steps = torch.zeros(num_envs, dtype=torch.long, device=device)
+        self.near_goal_steps = torch.zeros(num_envs, dtype=torch.long, device=device)
+        self.stable_goal_steps = torch.zeros(num_envs, dtype=torch.long, device=device)
+        self.grasp_steps = torch.zeros(num_envs, dtype=torch.long, device=device)
+        self.streak = torch.zeros(num_envs, dtype=torch.long, device=device)
+        self.best_streak = torch.zeros(num_envs, dtype=torch.long, device=device)
+        self.minimum_goal_error_rad = torch.full((num_envs,), float("inf"), device=device)
+        self.final_goal_error_rad = torch.zeros(num_envs, device=device)
+        self.max_displacement_m = torch.zeros(num_envs, device=device)
+        self.final_stable_goal = torch.zeros(num_envs, dtype=torch.bool, device=device)
+
+    def observe(self, state: dict[str, torch.Tensor]) -> None:
+        """Consume a batch of instantaneous observations exactly once per step."""
+        for name in ("near_goal", "stable_goal", "grasp_retained", "goal_error_rad", "cube_displacement_m"):
+            if name not in state or state[name].shape != (self.num_envs,):
+                raise ValueError(f"Missing or incorrectly shaped metric: {name}")
+        hit = state["stable_goal"].bool()
+        self.steps += 1
+        self.near_goal_steps += state["near_goal"].long()
+        self.stable_goal_steps += hit.long()
+        self.grasp_steps += state["grasp_retained"].long()
+        self.streak = torch.where(hit, self.streak + 1, 0)
+        self.best_streak = torch.maximum(self.best_streak, self.streak)
+        self.minimum_goal_error_rad = torch.minimum(self.minimum_goal_error_rad, state["goal_error_rad"])
+        self.final_goal_error_rad = state["goal_error_rad"].clone()
+        self.max_displacement_m = torch.maximum(self.max_displacement_m, state["cube_displacement_m"])
+        self.final_stable_goal = hit.clone()
+
+    def summarise_completed(self, env_ids: torch.Tensor) -> dict[str, float]:
+        """Aggregate only finished environments, excluding zero-step initial resets."""
+        if env_ids.numel() == 0:
+            return {}
+        selected = env_ids[self.steps[env_ids] > 0]
+        if selected.numel() == 0:
+            return {}
+        steps = self.steps[selected].clamp_min(1)
+        return {
+            "Metrics/transient_goal_rate": (self.near_goal_steps[selected] > 0).float().mean().item(),
+            "Metrics/sustained_success_rate": (self.best_streak[selected] >= self.sustained_steps).float().mean().item(),
+            "Metrics/stable_goal_fraction": (self.stable_goal_steps[selected].float() / steps).mean().item(),
+            "Metrics/grasp_retention_fraction": (self.grasp_steps[selected].float() / steps).mean().item(),
+            "Metrics/final_goal_error_deg": torch.rad2deg(self.final_goal_error_rad[selected]).mean().item(),
+            "Metrics/min_goal_error_deg": torch.rad2deg(self.minimum_goal_error_rad[selected]).mean().item(),
+            "Metrics/max_displacement_m": self.max_displacement_m[selected].mean().item(),
+            "Metrics/final_stable_goal_rate": self.final_stable_goal[selected].float().mean().item(),
+        }
+
+    def reset(self, env_ids: torch.Tensor) -> None:
+        """Do not clear unfinished episodes belonging to other environments."""
+        self.steps[env_ids] = 0
+        self.near_goal_steps[env_ids] = 0
+        self.stable_goal_steps[env_ids] = 0
+        self.grasp_steps[env_ids] = 0
+        self.streak[env_ids] = 0
+        self.best_streak[env_ids] = 0
+        self.minimum_goal_error_rad[env_ids] = float("inf")
+        self.final_goal_error_rad[env_ids] = 0
+        self.max_displacement_m[env_ids] = 0
+        self.final_stable_goal[env_ids] = False
