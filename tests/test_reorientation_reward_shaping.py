@@ -8,7 +8,8 @@ import torch
 
 from contact_prediction_rl.tasks.reorientation.config.hx5_d20_right.train_env_cfg import ReorientationTrainEnvCfg
 from contact_prediction_rl.tasks.reorientation.diagnostics import ReorientationEpisodeMetrics
-from contact_prediction_rl.tasks.reorientation.mdp import metrics as mdp_metrics, rewards
+from contact_prediction_rl.tasks.reorientation.mdp import metrics as mdp_metrics
+from contact_prediction_rl.tasks.reorientation.mdp import rewards
 from contact_prediction_rl.tasks.reorientation.orientation import axis_angle_quat
 
 
