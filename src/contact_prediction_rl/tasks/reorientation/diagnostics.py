@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import math
-
 import torch
 
 from .orientation import orientation_error_rad, signed_twist_rad

@@ -85,9 +85,9 @@ class EpisodeTracker:
             self._longest = torch.maximum(self._longest, self._streak)
         finished: list[EpisodeRecord] = []
         for idx in done.nonzero(as_tuple=False).flatten().tolist():
-            def optional(value: torch.Tensor) -> float | None:
-                result = float(value[idx].item())
-                return result if torch.isfinite(value[idx]) else None
+            def optional(value: torch.Tensor, index: int = idx) -> float | None:
+                result = float(value[index].item())
+                return result if bool(torch.isfinite(value[index])) else None
 
             record = EpisodeRecord(
                 env_id=idx,

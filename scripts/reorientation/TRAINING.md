@@ -17,3 +17,29 @@ The task uses a fixed +15-degree goal, 58D policy observations, 20D grasp-centre
 actions, a measured finger equilibrium, and five separate contact labels.
 
 GPU validation and task success are NOT established by these source changes.
+
+## Read-only diagnostics
+
+The following scripts leave the policy observations, rewards, contact labels,
+and action terms unchanged. They disable success/drop **terminations only in the
+diagnostic configuration** to inspect a continuous 150-step trajectory. Do not
+interpret their reported success fractions as training episode success rates.
+
+```bash
+export REORIENTATION_GRASP_SNAPSHOT="$PWD/runs/reorientation/grasp_snapshot.json"
+
+# Zero-action, Gaussian and untrained-policy trajectories:
+uv run python scripts/reorientation/diagnose_training.py --mode zero
+uv run python scripts/reorientation/diagnose_training.py --mode random --action-std 0.2
+uv run python scripts/reorientation/diagnose_training.py --mode untrained
+
+# Recreate the physically tested signed gait and one-way offset through the
+# TRAINING task's live joint-position action conversion:
+uv run python scripts/reorientation/replay_training_actions.py --controller gait --pattern spread --amplitude -0.6
+uv run python scripts/reorientation/replay_training_actions.py --controller offset --pattern thumb_index --amplitude 0.6
+```
+
+The live action term offset and scale are inverted rather than assuming that a
+policy action has the same numerical units as a joint target. Reported diagnostics
+include angle, signed twist, cube drift, opposing contact, finger-mask diversity,
+joint tracking and the fraction of physically clipped targets.
