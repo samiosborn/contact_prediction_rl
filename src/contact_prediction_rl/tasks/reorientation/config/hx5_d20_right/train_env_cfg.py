@@ -34,16 +34,16 @@ class TrainObservationsCfg(ObservationsCfg):
 
 @configclass
 class TrainRewardsCfg:
-    """Reward reaching, stabilising and keeping a genuine grasp for six seconds."""
+    """Minimal task reward plus zero-return episode-metrics observer."""
 
     orientation = RewTerm(
-        func=mdp.orientation_progress_reward,
+        func=mdp.orientation_reward,
         weight=1.0,
-        params={"goal_xyzw": (0.0, 0.0, 0.0, 1.0), "start_pos_w": (0.0, 0.0, 0.0)},
+        params={"goal_xyzw": (0.0, 0.0, 0.0, 1.0)},
     )
-    stable_hold = RewTerm(
-        func=mdp.StableGoalReward,
-        weight=4.0,
+    episode_metrics = RewTerm(
+        func=mdp.ReorientationMetricsTerm,
+        weight=1.0,  # Observer always returns zero; no reward contribution.
         params={
             "goal_xyzw": (0.0, 0.0, 0.0, 1.0),
             "start_pos_w": (0.0, 0.0, 0.0),
@@ -96,7 +96,7 @@ class ReorientationTrainEnvCfg(ReorientationEnvCfg):
         goal = tuple(float(x) for x in goal_orientation(initial, axis, torch.tensor([math.radians(15.0)]))[0])
         start = tuple(snapshot["cube_pos_w"])
         self.observations.policy.goal_error.params["goal_xyzw"] = goal
-        for term in (self.rewards.orientation, self.rewards.stable_hold):
+        for term in (self.rewards.orientation, self.rewards.episode_metrics):
             term.params["goal_xyzw"] = goal
-        for term in (self.rewards.orientation, self.rewards.stable_hold, self.rewards.dropped):
+        for term in (self.rewards.episode_metrics, self.rewards.dropped):
             term.params["start_pos_w"] = start

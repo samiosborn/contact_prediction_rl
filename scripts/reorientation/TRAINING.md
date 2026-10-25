@@ -28,8 +28,8 @@ uv run python scripts/reorientation/diagnose_training.py --mode zero
 uv run python scripts/reorientation/replay_training_actions.py --controller gait --pattern spread --amplitude -0.6
 ```
 
-These diagnostic scripts disable success and drop terminations **locally** to
-measure continuous trajectories; they do not modify PPO or training rewards.
+These diagnostic scripts track uninterrupted trajectories and keep the same
+timeout as the training task; they do not modify PPO or training rewards.
 The feasibility experiment still exports *candidate* grasps into `runs/`.
 Never promote a new candidate over v1 without explicitly versioning it.
 
@@ -54,27 +54,26 @@ Reorientation Train terminates **only at the six-second time limit**, about
 180 control steps with the existing 120 Hz physics / four-step decimation.
 Neither briefly reaching the target nor dropping the cube ends the episode.
 
-New reward terms in `mdp/rewards.py`:
+The deliberately minimal reward consists of:
 
-- `orientation` (weight +1): bounded progress toward the +15° target,
-  gated on thumb/opposing-finger grasp retention
-- `stable_hold` (weight +4): one for each step within 5° and 20 mm,
-  with opposing contact, linear speed ≤0.10 m/s and angular speed ≤0.50 rad/s
-- `dropped` (weight −2): each step after the cube drifts beyond 40 mm
+- `orientation` (weight +1): negative shortest quaternion orientation error
+  in radians, without clipping or contact gating
+- `dropped` (weight −2): current baseline position-based penalty for every
+  timestep the cube drifts farther than 40 mm from the initial world position
 
-Isaac Lab reward weights are scaled by the control timestep. Hold speed
-thresholds and relative weights are **initial hypotheses**, not calibrated
-against complete Newton reference trajectories. In particular, do not
-infer stable manipulation from the original 300-iteration quick-flick baseline.
+The previous `stable_hold` shaping reward is removed. Other drop definitions
+(e.g. cube position relative to the palm) are deferred until validated.
 
-The `stable_hold` reward term reuses pure predicates in
-`tasks/reorientation/metrics.py`. Its independent per-env tracker in
-`diagnostics.py` reports episode summaries through the existing Isaac Lab
-`extras["log"]` path on time-limit reset. The current PPO runner already
-writes those scalar values to console and TensorBoard as `Metrics/*`:
-`sustained_success_rate`, `stable_goal_fraction`, `transient_goal_rate`,
-`grasp_retention_fraction`, `dropped_fraction`, final and minimum goal
-errors, max displacement and final stable-goal rate.
+The `episode_metrics` observer is wired through the reward-manager lifecycle
+because this exposes one per-step callback and reset logging without modifying
+the PPO runner. It returns **exactly zero reward** for all states. Its config
+weight is 1 only to ensure Isaac Lab invokes the observer, not to incentivise
+stable holding. Metrics remain separate from the task reward.
+
+Success metrics live in `tasks/reorientation/metrics.py` and are accumulated
+by `diagnostics.py`; they appear under `Metrics/*` in existing TensorBoard
+logging when an episode ends. The velocity, contact and 10-step stable-goal
+criteria are **diagnostic definitions**, not rewards or terminations.
 
 W&B, changes to `scripts/train.py`, a new
 `scripts/reorientation/evaluate_training.py` and action limits are postponed.
