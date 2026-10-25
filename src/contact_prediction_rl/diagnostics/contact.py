@@ -98,10 +98,7 @@ class ContactTracker:
             true_pos = (self.positives * pattern.long()).sum().float()
             return _f1(true_pos, predicted, positives).item()
 
-        if fixed_pattern is not None:
-            fixed = torch.tensor(fixed_pattern, device=self.device, dtype=torch.bool)
-        else:
-            fixed = majority
+        fixed = torch.tensor(fixed_pattern, device=self.device, dtype=torch.bool) if fixed_pattern is not None else majority
 
         opportunities = int(self.flip_opportunities.item())
         return {
