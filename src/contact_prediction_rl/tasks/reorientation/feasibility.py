@@ -9,13 +9,11 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from .orientation import (  # noqa: I001 -- intentional same-name re-exports for compatibility
-    angle_error_deg as angle_error_deg,
-    axis_angle_xyzw as axis_angle_xyzw,
-    quat_mul_xyzw as quat_mul_xyzw,
-    rotate_vector_xyzw as rotate_vector_xyzw,
-    signed_twist_deg as signed_twist_deg,
-)
+from .orientation import angle_error_deg as angle_error_deg
+from .orientation import axis_angle_xyzw as axis_angle_xyzw
+from .orientation import quat_mul_xyzw as quat_mul_xyzw
+from .orientation import rotate_vector_xyzw as rotate_vector_xyzw
+from .orientation import signed_twist_deg as signed_twist_deg
 
 FINGERS = ("thumb", "index", "middle", "ring", "little")
 # A known reachable posture used only as the initial guess for the
