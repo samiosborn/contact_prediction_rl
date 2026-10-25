@@ -39,3 +39,9 @@ def test_live_action_offset_and_scale_round_trip_for_arbitrary_joint_order():
     assert action[0, 0].item() == pytest.approx(2.0)
     with pytest.raises(ValueError):
         targets_to_actions(desired, offset=offset, scale=torch.zeros(2))
+
+
+def test_scalar_action_scale_and_offset_are_supported():
+    desired = torch.tensor([[0.6, -0.4]])
+    actions = targets_to_actions(desired, offset=0.1, scale=0.25)
+    torch.testing.assert_close(actions, torch.tensor([[2.0, -2.0]]))

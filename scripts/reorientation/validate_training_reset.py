@@ -10,6 +10,7 @@ os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
 import torch
 
 from isaaclab.app import add_launcher_args, launch_simulation
+
 from isaaclab_tasks.utils import parse_env_cfg
 
 import contact_prediction_rl.tasks  # noqa: F401

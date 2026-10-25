@@ -64,7 +64,7 @@ def rotation_waypoints(
     return outputs
 
 
-def targets_to_actions(targets: torch.Tensor, *, offset: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
+def targets_to_actions(targets: torch.Tensor, *, offset: torch.Tensor | float, scale: torch.Tensor | float) -> torch.Tensor:
     """Invert Isaac Lab's joint-position action mapping: target = offset + scale * action.
 
     Use the *live action term's* resolved offset and scale, in its own joint
@@ -73,8 +73,8 @@ def targets_to_actions(targets: torch.Tensor, *, offset: torch.Tensor, scale: to
     if targets.ndim != 2 or not torch.isfinite(targets).all():
         raise ValueError("Targets must be finite [envs, joints]")
     try:
-        offset = torch.broadcast_to(offset, targets.shape)
-        scale = torch.broadcast_to(scale, targets.shape)
+        offset = torch.broadcast_to(torch.as_tensor(offset, device=targets.device, dtype=targets.dtype), targets.shape)
+        scale = torch.broadcast_to(torch.as_tensor(scale, device=targets.device, dtype=targets.dtype), targets.shape)
     except RuntimeError as exc:
         raise ValueError("Offset/scale do not broadcast to commanded targets") from exc
     if not torch.isfinite(offset).all() or not torch.isfinite(scale).all() or bool((scale == 0).any()):

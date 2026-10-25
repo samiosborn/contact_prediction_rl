@@ -21,8 +21,8 @@ import argparse
 import json
 import math
 import os
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
 
 os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
 
@@ -39,14 +39,14 @@ import contact_prediction_rl.tasks  # noqa: E402, F401
 from contact_prediction_rl.tasks.reorientation.feasibility import (  # noqa: E402
     ARM_IK_SEED,
     FINGERS_FORWARD_WORLD,
-    PALM_NORMAL_WORLD,
     GRASP_CENTRES,
+    PALM_NORMAL_WORLD,
     ROLL_PATTERNS,
     GraspCandidate,
     angle_error_deg,
     apply_rotation_pattern,
-    finger_gait_phases,
     axis_angle_xyzw,
+    finger_gait_phases,
     grasp_targets,
     quat_mul_xyzw,
     signed_twist_deg,
@@ -179,7 +179,7 @@ def _solve_palm_up_pose(env, *, margin_rad: float):
 
     best = None
     for position_goal in positions:
-        def residual(q):
+        def residual(q, position_goal=position_goal):
             pos, normal, forward = fk(q)
             return np.concatenate((
                 12.0 * (pos - position_goal),

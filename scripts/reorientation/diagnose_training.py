@@ -18,6 +18,7 @@ import os
 os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
 
 import torch  # noqa: E402
+
 from isaaclab.app import add_launcher_args, launch_simulation  # noqa: E402
 
 from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
@@ -66,6 +67,7 @@ def main() -> None:
 
     with launch_simulation(cfg, args):
         from isaaclab.envs import ManagerBasedRLEnv
+
         from contact_prediction_rl.tasks.reorientation.config.hx5_d20_right.train_ppo_cfg import ReorientationTrainPPORunnerCfg
 
         env = ManagerBasedRLEnv(cfg=cfg)

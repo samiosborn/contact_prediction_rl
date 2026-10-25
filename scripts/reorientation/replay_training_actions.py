@@ -19,6 +19,7 @@ import os
 os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
 
 import torch  # noqa: E402
+
 from isaaclab.app import add_launcher_args, launch_simulation  # noqa: E402
 
 from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
@@ -78,8 +79,9 @@ def main() -> None:
                 raise RuntimeError(f"Unexpected training action order: {names}")
             if not hasattr(term, "_offset") or not hasattr(term, "_scale"):
                 raise RuntimeError("Expected a resolved Isaac Lab joint-position offset and scale")
-            offset = _tensor(term._offset).to(device)
-            scale = _tensor(term._scale).to(device)
+            # Isaac Lab permits scalar floats as action scales/offsets.
+            offset = torch.as_tensor(_tensor(term._offset), device=device, dtype=torch.float32)
+            scale = torch.as_tensor(_tensor(term._scale), device=device, dtype=torch.float32)
             robot = env.scene["robot"]
             ids = [robot.joint_names.index(name) for name in names]
             limits = robot.data.joint_pos_limits.torch[:, ids]
