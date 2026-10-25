@@ -9,7 +9,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from .orientation import (
+from .orientation import (  # noqa: I001 -- intentional same-name re-exports for compatibility
     angle_error_deg as angle_error_deg,
     axis_angle_xyzw as axis_angle_xyzw,
     quat_mul_xyzw as quat_mul_xyzw,
