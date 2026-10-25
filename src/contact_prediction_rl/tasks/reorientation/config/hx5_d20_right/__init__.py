@@ -1,5 +1,7 @@
 # src/contact_prediction_rl/tasks/reorientation/config/hx5_d20_right/__init__.py
 
+import os
+
 import gymnasium as gym
 
 from . import agents
@@ -22,8 +24,6 @@ gym.register(
 
 
 # The training task is explicitly opt-in so contact-validation fixture tests remain unchanged.
-import os
-
 if os.environ.get("REORIENTATION_GRASP_SNAPSHOT"):
     gym.register(
         id="ContactPredictionRl-Reorientation-Train-HX5-D20-Right",

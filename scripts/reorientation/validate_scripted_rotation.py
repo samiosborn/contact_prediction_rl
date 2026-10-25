@@ -49,7 +49,6 @@ from contact_prediction_rl.tasks.reorientation.feasibility import (  # noqa: E40
     axis_angle_xyzw,
     grasp_targets,
     quat_mul_xyzw,
-    rotate_vector_xyzw,
     signed_twist_deg,
 )
 
@@ -380,7 +379,6 @@ class FeasibilityExperiment:
         self.check_arm_orientation("after_closure")
 
         initial_pos, initial_quat = self.cube_state()
-        palm_pos, palm_quat = self.hand_pose()
         axis_world = self.palm_axis_world()
         totals = [0.0] * 5
         opposing = 0
@@ -446,7 +444,6 @@ class FeasibilityExperiment:
 
         # Define goals from the actual cube and palm orientations after grasp.
         start_position, start_quat = self.cube_state()
-        _, palm_quat = self.hand_pose()
         axis = self.palm_axis_world()
         goals = {deg: quat_mul_xyzw(axis_angle_xyzw(axis, deg), start_quat) for deg in (-15, 15, 45)}
 
@@ -569,7 +566,7 @@ def _parse_args():
     args = parser.parse_args()
     if min(args.max_grasps, args.max_rotation_trials, args.settle_steps, args.close_steps,
            args.hold_steps, args.rotate_steps, args.rotate_ramp_steps, args.close_ramp_steps,
-           args.gait_cycles, args.arm_limit_margin_rad) <= 0:
+           args.gait_cycles, args.arm_limit_margin_rad, args.max_viable_grasps) <= 0:
         parser.error("Trial counts and durations must be positive")
     if args.close_ramp_steps > args.close_steps or args.rotate_ramp_steps > args.rotate_steps:
         parser.error("Ramp steps cannot exceed their phase durations")
