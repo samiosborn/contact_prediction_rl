@@ -85,3 +85,16 @@ def test_no_success_for_passing_goal_once_then_losing_contact():
     assert result["Metrics/transient_goal_rate"] == 1.0
     assert result["Metrics/sustained_success_rate"] == 0.0
     assert result["Metrics/stable_goal_fraction"] == pytest.approx(1.0 / 12.0)
+
+
+
+def test_training_task_only_terminates_on_fixed_horizon():
+    from contact_prediction_rl.tasks.reorientation.config.hx5_d20_right.train_env_cfg import ReorientationTrainEnvCfg
+
+    cfg = ReorientationTrainEnvCfg()
+    assert cfg.episode_length_s == 6.0
+    assert cfg.is_finite_horizon
+    assert cfg.terminations.time_out.time_out is True
+    assert not hasattr(cfg.terminations, "success")
+    assert not hasattr(cfg.terminations, "dropped")
+    assert cfg.scene.num_envs >= 1

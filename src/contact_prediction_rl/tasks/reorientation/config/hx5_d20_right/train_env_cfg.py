@@ -41,8 +41,8 @@ class TrainRewardsCfg:
 
 @configclass
 class TrainTerminationsCfg:
-    success = DoneTerm(func=mdp.goal_reached, params={"goal_xyzw": (0.0, 0.0, 0.0, 1.0), "start_pos_w": (0.0, 0.0, 0.0)})
-    dropped = DoneTerm(func=mdp.object_dropped, params={"start_pos_w": (0.0, 0.0, 0.0)})
+    """Always run the entire six-second episode, even after goal entry or grasp loss."""
+
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
 
@@ -77,7 +77,7 @@ class ReorientationTrainEnvCfg(ReorientationEnvCfg):
         goal = tuple(float(x) for x in goal_orientation(initial, axis, torch.tensor([math.radians(15.0)]))[0])
         start = tuple(snapshot["cube_pos_w"])
         self.observations.policy.goal_error.params["goal_xyzw"] = goal
-        for term in (self.rewards.orientation, self.rewards.success, self.terminations.success):
+        for term in (self.rewards.orientation, self.rewards.success):
             term.params["goal_xyzw"] = goal
-        for term in (self.rewards.success, self.rewards.dropped, self.terminations.success, self.terminations.dropped):
+        for term in (self.rewards.success, self.rewards.dropped):
             term.params["start_pos_w"] = start
