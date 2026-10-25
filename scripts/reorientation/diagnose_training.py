@@ -5,8 +5,9 @@ Success/drop terminations are disabled only in the local diagnostic configuratio
 so the cube can be followed for a whole trajectory. Keep steps below the 180-step
 episode limit to avoid auto-reset. The simulation, gravity and rewards are unchanged.
 
-Example:
+Examples:
   uv run python scripts/reorientation/diagnose_training.py --mode random --steps 150
+  uv run python scripts/reorientation/diagnose_training.py --mode trained --checkpoint latest --steps 150
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 import contact_prediction_rl.tasks  # noqa: E402, F401
 from contact_prediction_rl.diagnostics.contact import ContactTracker  # noqa: E402
 from contact_prediction_rl.diagnostics.control import action_statistics, joint_tracking_statistics  # noqa: E402
+from contact_prediction_rl.learning.checkpoints import get_log_root_path, resolve_checkpoint  # noqa: E402
 from contact_prediction_rl.learning.models.actor import Actor  # noqa: E402
 from contact_prediction_rl.tasks.reorientation.diagnostics import (  # noqa: E402
     ReorientationTracker,
@@ -38,7 +40,8 @@ TASK = "ContactPredictionRl-Reorientation-Train-HX5-D20-Right"
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--mode", choices=("zero", "random", "untrained"), default="random")
+    parser.add_argument("--mode", choices=("zero", "random", "untrained", "trained"), default="random")
+    parser.add_argument("--checkpoint", type=str, default=None, help="Checkpoint path, run directory, or 'latest' (trained mode only)")
     parser.add_argument("--num-envs", type=int, default=16)
     parser.add_argument("--steps", type=int, default=150)
     parser.add_argument("--action-std", type=float, default=0.2)
@@ -47,6 +50,8 @@ def parse_args():
     args = parser.parse_args()
     if args.num_envs < 1 or args.steps < 1 or args.action_std < 0:
         parser.error("Positive environment/step counts and nonnegative action std required")
+    if (args.mode == "trained") != (args.checkpoint is not None):
+        parser.error("Use --mode trained together with --checkpoint PATH (or 'latest')")
     return args
 
 
@@ -74,9 +79,14 @@ def main() -> None:
             device = env.device
             action_dim = int(env.action_manager.total_action_dim)
             actor = None
-            if args.mode == "untrained":
-                actor_cfg = ReorientationTrainPPORunnerCfg().actor
-                actor = Actor(obs["policy"].shape[-1], action_dim, **actor_cfg).to(device)
+            checkpoint = None
+            if args.mode in ("untrained", "trained"):
+                agent_cfg = ReorientationTrainPPORunnerCfg()
+                actor = Actor(obs["policy"].shape[-1], action_dim, **agent_cfg.actor).to(device)
+                if args.mode == "trained":
+                    checkpoint = resolve_checkpoint(args.checkpoint, get_log_root_path(agent_cfg.experiment_name))
+                    state = torch.load(checkpoint, map_location=device, weights_only=True)
+                    actor.load_state_dict(state["actor_state_dict"], strict=True)
                 actor.eval()
             contacts = ContactTracker(n, 5, device=device)
             motion = ReorientationTracker(n, device=device)
@@ -88,14 +98,32 @@ def main() -> None:
             tracking: list[dict[str, float]] = []
             term = env.action_manager.get_term("joint_pos")
             indices = [env.scene["robot"].joint_names.index(name) for name in term._joint_names]
-            for _ in range(args.steps):
+            cube = env.scene["object"].data
+            initial_metrics = measure_reorientation(
+                cube.root_pos_w.torch, cube.root_quat_w.torch, obs["contact"],
+                start_pos_w=start_pos, start_quat_w=start_quat,
+                goal_quat_w=goal_quat, axis_world=axis,
+            )
+            trace = [{
+                "step": 0,
+                "goal_error_mean_deg": initial_metrics["goal_error_deg"].mean().item(),
+                "goal_error_min_deg": initial_metrics["goal_error_deg"].min().item(),
+                "goal_error_max_deg": initial_metrics["goal_error_deg"].max().item(),
+                "within_5deg_fraction": initial_metrics["diagnostic_success"].float().mean().item(),
+                "cube_displacement_mean_m": initial_metrics["cube_displacement_m"].mean().item(),
+                "mean_abs_action": 0.0,
+            }]
+            recorded_steps = {1, 2, 3, 5, 10, 20, 30, 60, 90, args.steps}
+            for step in range(1, args.steps + 1):
                 with torch.inference_mode():
                     if args.mode == "zero":
                         action = torch.zeros((n, action_dim), device=device)
                     elif args.mode == "random":
                         action = args.action_std * torch.randn((n, action_dim), device=device)
-                    else:
+                    elif args.mode == "untrained":
                         action = actor(obs["policy"], stochastic_output=True)
+                    else:
+                        action = actor(obs["policy"], stochastic_output=False)
                     obs, _, terminated, truncated, _ = env.step(action)
                     if bool((terminated | truncated).any()):
                         raise RuntimeError("Unexpected reset during continuous diagnostic rollout")
@@ -108,6 +136,18 @@ def main() -> None:
                     )
                     motion.observe(metrics)
                     contacts.observe(obs["contact"])
+                    if step in recorded_steps:
+                        trace.append({
+                            "step": step,
+                            "goal_error_mean_deg": metrics["goal_error_deg"].mean().item(),
+                            "goal_error_min_deg": metrics["goal_error_deg"].min().item(),
+                            "goal_error_max_deg": metrics["goal_error_deg"].max().item(),
+                            "mean_signed_twist_deg": metrics["signed_twist_deg"].mean().item(),
+                            "within_5deg_fraction": metrics["diagnostic_success"].float().mean().item(),
+                            "cube_displacement_mean_m": metrics["cube_displacement_m"].mean().item(),
+                            "mean_abs_action": action.abs().mean().item(),
+                            "max_abs_action": action.abs().max().item(),
+                        })
                     processed = getattr(term, "processed_actions", None)
                     if processed is not None and processed.shape == (n, action_dim):
                         measured = env.scene["robot"].data.joint_pos.torch[:, indices]
@@ -119,7 +159,9 @@ def main() -> None:
             )
             print(json.dumps({
                 "mode": args.mode, "num_envs": n, "steps": args.steps,
-                "note": "continuous probe; success/drop terminations disabled, no reset",
+                "checkpoint": str(checkpoint) if checkpoint is not None else None,
+                "note": "continuous probe; success/drop terminations disabled, no reset; not episode success",
+                "early_step_trace": trace,
                 "motion": motion.summary(),
                 "contact": contacts.summary(fixed_pattern=(1, 1, 1, 0, 0)),
                 "control": average_controls,
