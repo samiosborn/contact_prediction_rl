@@ -98,3 +98,42 @@ def test_training_task_only_terminates_on_fixed_horizon():
     assert not hasattr(cfg.terminations, "success")
     assert not hasattr(cfg.terminations, "dropped")
     assert cfg.scene.num_envs >= 1
+
+def test_inference_mode_observe_then_external_partial_reset():
+    """Metrics stay mutable across inference-mode steps and ordinary partial resets."""
+    tracker = ReorientationEpisodeMetrics(2, sustained_steps=3)
+    names = (
+        "steps", "near_goal_steps", "stable_goal_steps", "grasp_steps",
+        "dropped_steps", "streak", "best_streak", "minimum_goal_error_rad",
+        "final_goal_error_rad", "max_displacement_m", "final_stable_goal",
+    )
+    buffers = {name: getattr(tracker, name) for name in names}
+    state = _batch()
+
+    with torch.inference_mode():
+        batched = {name: torch.cat((value, value), dim=0) for name, value in state.items()}
+        tracker.observe(batched)
+        tracker.observe(batched)
+
+    assert tracker.steps.tolist() == [2, 2]
+    assert tracker.streak.tolist() == [2, 2]
+    assert all(getattr(tracker, name) is buffer for name, buffer in buffers.items())
+    assert all(not buffer.is_inference() for buffer in buffers.values())
+
+    # This reset happens outside inference mode, exactly as in validate_training_reset.py.
+    tracker.reset(torch.tensor([0]))
+    assert tracker.steps.tolist() == [0, 2]
+    assert tracker.streak.tolist() == [0, 2]
+    assert tracker.best_streak.tolist() == [0, 2]
+    assert torch.isinf(tracker.minimum_goal_error_rad[0])
+    assert torch.isfinite(tracker.minimum_goal_error_rad[1])
+    assert tracker.final_stable_goal.tolist() == [False, True]
+
+    with torch.inference_mode():
+        tracker.observe(batched)
+    assert tracker.steps.tolist() == [1, 3]
+    assert tracker.best_streak.tolist() == [1, 3]
+    tracker.reset(torch.tensor([0, 1]))
+    assert tracker.steps.tolist() == [0, 0]
+    assert tracker.best_streak.tolist() == [0, 0]
+    assert all(getattr(tracker, name) is buffer for name, buffer in buffers.items())
