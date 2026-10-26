@@ -99,6 +99,7 @@ def test_training_task_only_terminates_on_fixed_horizon():
     assert not hasattr(cfg.terminations, "dropped")
     assert cfg.scene.num_envs >= 1
 
+
 def test_inference_mode_observe_then_external_partial_reset():
     """Metrics stay mutable across inference-mode steps and ordinary partial resets."""
     tracker = ReorientationEpisodeMetrics(2, sustained_steps=3)
