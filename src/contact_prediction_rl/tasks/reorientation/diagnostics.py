@@ -157,12 +157,12 @@ class ReorientationEpisodeMetrics:
         self.stable_goal_steps += hit.long()
         self.grasp_steps += state["grasp_retained"].long()
         self.dropped_steps += state["object_dropped"].long()
-        self.streak = torch.where(hit, self.streak + 1, 0)
-        self.best_streak = torch.maximum(self.best_streak, self.streak)
-        self.minimum_goal_error_rad = torch.minimum(self.minimum_goal_error_rad, state["goal_error_rad"])
-        self.final_goal_error_rad = state["goal_error_rad"].clone()
-        self.max_displacement_m = torch.maximum(self.max_displacement_m, state["cube_displacement_m"])
-        self.final_stable_goal = hit.clone()
+        self.streak.copy_(torch.where(hit, self.streak + 1, 0))
+        self.best_streak.copy_(torch.maximum(self.best_streak, self.streak))
+        self.minimum_goal_error_rad.copy_(torch.minimum(self.minimum_goal_error_rad, state["goal_error_rad"]))
+        self.final_goal_error_rad.copy_(state["goal_error_rad"])
+        self.max_displacement_m.copy_(torch.maximum(self.max_displacement_m, state["cube_displacement_m"]))
+        self.final_stable_goal.copy_(hit)
 
     def summarise_completed(self, env_ids: torch.Tensor) -> dict[str, float]:
         """Aggregate only finished environments, excluding zero-step initial resets."""
