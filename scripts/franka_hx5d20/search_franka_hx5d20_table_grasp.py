@@ -412,7 +412,17 @@ def main():
             tilt_txt = f"tilt median {tilts[len(tilts) // 2]:.0f} deg" if tilts else "tilt n/a"
             pushed = sum(t["pushed"] for t in trials) / len(trials)
             rise = sum(t["rise"] for t in trials) / len(trials)
-            results.append((lifted, gravity, centre, flex_scale, grasp_arm.tolist(), lift_arm.tolist()))
+            results.append(
+                (
+                    lifted,
+                    gravity,
+                    centre,
+                    flex_scale,
+                    grasp_arm.tolist(),
+                    lift_arm.tolist(),
+                    None if approach_arm is None else approach_arm.tolist(),
+                )
+            )
             print(
                 f"{str(gravity):<22}{str(centre):<22}{flex_scale:>5}  {ik:>14}  "
                 f"{lifted:>3}/{len(trials)}  {pushed:>12.1f} {rise:>10.1f}"
@@ -427,6 +437,8 @@ def main():
             print(f"\nbest: {best[0]}/{len(offsets)} lifted with gravity {best[1]}, cube centre {best[2]}, flex scale {best[3]}")
             print(f"  grasp arm [rad]: {[round(v, 3) for v in best[4]]}")
             print(f"  lift arm  [rad]: {[round(v, 3) for v in best[5]]}")
+            if best[6] is not None:
+                print(f"  start arm [rad] (open hand {args_cli.approach} m back along the palm normal): {[round(v, 3) for v in best[6]]}")
 
 
 if __name__ == "__main__":

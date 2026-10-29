@@ -282,6 +282,76 @@ uv run python scripts/train.py \
   --agent ppo_low_entropy_cfg_entry_point --num_envs 1024 --max_iterations 600 --seed 42
 ```
 
+### Tactile-RL paper set-up (history, shared encoder, contacts as input)
+
+Following *Enhancing Tactile-based Reinforcement Learning for Robotic Control* (Miller et al., NeurIPS 2025), two
+variants of the prior-residual lift task:
+
+| Task | Policy input | Role |
+|---|---|---|
+| `ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualHistory-Right` | the usual observation, stacked over the last 4 steps | PPO(prop): proprioception-only baseline |
+| `ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right` | the same, plus the 5 binary fingertip contacts, stacked too | PPO(prop + tactile), and the base of the auxiliary losses |
+
+Both use the paper's agent: one encoder (`o -> 1024 -> 512 -> 256 = z`, layer normalisation, ELU) shared by the policy
+(`z -> 128 -> 64 -> actions`, tanh output) and the value function (`z -> 128 -> 64 -> 1`), selected with
+`architecture = "shared"` in the agent config. The tactile task also exposes the current contact labels as a separate
+`contact` observation group, the target of the auxiliary losses. The contacts come from five fingertip sensors, checked
+against real grasps with `scripts/franka_hx5d20/validate_lift_contacts.py`.
+
+```bash
+uv run python scripts/train.py \
+  --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right \
+  --num_envs 1024 --max_iterations 600 --seed 42
+```
+
+Tactile reconstruction (TR) is selected with the second agent configuration of the tactile task. A decoder
+`z -> 512 -> 512 -> 20` must reproduce the stacked contact readings (the last 20 entries of the policy observation) with a
+binary cross-entropy of positive weight 10. It has its own optimiser (own learning rate, no gradient clipping) that is
+stepped after each PPO step on the same mini-batch, and it is discarded after training. Its loss and detection metrics
+(`aux_loss`, `aux_f1`, ...) appear under `Auxiliary/` in TensorBoard.
+
+```bash
+uv run python scripts/train.py \
+  --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right \
+  --agent ppo_tr_cfg_entry_point --num_envs 1024 --max_iterations 600 --seed 42
+```
+
+Full reconstruction (FR) uses the same machinery with a larger decoder, `z -> 512 -> 512 -> observation size`, that must
+rebuild the whole observation: the contacts (binary cross-entropy, positive weight 10) and the proprioception (squared
+error against the *normalised* observation, so that quantities of different sizes count about equally). Its loss is the
+sum of the two parts, logged as `aux_tactile_bce` and `aux_proprio_mse`.
+
+```bash
+uv run python scripts/train.py \
+  --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right \
+  --agent ppo_fr_cfg_entry_point --num_envs 1024 --max_iterations 600 --seed 42
+```
+
+### Grasp-start variants (contact early in every episode)
+
+On the tasks above, most seeds never touch the block: the hand starts 6 cm away, closes in the air near the block and
+keeps collecting the closed-hand reward, so the contact signals the tactile losses need are almost absent. The
+grasp-start tasks start the open hand **2 cm** from the grasp pose and narrow the closed-hand reward kernel from 3 cm to
+2 cm. Closing then touches the block with four fingertips within 2 s in every environment, and the scripted close-and-lift
+works in 9 of 10 trials with the exploration noise of training. Starting exactly at the grasp pose is not usable, since
+the open fingers shove the block at reset. Everything else is unchanged.
+
+| Task | Agents |
+|---|---|
+| `ContactPredictionRl-Lift-Block-Franka-HX5-D20-GraspStartHistory-Right` | PPO(prop) |
+| `ContactPredictionRl-Lift-Block-Franka-HX5-D20-GraspStartTactile-Right` | PPO(prop + tactile); `--agent ppo_tr_cfg_entry_point` (TR); `--agent ppo_fr_cfg_entry_point` (FR) |
+
+```bash
+uv run python scripts/train.py \
+  --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-GraspStartTactile-Right \
+  --agent ppo_tr_cfg_entry_point --num_envs 1024 --max_iterations 300 --seed 42
+```
+
+On this task all nine runs that received the contacts as normalised inputs failed (0 of 9), while the three runs without
+them solved it. A contact bit that is on in 0.1 % of the readings becomes a value of 24 after the running normalisation,
+and 50 at 0.01 %. The `ppo_raw_cfg_entry_point`, `ppo_raw_tr_cfg_entry_point` and `ppo_raw_fr_cfg_entry_point` agents feed
+the last 20 observation entries (the contacts) to the encoder raw, as 0 or 1, outside the normaliser, as the paper does.
+
 The combined Franka + HX5-D20 asset is documented in:
 
 ```text

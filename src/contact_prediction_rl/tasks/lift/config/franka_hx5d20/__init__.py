@@ -27,6 +27,11 @@ The ``-PriorResidual-`` variant keeps the thumb-open curl posture as a prior and
 joint around it within a bounded range (7 + 1 + 20 actions)::
 
     uv run python scripts/train.py --task ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidual-Right
+
+The ``-PriorResidualHistory-`` and ``-PriorResidualTactile-`` variants follow the tactile-RL paper (Miller et al.,
+NeurIPS 2025): the policy observation stacks the last 4 steps, and the agent has one encoder shared by the policy and the
+value function. The first is the proprioception-only baseline, the second adds the five binary fingertip contacts to the
+policy input.
 """
 
 import gymnasium as gym
@@ -107,6 +112,105 @@ gym.register(
         "ppo_low_entropy_cfg_entry_point": (
             f"{agents.__name__}.ppo_cfg:"
             "FrankaHX5D20BlockLiftPriorResidualLowEntropyPPOCfg"
+        ),
+        "default_agent": "ppo",
+    },
+)
+
+# Tactile-RL paper set-up: the observation stacks the last 4 steps and the agent has one shared encoder.
+gym.register(
+    id="ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualHistory-Right",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.env_cfg:"
+            "FrankaHX5D20BlockLiftPriorResidualHistoryEnvCfg"
+        ),
+        "ppo_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20BlockLiftHistoryPaperPPOCfg"
+        ),
+        "default_agent": "ppo",
+    },
+)
+
+gym.register(
+    id="ContactPredictionRl-Lift-Block-Franka-HX5-D20-PriorResidualTactile-Right",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.env_cfg:"
+            "FrankaHX5D20BlockLiftPriorResidualTactileEnvCfg"
+        ),
+        "ppo_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20BlockLiftTactilePaperPPOCfg"
+        ),
+        "ppo_tr_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20BlockLiftTactileTRPaperPPOCfg"
+        ),
+        "ppo_fr_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20BlockLiftTactileFRPaperPPOCfg"
+        ),
+        "default_agent": "ppo",
+    },
+)
+
+# The same two paper-style tasks, with the open hand starting 2 cm from the grasp pose and a narrower closed-hand reward, so
+# that contacts appear early in every episode that closes the hand.
+gym.register(
+    id="ContactPredictionRl-Lift-Block-Franka-HX5-D20-GraspStartHistory-Right",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.env_cfg:"
+            "FrankaHX5D20BlockLiftGraspStartHistoryEnvCfg"
+        ),
+        "ppo_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartHistoryPaperPPOCfg"
+        ),
+        "default_agent": "ppo",
+    },
+)
+
+gym.register(
+    id="ContactPredictionRl-Lift-Block-Franka-HX5-D20-GraspStartTactile-Right",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.env_cfg:"
+            "FrankaHX5D20BlockLiftGraspStartTactileEnvCfg"
+        ),
+        "ppo_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartTactilePaperPPOCfg"
+        ),
+        "ppo_tr_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartTactileTRPaperPPOCfg"
+        ),
+        "ppo_fr_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartTactileFRPaperPPOCfg"
+        ),
+        "ppo_raw_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartTactileRawPaperPPOCfg"
+        ),
+        "ppo_raw_tr_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartTactileRawTRPaperPPOCfg"
+        ),
+        "ppo_raw_fr_cfg_entry_point": (
+            f"{agents.__name__}.ppo_cfg:"
+            "FrankaHX5D20GraspStartTactileRawFRPaperPPOCfg"
         ),
         "default_agent": "ppo",
     },

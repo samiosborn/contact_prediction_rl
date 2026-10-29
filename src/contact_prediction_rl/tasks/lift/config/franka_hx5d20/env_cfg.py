@@ -4,6 +4,8 @@
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import AssetBaseCfg, RigidObjectCfg
+from isaaclab.managers import ObservationGroupCfg as ObsGroup
+from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import FrameTransformerCfg
@@ -22,6 +24,13 @@ from contact_prediction_rl.robots.franka_hx5d20 import (  # isort: skip
     FRANKA_HX5D20_HAND_CLOSED_THUMB_OPEN,
     FRANKA_HX5D20_HAND_OPEN,
     FRANKA_HX5D20_HAND_SYNERGIES,
+)
+
+from contact_prediction_rl.robots.hx5_d20_contacts import (  # isort: skip
+    FINGERTIP_NAMES,
+    FINGERTIP_SENSOR_NAMES,
+    fingertip_contact_sensor_cfg,
+    fingertip_object_contact,
 )
 
 from ...mdp import rewards
@@ -405,3 +414,129 @@ class FrankaHX5D20BlockLiftPriorResidualEnvCfg(FrankaHX5D20BlockLiftEnvCfg):
         )
 
         self.rewards.hand_residual = RewTerm(func=rewards.hand_residual_penalty, weight=-RESIDUAL_PENALTY_WEIGHT)
+
+
+OBSERVATION_HISTORY = 4
+"""Number of steps (the current one and the previous ones) stacked in the policy observation.
+
+The tactile-RL paper stacks the last ``k`` readings of every sensor: ``k = 4`` for its two dexterous-hand tasks and
+``k = 16`` for the arm task. The history is what lets a policy without a velocity or contact sensor infer motion."""
+
+
+@configclass
+class FrankaHX5D20BlockLiftPriorResidualHistoryEnvCfg(FrankaHX5D20BlockLiftPriorResidualEnvCfg):
+    """The prior-residual lift task whose policy observation stacks the last ``OBSERVATION_HISTORY`` steps.
+
+    This is the proprioception-only baseline of the tactile-RL paper, PPO(prop). The observation terms are the ones of
+    the lift task (joint positions and velocities, block position, goal, last action), each repeated for the last k
+    steps, so the policy input is k times larger. Isaac Lab fills the history of a freshly reset environment with
+    copies of its first observation. Nothing else changes: same robot, actions, rewards and episode.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.observations.policy.history_length = OBSERVATION_HISTORY
+        self.observations.policy.flatten_history_dim = True
+
+
+@configclass
+class FingertipContactLabelsCfg(ObsGroup):
+    """Current fingertip-object contact labels (thumb, index, middle, ring, little), without history.
+
+    Kept apart from the policy group: the policy does not read it. It holds the target of the auxiliary contact losses
+    (the ``obs["contact"]`` group that the PPO implementation expects).
+    """
+
+    fingertip_contacts = ObsTerm(func=fingertip_object_contact)
+
+    def __post_init__(self):
+        self.enable_corruption = False
+        self.concatenate_terms = True
+
+
+@configclass
+class FrankaHX5D20BlockLiftPriorResidualTactileEnvCfg(FrankaHX5D20BlockLiftPriorResidualHistoryEnvCfg):
+    """The history task with the five binary fingertip contacts added to the policy input.
+
+    This is PPO(prop + tactile) of the tactile-RL paper and the base of its auxiliary losses. Compared with the history
+    task:
+
+    * five contact sensors (one per fingertip, filtered to the block) are added to the scene, and PhysX is told to report
+      contacts on the robot's bodies (``activate_contact_sensors``);
+    * the contacts, thresholded at 0.1 N, are one more term of the policy observation, so they are stacked over the last
+      k steps like everything else (5 more numbers per step);
+    * a separate ``contact`` group holds the current labels, for the auxiliary loss.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        for finger, sensor_name in zip(FINGERTIP_NAMES, FINGERTIP_SENSOR_NAMES):
+            setattr(self.scene, sensor_name, fingertip_contact_sensor_cfg(finger))
+        self.scene.robot.spawn.activate_contact_sensors = True
+
+        self.observations.policy.fingertip_contacts = ObsTerm(func=fingertip_object_contact)
+        self.observations.contact = FingertipContactLabelsCfg()
+
+
+GRASP_START_APPROACH_DISTANCE = 0.02
+"""Distance [m] the open hand starts back from the grasp pose in the grasp-start tasks (``APPROACH_DISTANCE`` is 0.06).
+
+Starting exactly at the grasp pose is not usable: the open fingers overlap the block at reset and shove it at the first
+step (median 17 mm and 3 of 128 blocks knocked over). At 1 cm the block still moves (median 9 mm); at 2 cm it stays put
+(median 1 mm, 2 of 128 moved by more than 1 cm), and closing the hand then touches the block with four fingertips in
+every environment within 2 s."""
+
+GRASP_START_ARM_POS = [0.632, 0.836, -0.226, -1.896, -0.561, 1.296, 1.992]
+"""Arm joint values [rad] for the start of the grasp-start tasks: the open hand ``GRASP_START_APPROACH_DISTANCE`` back from
+the grasp pose.
+
+Same arm branch as ``START_ARM_POS``. Found with ``scripts/franka_hx5d20/search_franka_hx5d20_table_grasp.py --approach
+0.02``, which also checks that closing and then lifting works with the exploration noise of training (0.04 rad): 9 of 10
+trials lift the block, as from 6 cm back."""
+
+GRASP_START_CLOSED_NEAR_STD = 0.02
+"""Length scale [m] of the closed-hand reward for the grasp-start tasks (``CLOSED_NEAR_STD`` is 0.03).
+
+Policies that never lifted the block kept collecting the closed-hand reward by closing the hand in the air near the
+block. A narrower kernel pays less for closing a few centimetres away.
+"""
+
+
+def _apply_grasp_start(cfg: FrankaHX5D20BlockLiftEnvCfg) -> None:
+    """Start the episode with the open hand 2 cm from the grasp pose, and narrow the closed-hand reward"""
+
+    cfg.scene.robot.init_state.joint_pos = {
+        **{f"panda_joint{i + 1}": value for i, value in enumerate(GRASP_START_ARM_POS)},
+        "finger_r_joint.*": 0.0,
+    }
+    cfg.rewards.hand_closed_near_object.params["std"] = GRASP_START_CLOSED_NEAR_STD
+
+
+@configclass
+class FrankaHX5D20BlockLiftGraspStartHistoryEnvCfg(FrankaHX5D20BlockLiftPriorResidualHistoryEnvCfg):
+    """The history task (PPO(prop)) with the open hand starting 2 cm from the grasp pose and a narrower closed-hand reward.
+
+    The first closing already touches the block, so the policy has to discover only "close, then lift" and not
+    "approach, close, lift". Everything else is as in the history task.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        _apply_grasp_start(self)
+
+
+@configclass
+class FrankaHX5D20BlockLiftGraspStartTactileEnvCfg(FrankaHX5D20BlockLiftPriorResidualTactileEnvCfg):
+    """The tactile task with the open hand starting 2 cm from the grasp pose and a narrower closed-hand reward.
+
+    Contacts now appear within the first second of every episode that closes the hand, which is the regime the
+    auxiliary tactile losses need. Everything else is as in the tactile task.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        _apply_grasp_start(self)
