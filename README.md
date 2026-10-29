@@ -363,6 +363,46 @@ Additional grasp-design tools are in `scripts/franka_hx5d20/`:
 - `find_franka_hx5d20_pregrasp.py` — arm pose solver
 - `search_franka_hx5d20_table_grasp.py` — scripted table-grasp search
 
+## Pretraining
+
+Early scaffolding for fine-tuning pretrained vision-language-action (VLA) policies on demonstrations, and for
+benchmarking their training throughput, memory and multi-GPU scaling. The code is in
+`src/contact_prediction_rl/pretraining/` and the entrypoints in `scripts/pretraining/`.
+
+| Module | Contents |
+|---|---|
+| `models.py` | SmolVLA and pi0 loaders (lerobot), an openpi loader, and a small toy policy with the same interface |
+| `data.py` | synthetic demonstrations (images, state, fingertip contacts, action chunks, language tokens) and a lerobot dataset loader |
+| `lora.py` | LoRA adapters (peft) |
+| `distributed.py` | torchrun setup, DDP and FSDP2 wrapping, activation checkpointing |
+| `benchmark.py` | timed training steps: samples/s, step time, data-loading share, peak GPU memory, scaling efficiency |
+
+The optional dependencies stay out of the default environment. LoRA needs the `pretraining` extra
+(`uv sync --extra pretraining`). lerobot is not in `uv.lock`, because adding it would also change base packages
+(protobuf, einops). `scripts/pretraining/with_lerobot.sh` layers it on top of the locked environment for one command,
+with torch kept at the project's CUDA 12.8 build. openpi pins its own JAX and PyTorch versions and is installed
+separately. Weights are downloaded into the Hugging Face cache and are not stored in the repository.
+
+The toy policy needs no downloads:
+
+```bash
+uv run --extra pretraining torchrun --nproc_per_node 1 scripts/pretraining/benchmark_finetune.py \
+  --model toy --mode lora
+```
+
+SmolVLA (about 450 M parameters) or pi0 (about 3 B parameters), with `--mode full` or `--mode lora` and
+`--strategy ddp` or `--strategy fsdp`:
+
+```bash
+uv run python scripts/pretraining/download_weights.py smolvla
+scripts/pretraining/with_lerobot.sh torchrun --nproc_per_node 1 scripts/pretraining/benchmark_finetune.py \
+  --model smolvla --mode lora --batch_size 8
+```
+
+Each run appends one JSON line to `logs/pretraining/benchmark.jsonl`. `--summarise <file>` prints the scaling
+efficiency against the one-GPU run. `scripts/pretraining/slurm_benchmark.sh` is a Slurm template that sweeps
+1, 2, 4 and 8 GPUs on one node.
+
 ## Development
 
 `scripts/train.py` and `scripts/play.py` import `contact_prediction_rl.tasks` to register the environments, then resolve the environment and PPO configurations from the Gym registry (`env_cfg_entry_point`, `ppo_cfg_entry_point`). PPO hyperparameters can be overridden on the command line with Hydra syntax, for example `agent.algorithm.learning_rate=1e-4`.
